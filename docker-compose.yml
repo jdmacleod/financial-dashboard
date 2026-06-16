@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: hearthledger
+      POSTGRES_USER: hearthledger
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./backend/db_init.sql:/docker-entrypoint-initdb.d/01_init.sql
+    networks: [hearthledger_net]
+    # No ports: — never expose to host
+
+  redis:
+    image: redis:7-alpine
+    networks: [hearthledger_net]
+    # No ports: — never expose to host
+
+  backend:
+    build: ./backend
+    env_file: .env
+    depends_on: [db, redis]
+    networks: [hearthledger_net]
+
+  worker:
+    build: ./backend
+    command: python -m app.worker.main
+    env_file: .env
+    depends_on: [db, redis]
+    volumes:
+      - ./data/backups:/data/backups
+    networks: [hearthledger_net]
+
+  frontend:
+    build: ./frontend
+    networks: [hearthledger_net]
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on: [backend, frontend]
+    networks: [hearthledger_net]
+
+networks:
+  hearthledger_net:
+    driver: bridge
