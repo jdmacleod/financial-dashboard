@@ -7,6 +7,8 @@ the `hearthledger_app` role's restricted `audit_log` grants (rule #3), which
 have no SQLite or mocked-session equivalent.
 """
 
+from __future__ import annotations
+
 import base64
 import os
 import socket
