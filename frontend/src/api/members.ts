@@ -23,4 +23,9 @@ export const membersApi = {
   ) => api.patch<MemberResponse>(`/members/${id}`, data),
 
   deactivate: (id: string) => api.delete(`/members/${id}`),
+
+  updateDashboardLayout: (
+    id: string,
+    data: { widgets: { id: string; visible: boolean; order: number }[] },
+  ) => api.patch<MemberResponse>(`/members/${id}/dashboard-layout`, data),
 }

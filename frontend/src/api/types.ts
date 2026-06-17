@@ -17,6 +17,7 @@ export interface MemberResponse {
   role: "primary" | "partner" | "dependent"
   date_of_birth: string | null
   is_active: boolean
+  settings: Record<string, unknown>
   created_at: string
   updated_at: string
 }
@@ -137,6 +138,21 @@ export interface ImportJobResponse {
   imported_by: string
   created_at: string
   updated_at: string
+}
+
+export type BackupTrigger = "manual" | "scheduled"
+export type BackupStatus = "pending" | "processing" | "complete" | "failed"
+
+export interface BackupJobResponse {
+  id: string
+  triggered_by: BackupTrigger
+  triggered_by_user_id: string | null
+  status: BackupStatus
+  filename: string | null
+  file_size_bytes: number | null
+  error_message: string | null
+  started_at: string
+  completed_at: string | null
 }
 
 export interface ApiError {

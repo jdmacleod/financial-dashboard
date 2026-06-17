@@ -17,3 +17,13 @@ class HouseholdResponse(BaseModel):
 class HouseholdUpdate(BaseModel):
     name: str | None = None
     settings: dict[str, Any] | None = None
+
+
+class ValuationConfigResponse(BaseModel):
+    provider: str
+    has_api_key: bool
+
+
+class ValuationConfigUpdate(BaseModel):
+    provider: str
+    api_key: str | None = None

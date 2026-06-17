@@ -4,6 +4,7 @@ from app.api.v1 import (
     accounts,
     audit_log,
     auth,
+    backups,
     budgets,
     categories,
     debt,
@@ -39,3 +40,4 @@ router.include_router(audit_log.router)
 router.include_router(fire.router)
 router.include_router(debt.router)
 router.include_router(exports.router)
+router.include_router(backups.router)

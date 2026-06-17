@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { RouterProvider } from "@tanstack/react-router"
 import { router } from "./router"
 import "./index.css"
+import "./stores/themeStore" // applies dark class to <html> on startup
 
 const queryClient = new QueryClient({
   defaultOptions: {

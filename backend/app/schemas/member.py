@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
 
@@ -18,6 +18,16 @@ class MemberUpdate(BaseModel):
     is_active: bool | None = None
 
 
+class DashboardWidget(BaseModel):
+    id: str
+    visible: bool = True
+    order: int
+
+
+class DashboardLayoutUpdate(BaseModel):
+    widgets: list[DashboardWidget]
+
+
 class MemberResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -27,5 +37,6 @@ class MemberResponse(BaseModel):
     role: str
     date_of_birth: date | None
     is_active: bool
+    settings: dict[str, Any] = {}
     created_at: datetime
     updated_at: datetime

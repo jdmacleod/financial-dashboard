@@ -7,8 +7,10 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
       to={to}
-      className="text-sm text-gray-600 hover:text-gray-900"
-      activeProps={{ className: "text-sm text-indigo-600 font-medium" }}
+      className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+      activeProps={{
+        className: "text-sm text-indigo-600 font-medium dark:text-indigo-400",
+      }}
     >
       {children}
     </Link>
@@ -22,11 +24,14 @@ export function AppLayout() {
   const [exportOpen, setExportOpen] = useState(false)
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
-      <nav className="bg-white border-b border-gray-200 relative">
+      <nav className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 relative">
         <div className="max-w-5xl mx-auto px-4 flex items-center gap-6 h-14">
-          <Link to="/" className="font-semibold text-gray-900 hover:text-gray-700">
+          <Link
+            to="/"
+            className="font-semibold text-gray-900 hover:text-gray-700 dark:text-gray-100 dark:hover:text-gray-300"
+          >
             HearthLedger
           </Link>
           <NavLink to="/">Dashboard</NavLink>
@@ -40,34 +45,34 @@ export function AppLayout() {
                 setReportsOpen((v) => !v)
                 setSettingsOpen(false)
               }}
-              className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+              className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1"
             >
               Reports
               <span className="text-xs">▾</span>
             </button>
             {reportsOpen && (
               <div
-                className="absolute top-full left-0 mt-1 w-44 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-50"
+                className="absolute top-full left-0 mt-1 w-44 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50"
                 onMouseLeave={() => setReportsOpen(false)}
               >
                 <Link
                   to="/reports/net-worth"
                   onClick={() => setReportsOpen(false)}
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Net Worth
                 </Link>
                 <Link
                   to="/reports/cash-flow"
                   onClick={() => setReportsOpen(false)}
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Cash Flow
                 </Link>
                 <Link
                   to="/reports/spending"
                   onClick={() => setReportsOpen(false)}
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Spending
                 </Link>
@@ -83,7 +88,7 @@ export function AppLayout() {
           {/* Export button */}
           <button
             onClick={() => setExportOpen(true)}
-            className="text-sm text-gray-600 hover:text-gray-900"
+            className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
           >
             Export
           </button>
@@ -95,20 +100,20 @@ export function AppLayout() {
                 setSettingsOpen((v) => !v)
                 setReportsOpen(false)
               }}
-              className="text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1"
+              className="text-sm text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 flex items-center gap-1"
             >
               Settings
               <span className="text-xs">▾</span>
             </button>
             {settingsOpen && (
               <div
-                className="absolute top-full right-0 mt-1 w-44 bg-white rounded-xl border border-gray-200 shadow-lg py-1 z-50"
+                className="absolute top-full right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg py-1 z-50"
                 onMouseLeave={() => setSettingsOpen(false)}
               >
                 <Link
                   to="/settings/security"
                   onClick={() => setSettingsOpen(false)}
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Security Log
                 </Link>
@@ -116,7 +121,7 @@ export function AppLayout() {
                   <Link
                     to="/settings/activity"
                     onClick={() => setSettingsOpen(false)}
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                   >
                     Activity Log
                   </Link>
@@ -124,9 +129,39 @@ export function AppLayout() {
                 <Link
                   to="/settings/exports"
                   onClick={() => setSettingsOpen(false)}
-                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Exports
+                </Link>
+                <Link
+                  to="/settings/imports"
+                  onClick={() => setSettingsOpen(false)}
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Import History
+                </Link>
+                {isPrimary && (
+                  <Link
+                    to="/settings/backups"
+                    onClick={() => setSettingsOpen(false)}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Backups
+                  </Link>
+                )}
+                <Link
+                  to="/settings/dashboard"
+                  onClick={() => setSettingsOpen(false)}
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Dashboard Layout
+                </Link>
+                <Link
+                  to="/settings/appearance"
+                  onClick={() => setSettingsOpen(false)}
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Appearance
                 </Link>
               </div>
             )}
