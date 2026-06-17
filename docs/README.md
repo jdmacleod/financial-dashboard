@@ -1,11 +1,21 @@
-# HearthLedger — Spec Index
+# HearthLedger — Documentation Index
 
-This directory contains the complete implementation spec for the HearthLedger
-household financial tracking system. Read CLAUDE.md first — it contains the
-project context, non-negotiable architectural rules, and coding conventions
-that apply to every phase.
+This directory contains all documentation for the HearthLedger household financial
+tracking system.
 
-## Document map
+## User documentation
+
+| File                      | Purpose                                                             |
+| ------------------------- | ------------------------------------------------------------------- |
+| `docs/getting-started.md` | Install, configure, and run HearthLedger for the first time         |
+| `docs/user-guide.md`      | Complete guide to every feature                                     |
+| `docs/api-reference.md`   | REST API reference — all endpoints, parameters, and response shapes |
+| `docs/security.md`        | Authentication, RBAC, encryption, audit log, and secrets management |
+
+## Implementation spec (developer reference)
+
+Read CLAUDE.md first — it contains the project context, non-negotiable
+architectural rules, and coding conventions that apply to every phase.
 
 | File                             | Purpose                                                                    |
 | -------------------------------- | -------------------------------------------------------------------------- |

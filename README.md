@@ -1,0 +1,81 @@
+# HearthLedger
+
+[![CI](https://github.com/jdmacleod/financial-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/jdmacleod/financial-dashboard/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/jdmacleod/financial-dashboard/graph/badge.svg)](https://codecov.io/gh/jdmacleod/financial-dashboard)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
+[![Node 20 LTS](https://img.shields.io/badge/node-20_LTS-green.svg)](https://nodejs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
+[![React 18](https://img.shields.io/badge/React-18-61dafb.svg)](https://react.dev/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ed.svg)](https://docs.docker.com/compose/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Self-hosted household financial tracking. Runs entirely on your own machine — no cloud, no subscriptions.
+
+## Features
+
+- **Accounts** — checking, savings, credit, investment, retirement, loans
+- **Transactions** — CSV and OFX/QFX import, bulk categorize, duplicate detection
+- **Budgets** — monthly limits per category with dashboard alerts
+- **Reports** — net worth, cash flow, spending by category, budget vs actuals, property P&L
+- **FIRE planning** — retirement projections with multiple income streams and scenario modeling
+- **Debt payoff** — avalanche/snowball comparison with extra payment modeling
+- **Real estate** — manual or API-driven property valuations (ATTOM, Estated)
+- **Exports** — PDF and Excel reports with executor re-authentication gate
+- **Backups** — scheduled and manual database backups, AES-256-GCM encrypted
+- **Multi-member** — primary + partner + dependent roles with per-account access grants
+- **Dark mode** — system, light, or dark; per-member dashboard layout customization
+
+## Quickstart
+
+**Prerequisites:** Docker Desktop, Git
+
+```bash
+git clone https://github.com/jdmacleod/financial-dashboard.git
+cd financial-dashboard
+cp .env.example .env
+```
+
+Edit `.env` and set three values:
+
+```bash
+# Generate with: openssl rand -hex 32
+SECRET_KEY=...
+
+# Generate with: python3 -c "import secrets,base64; print(base64.b64encode(secrets.token_bytes(32)).decode())"
+SECRET_ENCRYPTION_KEY=...
+
+DB_PASSWORD=choose-a-strong-password
+```
+
+Then:
+
+```bash
+mkdir -p data/postgres data/backups
+docker compose up -d
+```
+
+Open `http://localhost` and complete the setup wizard (household name, your name, email, password).
+
+See [docs/getting-started.md](docs/getting-started.md) for the full walkthrough.
+
+## Stack
+
+| Layer           | Technology                                                                      |
+| --------------- | ------------------------------------------------------------------------------- |
+| API             | Python 3.12, FastAPI 0.115+, SQLAlchemy 2 async, Pydantic v2                    |
+| Database        | PostgreSQL 16                                                                   |
+| Background jobs | ARQ (Redis 7), APScheduler                                                      |
+| Frontend        | React 18, TypeScript, Vite 5, TanStack Query/Router, Tailwind CSS v4, shadcn/ui |
+| Proxy           | nginx (Alpine)                                                                  |
+| Deployment      | Docker Compose                                                                  |
+
+## Documentation
+
+- [Getting Started](docs/getting-started.md) — install, configure, first run
+- [User Guide](docs/user-guide.md) — all features
+- [API Reference](docs/api-reference.md) — REST API
+- [Security](docs/security.md) — auth, encryption, audit log
+
+## License
+
+MIT
