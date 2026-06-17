@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Request, Response
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.visibility import VisibilityContext, get_visibility_ctx
@@ -15,7 +17,12 @@ from app.services.auth import AuthService
 router = APIRouter()
 
 _COOKIE = "refresh_token"
-_COOKIE_OPTS = dict(httponly=True, samesite="lax", secure=False, max_age=60 * 60 * 24 * 30)
+_COOKIE_OPTS: dict[str, Any] = {
+    "httponly": True,
+    "samesite": "lax",
+    "secure": False,
+    "max_age": 60 * 60 * 24 * 30,
+}
 
 
 @router.post("/auth/login", response_model=TokenResponse)
@@ -24,7 +31,7 @@ async def login(
     request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session),
-):
+) -> TokenResponse:
     ip = request.client.host if request.client else None
     svc = AuthService(session)
     access_token, refresh_token = await svc.login(data.email, data.password, ip)
@@ -37,9 +44,7 @@ async def refresh(
     request: Request,
     response: Response,
     session: AsyncSession = Depends(get_session),
-):
-    from fastapi import HTTPException, status
-
+) -> TokenResponse:
     token = request.cookies.get(_COOKIE)
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
@@ -54,7 +59,7 @@ async def logout(
     response: Response,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> None:
     svc = AuthService(session)
     await svc.logout(ctx.user_id, ctx.household_id, ctx.ip_address)
     response.delete_cookie(_COOKIE)
@@ -65,7 +70,7 @@ async def reauth(
     data: ReauthRequest,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> ReauthResponse:
     svc = AuthService(session)
     token = await svc.reauth(ctx.user_id, data.password, ctx.household_id, ctx.ip_address)
     return ReauthResponse(reauth_token=token)
@@ -77,7 +82,7 @@ async def change_password(
     response: Response,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> None:
     svc = AuthService(session)
     await svc.change_password(
         ctx.user_id, data.current_password, data.new_password, ctx.household_id, ctx.ip_address

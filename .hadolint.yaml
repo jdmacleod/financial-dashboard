@@ -1,0 +1,2 @@
+ignored:
+  - DL3008 # pin apt package versions — brittle across base image updates, not pinning intentionally

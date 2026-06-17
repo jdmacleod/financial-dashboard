@@ -128,12 +128,14 @@ Worker runs as a separate container using the same Docker image as the backend.
 Entrypoint: `python -m app.worker.main`.
 
 Registered task queues:
+
 - `import_queue` — CSV/OFX/QFX import jobs
 - `export_queue` — PDF and Excel export generation
 - `backup_queue` — DB dump, encrypt, prune
 - `valuation_queue` — real estate valuation API refresh
 
 Scheduled tasks (cron via APScheduler inside the worker):
+
 - Backup: `BACKUP_SCHEDULE` env var (default `0 2 * * *`)
 - Valuation refresh: `RE_VALUATION_REFRESH_SCHEDULE` env var (default `0 3 * * 1`)
 
@@ -141,11 +143,11 @@ Scheduled tasks (cron via APScheduler inside the worker):
 
 Three member roles enforced via `VisibilityContext` middleware:
 
-| Role | Individual accounts | Joint accounts | Admin ops | Executor exports |
-|---|---|---|---|---|
-| `primary` | All members' | Yes | Yes | Yes (re-auth) |
-| `partner` | Own only (+ granted) | Yes | No | No |
-| `dependent` | None | Read-only | No | No |
+| Role        | Individual accounts  | Joint accounts | Admin ops | Executor exports |
+| ----------- | -------------------- | -------------- | --------- | ---------------- |
+| `primary`   | All members'         | Yes            | Yes       | Yes (re-auth)    |
+| `partner`   | Own only (+ granted) | Yes            | No        | No               |
+| `dependent` | None                 | Read-only      | No        | No               |
 
 See `docs/data-model.md` for the `account_access_grants` schema.
 See `CLAUDE.md` rule #1 for enforcement mechanism.

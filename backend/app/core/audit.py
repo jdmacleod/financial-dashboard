@@ -1,8 +1,9 @@
 import uuid
+from collections.abc import Callable, Coroutine
 from datetime import datetime
 from decimal import Decimal
 from functools import wraps
-from typing import Any
+from typing import Any, TypeVar
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,11 +19,13 @@ ENCRYPTED_FIELDS = frozenset(
     }
 )
 
+_F = TypeVar("_F", bound=Callable[..., Coroutine[Any, Any, Any]])
 
-def _snapshot(obj: Any, exclude: frozenset = frozenset()) -> dict:
+
+def _snapshot(obj: Any, exclude: frozenset[str] = frozenset()) -> dict[str, Any]:
     if obj is None:
         return {}
-    result = {}
+    result: dict[str, Any] = {}
     for col in obj.__table__.columns:
         if col.name in exclude:
             continue
@@ -37,13 +40,13 @@ def _snapshot(obj: Any, exclude: frozenset = frozenset()) -> dict:
     return result
 
 
-def _diff(prev: dict, curr: dict) -> tuple[dict, dict]:
+def _diff(prev: dict[str, Any], curr: dict[str, Any]) -> tuple[dict[str, Any], dict[str, Any]]:
     changed = {k for k in set(prev) | set(curr) if prev.get(k) != curr.get(k)}
     return {k: prev.get(k) for k in changed}, {k: curr.get(k) for k in changed}
 
 
 class AuditRepository:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def write(
@@ -52,8 +55,8 @@ class AuditRepository:
         action: str,
         entity_type: str,
         entity_id: uuid.UUID | None = None,
-        previous_value: dict | None = None,
-        new_value: dict | None = None,
+        previous_value: dict[str, Any] | None = None,
+        new_value: dict[str, Any] | None = None,
     ) -> None:
         from app.db.models.audit_log import AuditLog
 
@@ -76,7 +79,7 @@ class AuditRepository:
         user_id: uuid.UUID | None,
         action: str,
         ip_address: str | None = None,
-        new_value: dict | None = None,
+        new_value: dict[str, Any] | None = None,
         entity_id: uuid.UUID | None = None,
     ) -> None:
         from app.db.models.audit_log import AuditLog
@@ -94,22 +97,22 @@ class AuditRepository:
         await self.session.flush()
 
 
-def audit(action: str, entity_type: str):
-    def decorator(fn):
+def audit(action: str, entity_type: str) -> Callable[[_F], _F]:
+    def decorator(fn: _F) -> _F:
         @wraps(fn)
-        async def wrapper(self, ctx: VisibilityContext, *args, **kwargs):
-            result = await fn(self, ctx, *args, **kwargs)
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            self = args[0]
+            ctx: VisibilityContext = args[1]
+            result = await fn(*args, **kwargs)
 
-            prev = getattr(self, "_prev_snapshot", None)
-            if prev is not None:
-                try:
-                    del self._prev_snapshot
-                except AttributeError:
-                    pass
+            prev: dict[str, Any] | None = getattr(self, "_prev_snapshot", None)
+            self.__dict__.pop("_prev_snapshot", None)
 
-            entity_id = getattr(result, "id", None)
+            entity_id: uuid.UUID | None = getattr(result, "id", None)
             curr = _snapshot(result, exclude=ENCRYPTED_FIELDS) if result is not None else None
 
+            diff_prev: dict[str, Any] | None
+            diff_curr: dict[str, Any] | None
             if prev is not None and curr is not None:
                 diff_prev, diff_curr = _diff(prev, curr)
             else:
@@ -125,6 +128,6 @@ def audit(action: str, entity_type: str):
             )
             return result
 
-        return wrapper
+        return wrapper  # type: ignore[return-value]
 
     return decorator

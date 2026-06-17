@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.visibility import VisibilityContext, get_visibility_ctx
 from app.db.base import get_session
+from app.db.models.member import HouseholdMember
 from app.schemas.member import MemberCreate, MemberResponse, MemberUpdate
 from app.services.member import MemberService
 
@@ -15,9 +16,9 @@ router = APIRouter()
 async def list_members(
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> list[HouseholdMember]:
     svc = MemberService(session)
-    return await svc.list(ctx)
+    return await svc.list_members(ctx)
 
 
 @router.post("/members", response_model=MemberResponse, status_code=201)
@@ -25,7 +26,7 @@ async def create_member(
     data: MemberCreate,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> HouseholdMember:
     svc = MemberService(session)
     member = await svc.create(ctx, data)
     await session.commit()
@@ -38,7 +39,7 @@ async def get_member(
     member_id: uuid.UUID,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> HouseholdMember:
     svc = MemberService(session)
     return await svc.get_by_id(ctx, member_id)
 
@@ -49,7 +50,7 @@ async def update_member(
     data: MemberUpdate,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> HouseholdMember:
     svc = MemberService(session)
     member = await svc.update(ctx, member_id, data)
     await session.commit()
@@ -62,7 +63,7 @@ async def deactivate_member(
     member_id: uuid.UUID,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> None:
     svc = MemberService(session)
     await svc.deactivate(ctx, member_id)
     await session.commit()

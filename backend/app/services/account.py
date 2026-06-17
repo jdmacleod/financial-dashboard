@@ -1,5 +1,5 @@
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from fastapi import HTTPException, status
@@ -13,14 +13,16 @@ from app.db.models.access_grant import AccountAccessGrant
 from app.db.models.account import Account
 from app.db.models.snapshot import AccountSnapshot
 from app.repositories.account import AccountRepository
-from app.schemas.account import AccessGrantCreate, AccountCreate, AccountUpdate, AccountResponse
+from app.schemas.account import AccessGrantCreate, AccountCreate, AccountResponse, AccountUpdate
 
 
 def _decrypt_opt(val: bytes | None) -> str | None:
     return decrypt(val) if val else None
 
 
-def _account_to_response(account: Account, balance: Decimal | None, balance_date: date | None) -> AccountResponse:
+def _account_to_response(
+    account: Account, balance: Decimal | None, balance_date: date | None
+) -> AccountResponse:
     institution_name = _decrypt_opt(account.institution_name_enc)
     account_number = _decrypt_opt(account.account_number_enc)
     last4 = account_number[-4:] if account_number and len(account_number) >= 4 else account_number
@@ -42,7 +44,7 @@ def _account_to_response(account: Account, balance: Decimal | None, balance_date
 
 
 class AccountService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.account_repo = AccountRepository(session)
         self.audit_repo = AuditRepository(session)
@@ -56,16 +58,18 @@ class AccountService:
         )
         return result.scalar_one_or_none()
 
-    async def list(self, ctx: VisibilityContext) -> list[AccountResponse]:
+    async def list_accounts(self, ctx: VisibilityContext) -> list[AccountResponse]:
         accounts = await self.account_repo.get_visible(ctx, is_active=True)
         responses = []
         for account in accounts:
             snap = await self._latest_snapshot(account.id)
-            responses.append(_account_to_response(
-                account,
-                snap.balance if snap else None,
-                snap.snapshot_date if snap else None,
-            ))
+            responses.append(
+                _account_to_response(
+                    account,
+                    snap.balance if snap else None,
+                    snap.snapshot_date if snap else None,
+                )
+            )
         return responses
 
     async def get(self, ctx: VisibilityContext, account_id: uuid.UUID) -> AccountResponse:
@@ -81,7 +85,7 @@ class AccountService:
     async def create(self, ctx: VisibilityContext, data: AccountCreate) -> Account:
         if not ctx.can_write:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         account = Account(
             household_id=ctx.household_id,
             owner_member_id=data.owner_member_id,
@@ -102,7 +106,9 @@ class AccountService:
         return account
 
     @audit("account.updated", "account")
-    async def update(self, ctx: VisibilityContext, account_id: uuid.UUID, data: AccountUpdate) -> Account:
+    async def update(
+        self, ctx: VisibilityContext, account_id: uuid.UUID, data: AccountUpdate
+    ) -> Account:
         account = await self.account_repo.get_by_id(ctx, account_id)
         if not ctx.is_primary and account.owner_member_id != ctx.member_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -123,7 +129,7 @@ class AccountService:
         if data.notes is not None:
             account.notes_enc = encrypt(data.notes)
 
-        account.updated_at = datetime.now(timezone.utc)
+        account.updated_at = datetime.now(UTC)
         await self.session.flush()
         await self.session.refresh(account)
         return account
@@ -135,12 +141,14 @@ class AccountService:
         account = await self.account_repo.get_by_id(ctx, account_id)
         self._prev_snapshot = _snapshot(account)
         account.is_active = False
-        account.updated_at = datetime.now(timezone.utc)
+        account.updated_at = datetime.now(UTC)
         await self.session.flush()
         await self.session.refresh(account)
         return account
 
-    async def list_grants(self, ctx: VisibilityContext, account_id: uuid.UUID) -> list[AccountAccessGrant]:
+    async def list_grants(
+        self, ctx: VisibilityContext, account_id: uuid.UUID
+    ) -> list[AccountAccessGrant]:
         if not ctx.is_primary:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         await self.account_repo.get_by_id(ctx, account_id)
@@ -163,7 +171,7 @@ class AccountService:
         if account.owner_member_id == data.grantee_member_id:
             raise HTTPException(status_code=400, detail="Cannot grant access to the account owner")
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         grant = AccountAccessGrant(
             account_id=account_id,
             owner_member_id=account.owner_member_id,
@@ -182,11 +190,16 @@ class AccountService:
             action="member.access_grant_created",
             entity_type="member",
             entity_id=data.grantee_member_id,
-            new_value={"account_id": str(account_id), "grantee_member_id": str(data.grantee_member_id)},
+            new_value={
+                "account_id": str(account_id),
+                "grantee_member_id": str(data.grantee_member_id),
+            },
         )
         return grant
 
-    async def revoke_grant(self, ctx: VisibilityContext, account_id: uuid.UUID, grant_id: uuid.UUID) -> None:
+    async def revoke_grant(
+        self, ctx: VisibilityContext, account_id: uuid.UUID, grant_id: uuid.UUID
+    ) -> None:
         if not ctx.is_primary:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         result = await self.session.execute(
@@ -201,7 +214,7 @@ class AccountService:
             raise HTTPException(status_code=404, detail="Grant not found")
 
         grant.is_active = False
-        grant.revoked_at = datetime.now(timezone.utc)
+        grant.revoked_at = datetime.now(UTC)
         await self.session.flush()
 
         await self.audit_repo.write(
@@ -209,5 +222,8 @@ class AccountService:
             action="member.access_grant_revoked",
             entity_type="member",
             entity_id=grant.grantee_member_id,
-            previous_value={"account_id": str(account_id), "grantee_member_id": str(grant.grantee_member_id)},
+            previous_value={
+                "account_id": str(account_id),
+                "grantee_member_id": str(grant.grantee_member_id),
+            },
         )

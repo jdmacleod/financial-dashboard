@@ -31,13 +31,23 @@ export interface UserResponse {
 }
 
 export type AccountType =
-  | "checking" | "savings" | "credit_card"
-  | "investment_brokerage" | "retirement_401k" | "retirement_403b"
-  | "retirement_ira" | "retirement_roth_ira"
-  | "pension" | "hsa"
-  | "real_estate" | "mortgage"
-  | "auto_loan" | "personal_loan" | "student_loan"
-  | "other_asset" | "other_liability"
+  | "checking"
+  | "savings"
+  | "credit_card"
+  | "investment_brokerage"
+  | "retirement_401k"
+  | "retirement_403b"
+  | "retirement_ira"
+  | "retirement_roth_ira"
+  | "pension"
+  | "hsa"
+  | "real_estate"
+  | "mortgage"
+  | "auto_loan"
+  | "personal_loan"
+  | "student_loan"
+  | "other_asset"
+  | "other_liability"
 
 export interface AccountResponse {
   id: string

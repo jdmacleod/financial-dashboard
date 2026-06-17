@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-router"
 import { authApi } from "@/api/auth"
 import { setAccessToken } from "@/api/client"
+import { AppLayout } from "@/components/app/AppLayout"
 import Login from "@/pages/Login"
 import Setup from "@/pages/Setup"
 import Members from "@/pages/Members"
@@ -49,22 +50,6 @@ const appLayoutRoute = createRoute({
   },
   component: AppLayout,
 })
-
-function AppLayout() {
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white border-b border-gray-200">
-        <div className="max-w-5xl mx-auto px-4 flex items-center gap-6 h-14">
-          <span className="font-semibold text-gray-900">HearthLedger</span>
-          <a href="/" className="text-sm text-gray-600 hover:text-gray-900">Dashboard</a>
-          <a href="/accounts" className="text-sm text-gray-600 hover:text-gray-900">Accounts</a>
-          <a href="/members" className="text-sm text-gray-600 hover:text-gray-900">Members</a>
-        </div>
-      </nav>
-      <Outlet />
-    </div>
-  )
-}
 
 const indexRoute = createRoute({
   getParentRoute: () => appLayoutRoute,

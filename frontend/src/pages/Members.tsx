@@ -15,13 +15,7 @@ const ROLE_COLORS: Record<string, string> = {
   dependent: "bg-gray-100 text-gray-600",
 }
 
-function MemberSlideOver({
-  member,
-  onClose,
-}: {
-  member: MemberResponse
-  onClose: () => void
-}) {
+function MemberSlideOver({ member, onClose }: { member: MemberResponse; onClose: () => void }) {
   const queryClient = useQueryClient()
   const [displayName, setDisplayName] = useState(member.display_name)
   const [error, setError] = useState<string | null>(null)
@@ -41,7 +35,9 @@ function MemberSlideOver({
       <div className="w-full max-w-sm bg-white shadow-xl p-6 flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Edit member</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            ✕
+          </button>
         </div>
 
         <div>
@@ -55,7 +51,9 @@ function MemberSlideOver({
 
         <div>
           <span className="block text-sm font-medium text-gray-700 mb-1">Role</span>
-          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[member.role]}`}>
+          <span
+            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[member.role]}`}
+          >
             {ROLE_LABELS[member.role]}
           </span>
           <p className="mt-1 text-xs text-gray-400">Role changes are not supported in this view.</p>
@@ -88,7 +86,11 @@ function MemberSlideOver({
 }
 
 export default function Members() {
-  const { data: members, isLoading, error } = useQuery({
+  const {
+    data: members,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["members"],
     queryFn: membersApi.list,
   })
@@ -117,7 +119,9 @@ export default function Members() {
               <p className="font-medium text-gray-900 truncate">{m.display_name}</p>
               <p className="text-sm text-gray-500">{m.is_active ? "Active" : "Inactive"}</p>
             </div>
-            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[m.role]}`}>
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[m.role]}`}
+            >
               {ROLE_LABELS[m.role]}
             </span>
           </button>

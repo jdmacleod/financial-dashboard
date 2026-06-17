@@ -53,8 +53,8 @@ async def get_visibility_ctx(
 ) -> VisibilityContext:
     try:
         payload = decode_token(credentials.credentials, "access")
-    except Exception:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    except Exception as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED) from exc
 
     user_id = UUID(payload["sub"])
     member_id = UUID(payload["member_id"]) if payload.get("member_id") else None

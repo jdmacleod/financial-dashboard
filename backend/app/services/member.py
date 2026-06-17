@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -12,11 +12,11 @@ from app.schemas.member import MemberCreate, MemberUpdate
 
 
 class MemberService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.audit_repo = AuditRepository(session)
 
-    async def list(self, ctx: VisibilityContext) -> list[HouseholdMember]:
+    async def list_members(self, ctx: VisibilityContext) -> list[HouseholdMember]:
         result = await self.session.execute(
             select(HouseholdMember).where(HouseholdMember.household_id == ctx.household_id)
         )
@@ -38,7 +38,7 @@ class MemberService:
     async def create(self, ctx: VisibilityContext, data: MemberCreate) -> HouseholdMember:
         if not ctx.is_primary:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         member = HouseholdMember(
             household_id=ctx.household_id,
             display_name=data.display_name,
@@ -54,16 +54,17 @@ class MemberService:
         return member
 
     @audit("member.updated", "member")
-    async def update(self, ctx: VisibilityContext, member_id: uuid.UUID, data: MemberUpdate) -> HouseholdMember:
+    async def update(
+        self, ctx: VisibilityContext, member_id: uuid.UUID, data: MemberUpdate
+    ) -> HouseholdMember:
         if not ctx.is_primary:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         member = await self.get_by_id(ctx, member_id)
         self._prev_snapshot = _snapshot(member)
 
-        if data.role is not None and data.role != member.role:
-            # Prevent downgrading the last primary
-            if member.role == "primary":
-                await self._check_not_last_primary(ctx, member_id)
+        # Prevent downgrading the last primary
+        if data.role is not None and data.role != member.role and member.role == "primary":
+            await self._check_not_last_primary(ctx, member_id)
 
         if data.display_name is not None:
             member.display_name = data.display_name
@@ -74,7 +75,7 @@ class MemberService:
         if data.is_active is not None:
             member.is_active = data.is_active
 
-        member.updated_at = datetime.now(timezone.utc)
+        member.updated_at = datetime.now(UTC)
         await self.session.flush()
         await self.session.refresh(member)
         return member
@@ -87,7 +88,7 @@ class MemberService:
         self._prev_snapshot = _snapshot(member)
         await self._check_not_last_primary(ctx, member_id)
         member.is_active = False
-        member.updated_at = datetime.now(timezone.utc)
+        member.updated_at = datetime.now(UTC)
         await self.session.flush()
         await self.session.refresh(member)
         return member

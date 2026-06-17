@@ -465,48 +465,48 @@ GRANT SELECT, INSERT ON audit_log TO hearthledger_app;
 
 ### Audit event catalog
 
-| action | entity_type | notes |
-|---|---|---|
-| auth.login_success | auth | ip_address captured |
-| auth.login_failed | auth | ip_address; entity_id null |
-| auth.logout | auth | |
-| auth.account_locked | auth | new_value: {failed_attempt_count} |
-| auth.password_changed | auth | |
-| auth.executor_reauth_success | auth | |
-| member.created | member | new_value: {display_name, role} |
-| member.role_changed | member | prev/new: {role} |
-| member.deactivated | member | |
-| member.reactivated | member | |
-| member.access_grant_created | member | new_value: {account_id, grantee_member_id} |
-| member.access_grant_revoked | member | prev: {account_id, grantee_member_id} |
-| account.created | account | new_value: {nickname, account_type, owner_member_id} |
-| account.updated | account | prev/new: changed fields only; never encrypted fields |
-| account.deactivated | account | |
-| account.reactivated | account | |
-| transaction.created | transaction | new_value: {amount, payee_normalized, transaction_date, category_id} |
-| transaction.category_changed | transaction | prev/new: {category_id} |
-| transaction.amount_changed | transaction | prev/new: {amount} |
-| transaction.payee_changed | transaction | prev/new: {payee_normalized} |
-| transaction.transfer_flagged | transaction | new_value: {is_transfer, transfer_pair_id} |
-| transaction.property_tagged | transaction | prev/new: {real_estate_property_id} |
-| transaction.deleted | transaction | prev: {amount, payee_normalized, transaction_date} |
-| snapshot.created | snapshot | new_value: {balance, snapshot_date, source} |
-| snapshot.updated | snapshot | prev/new: {balance} |
-| snapshot.deleted | snapshot | prev: {balance, snapshot_date} |
-| budget.created | budget | new_value: {category_id, period, amount} |
-| budget.updated | budget | changed fields only |
-| budget.deleted | budget | prev: {category_id, period, amount} |
-| category.created | category | new_value: {name, is_income} |
-| category.updated | category | changed fields only |
-| category.deleted | category | prev: {name} |
-| fire_scenario.created | fire_scenario | new_value: {name} |
-| fire_scenario.updated | fire_scenario | changed fields only |
-| fire_scenario.detection_run | fire_scenario | new_value: {detected_annual_income, detected_at} |
-| import.completed | import_job | new_value: {records_imported, filename} |
-| import.failed | import_job | |
-| export.generated | export_job | new_value: {export_type, anonymized} |
-| backup.completed | backup_job | new_value: {filename, file_size_bytes} |
-| backup.failed | backup_job | |
+| action                       | entity_type   | notes                                                                |
+| ---------------------------- | ------------- | -------------------------------------------------------------------- |
+| auth.login_success           | auth          | ip_address captured                                                  |
+| auth.login_failed            | auth          | ip_address; entity_id null                                           |
+| auth.logout                  | auth          |                                                                      |
+| auth.account_locked          | auth          | new_value: {failed_attempt_count}                                    |
+| auth.password_changed        | auth          |                                                                      |
+| auth.executor_reauth_success | auth          |                                                                      |
+| member.created               | member        | new_value: {display_name, role}                                      |
+| member.role_changed          | member        | prev/new: {role}                                                     |
+| member.deactivated           | member        |                                                                      |
+| member.reactivated           | member        |                                                                      |
+| member.access_grant_created  | member        | new_value: {account_id, grantee_member_id}                           |
+| member.access_grant_revoked  | member        | prev: {account_id, grantee_member_id}                                |
+| account.created              | account       | new_value: {nickname, account_type, owner_member_id}                 |
+| account.updated              | account       | prev/new: changed fields only; never encrypted fields                |
+| account.deactivated          | account       |                                                                      |
+| account.reactivated          | account       |                                                                      |
+| transaction.created          | transaction   | new_value: {amount, payee_normalized, transaction_date, category_id} |
+| transaction.category_changed | transaction   | prev/new: {category_id}                                              |
+| transaction.amount_changed   | transaction   | prev/new: {amount}                                                   |
+| transaction.payee_changed    | transaction   | prev/new: {payee_normalized}                                         |
+| transaction.transfer_flagged | transaction   | new_value: {is_transfer, transfer_pair_id}                           |
+| transaction.property_tagged  | transaction   | prev/new: {real_estate_property_id}                                  |
+| transaction.deleted          | transaction   | prev: {amount, payee_normalized, transaction_date}                   |
+| snapshot.created             | snapshot      | new_value: {balance, snapshot_date, source}                          |
+| snapshot.updated             | snapshot      | prev/new: {balance}                                                  |
+| snapshot.deleted             | snapshot      | prev: {balance, snapshot_date}                                       |
+| budget.created               | budget        | new_value: {category_id, period, amount}                             |
+| budget.updated               | budget        | changed fields only                                                  |
+| budget.deleted               | budget        | prev: {category_id, period, amount}                                  |
+| category.created             | category      | new_value: {name, is_income}                                         |
+| category.updated             | category      | changed fields only                                                  |
+| category.deleted             | category      | prev: {name}                                                         |
+| fire_scenario.created        | fire_scenario | new_value: {name}                                                    |
+| fire_scenario.updated        | fire_scenario | changed fields only                                                  |
+| fire_scenario.detection_run  | fire_scenario | new_value: {detected_annual_income, detected_at}                     |
+| import.completed             | import_job    | new_value: {records_imported, filename}                              |
+| import.failed                | import_job    |                                                                      |
+| export.generated             | export_job    | new_value: {export_type, anonymized}                                 |
+| backup.completed             | backup_job    | new_value: {filename, file_size_bytes}                               |
+| backup.failed                | backup_job    |                                                                      |
 
 ---
 

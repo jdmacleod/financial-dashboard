@@ -1,6 +1,6 @@
 import hashlib
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -25,7 +25,7 @@ def _hash_refresh_token(token: str) -> str:
 
 
 class AuthService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.audit_repo = AuditRepository(session)
 
@@ -37,9 +37,7 @@ class AuthService:
         )
         return result.scalar_one_or_none()
 
-    async def login(
-        self, email: str, password: str, ip_address: str | None
-    ) -> tuple[str, str]:
+    async def login(self, email: str, password: str, ip_address: str | None) -> tuple[str, str]:
         result = await self.session.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
 
@@ -60,19 +58,22 @@ class AuthService:
             )
 
         # Check lockout
-        if user.locked_until and user.locked_until > datetime.now(timezone.utc):
-            seconds_remaining = (user.locked_until - datetime.now(timezone.utc)).total_seconds()
+        if user.locked_until and user.locked_until > datetime.now(UTC):
+            seconds_remaining = (user.locked_until - datetime.now(UTC)).total_seconds()
             minutes_remaining = int(seconds_remaining // 60) + 1
             raise HTTPException(
                 status_code=status.HTTP_423_LOCKED,
-                detail={"message": "Account locked", "locked_until": user.locked_until.isoformat(), "minutes_remaining": minutes_remaining},
+                detail={
+                    "message": "Account locked",
+                    "locked_until": user.locked_until.isoformat(),
+                    "minutes_remaining": minutes_remaining,
+                },
             )
 
         if not verify_password(password, user.hashed_password):
             user.failed_login_attempts += 1
             if user.failed_login_attempts >= settings.max_login_attempts:
-                from datetime import timedelta
-                user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=settings.lockout_minutes)
+                user.locked_until = datetime.now(UTC) + timedelta(minutes=settings.lockout_minutes)
                 await self.session.flush()
                 if household_id:
                     await self.audit_repo.write_auth_event(
@@ -100,7 +101,7 @@ class AuthService:
         # Successful login
         user.failed_login_attempts = 0
         user.locked_until = None
-        user.last_login = datetime.now(timezone.utc)
+        user.last_login = datetime.now(UTC)
 
         member_result = await self.session.execute(
             select(HouseholdMember).where(HouseholdMember.id == user.member_id)
@@ -108,7 +109,9 @@ class AuthService:
         member = member_result.scalar_one_or_none()
         role = member.role if member else "partner"
 
-        access_token = create_access_token(str(user.id), str(user.member_id) if user.member_id else None, role)
+        access_token = create_access_token(
+            str(user.id), str(user.member_id) if user.member_id else None, role
+        )
         refresh_token = create_refresh_token(str(user.id))
         user.refresh_token_hash = _hash_refresh_token(refresh_token)
 
@@ -126,8 +129,8 @@ class AuthService:
     async def refresh(self, refresh_token: str) -> tuple[str, str]:
         try:
             payload = decode_token(refresh_token, "refresh")
-        except Exception:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        except Exception as exc:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED) from exc
 
         user_id = uuid.UUID(payload["sub"])
         result = await self.session.execute(select(User).where(User.id == user_id))
@@ -136,7 +139,9 @@ class AuthService:
         if not user or not user.is_active:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
-        if not user.refresh_token_hash or user.refresh_token_hash != _hash_refresh_token(refresh_token):
+        if not user.refresh_token_hash or user.refresh_token_hash != _hash_refresh_token(
+            refresh_token
+        ):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
         member_result = await self.session.execute(
@@ -145,14 +150,18 @@ class AuthService:
         member = member_result.scalar_one_or_none()
         role = member.role if member else "partner"
 
-        new_access = create_access_token(str(user.id), str(user.member_id) if user.member_id else None, role)
+        new_access = create_access_token(
+            str(user.id), str(user.member_id) if user.member_id else None, role
+        )
         new_refresh = create_refresh_token(str(user.id))
         user.refresh_token_hash = _hash_refresh_token(new_refresh)
 
         await self.session.commit()
         return new_access, new_refresh
 
-    async def logout(self, user_id: uuid.UUID, household_id: uuid.UUID, ip_address: str | None) -> None:
+    async def logout(
+        self, user_id: uuid.UUID, household_id: uuid.UUID, ip_address: str | None
+    ) -> None:
         result = await self.session.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if user:
@@ -166,7 +175,9 @@ class AuthService:
             )
             await self.session.commit()
 
-    async def reauth(self, user_id: uuid.UUID, password: str, household_id: uuid.UUID, ip_address: str | None) -> str:
+    async def reauth(
+        self, user_id: uuid.UUID, password: str, household_id: uuid.UUID, ip_address: str | None
+    ) -> str:
         result = await self.session.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if not user or not verify_password(password, user.hashed_password):
@@ -183,15 +194,22 @@ class AuthService:
         return token
 
     async def change_password(
-        self, user_id: uuid.UUID, current_password: str, new_password: str, household_id: uuid.UUID, ip_address: str | None
+        self,
+        user_id: uuid.UUID,
+        current_password: str,
+        new_password: str,
+        household_id: uuid.UUID,
+        ip_address: str | None,
     ) -> None:
         result = await self.session.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if not user or not verify_password(current_password, user.hashed_password):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid current password")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid current password"
+            )
 
         user.hashed_password = hash_password(new_password)
-        user.last_password_change = datetime.now(timezone.utc)
+        user.last_password_change = datetime.now(UTC)
         user.refresh_token_hash = None  # invalidate existing sessions
         await self.session.flush()
         await self.audit_repo.write_auth_event(

@@ -34,6 +34,7 @@ cd hearthledger
 ```
 
 Create `.gitignore`:
+
 ```
 .env
 data/
@@ -53,6 +54,7 @@ dist/
 `docker-compose.yml` — see `docs/architecture.md` for the full structure.
 
 `docker-compose.override.yml.example`:
+
 ```yaml
 # Copy to docker-compose.override.yml for local development.
 # Enables hot-reload for backend and frontend.
@@ -72,6 +74,7 @@ services:
 ### 3. Environment variables
 
 `.env.example`:
+
 ```bash
 # Database
 DATABASE_URL=postgresql+asyncpg://hearthledger:changeme@db:5432/hearthledger
@@ -109,6 +112,7 @@ ALLOWED_ORIGINS=http://localhost,http://localhost:80
 ### 4. Backend skeleton
 
 `backend/pyproject.toml`:
+
 ```toml
 [project]
 name = "hearthledger-backend"
@@ -142,6 +146,7 @@ dev-dependencies = [
 ```
 
 `backend/Dockerfile`:
+
 ```dockerfile
 FROM python:3.12-slim
 
@@ -157,6 +162,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
 `backend/app/main.py`:
+
 ```python
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -181,6 +187,7 @@ async def health():
 ```
 
 `backend/app/core/config.py`:
+
 ```python
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -209,6 +216,7 @@ settings = Settings()
 ### 5. Database initialization
 
 `backend/db_init.sql` — runs once on first Postgres container start:
+
 ```sql
 -- Create restricted application role
 CREATE ROLE hearthledger_app LOGIN PASSWORD 'changeme';
@@ -221,6 +229,7 @@ GRANT USAGE ON SCHEMA public TO hearthledger_app;
 ### 6. SQLAlchemy + Alembic
 
 `backend/app/db/base.py`:
+
 ```python
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
@@ -268,6 +277,7 @@ Create all tables per `docs/data-model.md` in dependency order:
 17. `audit_log`
 
 After creating `audit_log`, execute:
+
 ```sql
 REVOKE ALL ON audit_log FROM hearthledger_app;
 GRANT SELECT, INSERT ON audit_log TO hearthledger_app;
@@ -297,6 +307,7 @@ npx shadcn@latest init
 ```
 
 `frontend/Dockerfile`:
+
 ```dockerfile
 FROM node:20-alpine AS build
 WORKDIR /app
@@ -313,6 +324,7 @@ COPY nginx.conf /etc/nginx/nginx.conf
 ### 8. nginx config
 
 `nginx/nginx.conf`:
+
 ```nginx
 events {}
 http {
@@ -340,6 +352,7 @@ http {
 ### 9. ARQ worker skeleton
 
 `backend/app/worker/main.py`:
+
 ```python
 import asyncio
 from arq import create_pool

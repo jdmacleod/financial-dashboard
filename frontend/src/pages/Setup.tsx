@@ -62,10 +62,10 @@ export default function Setup() {
         <div className="flex gap-2 mb-8">
           {steps.map((label, i) => (
             <div key={label} className="flex-1">
-              <div
-                className={`h-1 rounded-full ${i <= step ? "bg-indigo-600" : "bg-gray-200"}`}
-              />
-              <p className={`mt-1 text-xs ${i === step ? "text-indigo-600 font-medium" : "text-gray-400"}`}>
+              <div className={`h-1 rounded-full ${i <= step ? "bg-indigo-600" : "bg-gray-200"}`} />
+              <p
+                className={`mt-1 text-xs ${i === step ? "text-indigo-600 font-medium" : "text-gray-400"}`}
+              >
                 {label}
               </p>
             </div>
@@ -75,9 +75,7 @@ export default function Setup() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {step === 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Household name
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Household name</label>
               <input
                 {...register("household_name")}
                 placeholder="e.g. The Smith Family"
@@ -91,9 +89,7 @@ export default function Setup() {
 
           {step === 1 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Your name
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Your name</label>
               <input
                 {...register("member_name")}
                 placeholder="e.g. Alex Smith"

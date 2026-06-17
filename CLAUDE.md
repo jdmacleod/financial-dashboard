@@ -11,6 +11,7 @@ relevant phase doc before starting any implementation work.
 ## Tech stack (exact versions)
 
 ### Backend
+
 - Python 3.12
 - uv (dependency management — not pip directly)
 - FastAPI 0.115+
@@ -27,6 +28,7 @@ relevant phase doc before starting any implementation work.
 - APScheduler (cron scheduling inside ARQ worker)
 
 ### Frontend
+
 - Node 20 LTS
 - React 18 + TypeScript (strict mode)
 - Vite 5
@@ -39,6 +41,7 @@ relevant phase doc before starting any implementation work.
 - date-fns
 
 ### Infrastructure
+
 - PostgreSQL 16 (Docker)
 - Redis 7 (Docker)
 - nginx (Alpine, Docker — serves built frontend + proxies API)
@@ -271,6 +274,7 @@ ALLOWED_ORIGINS=http://localhost,http://localhost:80
 ## Testing requirements
 
 ### Backend (pytest + pytest-asyncio)
+
 - Unit tests for all service methods
 - Unit tests for `VisibilityContext` permission logic (all role/account-type combinations)
 - Unit tests for `@audit` decorator (verify log rows written, verify encrypted fields excluded)
@@ -279,6 +283,7 @@ ALLOWED_ORIGINS=http://localhost,http://localhost:80
 - Import tests: CSV and OFX/QFX round-trip with sample fixture files
 
 ### Frontend (Vitest + React Testing Library)
+
 - Component tests for all form components
 - Hook tests for `useAuth`, `useVisibility`
 - API client tests (mock fetch)

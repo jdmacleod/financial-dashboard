@@ -143,6 +143,7 @@ async def refresh_valuations(ctx) -> None:
 ### Provider configuration in Settings
 
 Settings > Properties panel:
+
 - "Valuation provider" selector: Manual (default), ATTOM Data, Estated
 - When non-manual selected: API key input field
 - "Test connection" button → calls provider with a dummy address → shows success/error
@@ -158,6 +159,7 @@ Note: `.env` update endpoint writes only `RE_VALUATION_PROVIDER` and
 ### Property detail: manual valuation entry
 
 On property detail page > Valuation tab:
+
 - Current value card with source badge ("Manual · Jan 10" or "ATTOM · Jan 14")
   and confidence score if available ("Confidence: 87%")
 - "Update manually" button → modal with date picker and value input →
@@ -173,6 +175,7 @@ Users can reorder and hide dashboard widgets. Preference stored in
 `household_members.settings` JSONB (per-member, not household-wide).
 
 Widgets:
+
 - Net worth summary card
 - Cash flow MTD card
 - Spending by category donut
@@ -181,6 +184,7 @@ Widgets:
 - Recent transactions list
 
 `PATCH /api/v1/members/{id}/dashboard-layout`
+
 ```json
 {
   "widgets": [
@@ -217,6 +221,7 @@ Settings > Appearance: Light / Dark / System toggle.
 ## Import history
 
 `/settings/imports` — table of all import jobs:
+
 - Date, account nickname, filename, format badge (CSV/OFX/QFX),
   status badge, records imported / skipped, triggered by.
 - Filterable by account and date range.

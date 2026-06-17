@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -11,7 +11,7 @@ from app.schemas.user import UserCreate, UserUpdate
 
 
 class UserService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def get_by_id(self, user_id: uuid.UUID) -> User:
@@ -28,7 +28,7 @@ class UserService:
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Email already in use",
             )
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         user = User(
             member_id=data.member_id,
             email=data.email,
@@ -43,7 +43,9 @@ class UserService:
         await self.session.refresh(user)
         return user
 
-    async def update(self, user_id: uuid.UUID, data: UserUpdate, requesting_user_id: uuid.UUID, is_primary: bool) -> User:
+    async def update(
+        self, user_id: uuid.UUID, data: UserUpdate, requesting_user_id: uuid.UUID, is_primary: bool
+    ) -> User:
         if user_id != requesting_user_id and not is_primary:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         user = await self.get_by_id(user_id)

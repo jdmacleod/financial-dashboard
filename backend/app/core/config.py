@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,10 +25,10 @@ class Settings(BaseSettings):
 
     @field_validator("allowed_origins", mode="before")
     @classmethod
-    def _split_origins(cls, v):
+    def _split_origins(cls, v: Any) -> Any:
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
 
 
-settings = Settings()
+settings = Settings()  # type: ignore[call-arg]  # fields populated from .env at runtime

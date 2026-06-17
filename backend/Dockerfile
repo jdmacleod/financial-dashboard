@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcairo2 shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install uv
+RUN pip install --no-cache-dir uv==0.11.21
 COPY pyproject.toml .
 RUN uv pip install --system -e .
 

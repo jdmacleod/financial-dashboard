@@ -21,9 +21,9 @@ router = APIRouter()
 async def list_accounts(
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> list[AccountResponse]:
     svc = AccountService(session)
-    return await svc.list(ctx)
+    return await svc.list_accounts(ctx)
 
 
 @router.post("/accounts", response_model=AccountResponse, status_code=201)
@@ -31,7 +31,7 @@ async def create_account(
     data: AccountCreate,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> AccountResponse:
     svc = AccountService(session)
     account = await svc.create(ctx, data)
     await session.commit()
@@ -44,7 +44,7 @@ async def get_account(
     account_id: uuid.UUID,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> AccountResponse:
     svc = AccountService(session)
     return await svc.get(ctx, account_id)
 
@@ -55,7 +55,7 @@ async def update_account(
     data: AccountUpdate,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> AccountResponse:
     svc = AccountService(session)
     account = await svc.update(ctx, account_id, data)
     await session.commit()
@@ -68,7 +68,7 @@ async def deactivate_account(
     account_id: uuid.UUID,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> None:
     svc = AccountService(session)
     await svc.deactivate(ctx, account_id)
     await session.commit()
@@ -79,9 +79,9 @@ async def list_grants(
     account_id: uuid.UUID,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> list[AccessGrantResponse]:
     svc = AccountService(session)
-    return await svc.list_grants(ctx, account_id)
+    return await svc.list_grants(ctx, account_id)  # type: ignore[return-value]
 
 
 @router.post("/accounts/{account_id}/grants", response_model=AccessGrantResponse, status_code=201)
@@ -90,12 +90,12 @@ async def create_grant(
     data: AccessGrantCreate,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> AccessGrantResponse:
     svc = AccountService(session)
     grant = await svc.create_grant(ctx, account_id, data)
     await session.commit()
     await session.refresh(grant)
-    return grant
+    return grant  # type: ignore[return-value]
 
 
 @router.delete("/accounts/{account_id}/grants/{grant_id}", status_code=204)
@@ -104,7 +104,7 @@ async def revoke_grant(
     grant_id: uuid.UUID,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> None:
     svc = AccountService(session)
     await svc.revoke_grant(ctx, account_id, grant_id)
     await session.commit()

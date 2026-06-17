@@ -8,12 +8,25 @@ import { membersApi } from "@/api/members"
 import type { AccountResponse, AccountType } from "@/api/types"
 
 const ASSET_TYPES: AccountType[] = [
-  "checking", "savings", "investment_brokerage",
-  "retirement_401k", "retirement_403b", "retirement_ira", "retirement_roth_ira",
-  "pension", "hsa", "real_estate", "other_asset",
+  "checking",
+  "savings",
+  "investment_brokerage",
+  "retirement_401k",
+  "retirement_403b",
+  "retirement_ira",
+  "retirement_roth_ira",
+  "pension",
+  "hsa",
+  "real_estate",
+  "other_asset",
 ]
 const LIABILITY_TYPES: AccountType[] = [
-  "credit_card", "mortgage", "auto_loan", "personal_loan", "student_loan", "other_liability",
+  "credit_card",
+  "mortgage",
+  "auto_loan",
+  "personal_loan",
+  "student_loan",
+  "other_liability",
 ]
 
 const ACCOUNT_LABELS: Record<AccountType, string> = {
@@ -56,7 +69,13 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
   const [modalStep, setModalStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
-  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<CreateForm>({
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
   })
 
@@ -83,7 +102,9 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
       <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Add account</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            ✕
+          </button>
         </div>
 
         <form onSubmit={handleSubmit((d) => create.mutate(d))} className="space-y-4">
@@ -92,13 +113,18 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
               <p className="text-sm font-medium text-gray-700 mb-2">Account type</p>
               <div className="space-y-3">
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Assets</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                    Assets
+                  </p>
                   <div className="grid grid-cols-3 gap-2">
                     {ASSET_TYPES.map((t) => (
                       <button
                         key={t}
                         type="button"
-                        onClick={() => { setValue("account_type", t); setModalStep(1) }}
+                        onClick={() => {
+                          setValue("account_type", t)
+                          setModalStep(1)
+                        }}
                         className={`text-xs rounded-lg border px-2 py-2 text-left hover:bg-indigo-50 hover:border-indigo-300 transition-colors ${selectedType === t ? "border-indigo-500 bg-indigo-50" : "border-gray-200"}`}
                       >
                         {ACCOUNT_LABELS[t]}
@@ -107,13 +133,18 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
                   </div>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Liabilities</p>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
+                    Liabilities
+                  </p>
                   <div className="grid grid-cols-3 gap-2">
                     {LIABILITY_TYPES.map((t) => (
                       <button
                         key={t}
                         type="button"
-                        onClick={() => { setValue("account_type", t); setModalStep(1) }}
+                        onClick={() => {
+                          setValue("account_type", t)
+                          setModalStep(1)
+                        }}
                         className={`text-xs rounded-lg border px-2 py-2 text-left hover:bg-indigo-50 hover:border-indigo-300 transition-colors ${selectedType === t ? "border-indigo-500 bg-indigo-50" : "border-gray-200"}`}
                       >
                         {ACCOUNT_LABELS[t]}
@@ -134,10 +165,14 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
                   placeholder="e.g. BofA Checking"
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
-                {errors.nickname && <p className="mt-1 text-xs text-red-600">{errors.nickname.message}</p>}
+                {errors.nickname && (
+                  <p className="mt-1 text-xs text-red-600">{errors.nickname.message}</p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Institution name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Institution name
+                </label>
                 <input
                   {...register("institution_name")}
                   placeholder="e.g. Bank of America"
@@ -145,7 +180,9 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Account number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Account number
+                </label>
                 <input
                   {...register("account_number")}
                   placeholder="Optional"
@@ -164,7 +201,9 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
               >
                 <option value="">Joint account</option>
                 {members?.map((m) => (
-                  <option key={m.id} value={m.id}>{m.display_name}</option>
+                  <option key={m.id} value={m.id}>
+                    {m.display_name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -227,9 +266,7 @@ function AccountGroup({ title, accounts }: { title: string; accounts: AccountRes
             </div>
             <div className="text-right">
               <p className="font-medium text-gray-900">{formatBalance(a.current_balance)}</p>
-              {a.balance_as_of && (
-                <p className="text-xs text-gray-400">{a.balance_as_of}</p>
-              )}
+              {a.balance_as_of && <p className="text-xs text-gray-400">{a.balance_as_of}</p>}
             </div>
           </div>
         ))}
@@ -239,7 +276,11 @@ function AccountGroup({ title, accounts }: { title: string; accounts: AccountRes
 }
 
 export default function Accounts() {
-  const { data: accounts, isLoading, error } = useQuery({
+  const {
+    data: accounts,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["accounts"],
     queryFn: accountsApi.list,
   })

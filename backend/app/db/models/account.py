@@ -1,20 +1,30 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, LargeBinary, Numeric, String
+from sqlalchemy import Boolean, DateTime, Enum, LargeBinary, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
 ACCOUNT_TYPES = (
-    "checking", "savings", "credit_card",
-    "investment_brokerage", "retirement_401k", "retirement_403b",
-    "retirement_ira", "retirement_roth_ira",
-    "pension", "hsa",
-    "real_estate", "mortgage",
-    "auto_loan", "personal_loan", "student_loan",
-    "other_asset", "other_liability",
+    "checking",
+    "savings",
+    "credit_card",
+    "investment_brokerage",
+    "retirement_401k",
+    "retirement_403b",
+    "retirement_ira",
+    "retirement_roth_ira",
+    "pension",
+    "hsa",
+    "real_estate",
+    "mortgage",
+    "auto_loan",
+    "personal_loan",
+    "student_loan",
+    "other_asset",
+    "other_liability",
 )
 
 

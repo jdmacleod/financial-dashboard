@@ -44,12 +44,14 @@ but do not produce an error.
 After import, run transfer detection on all transactions in the import batch:
 
 A pair of transactions is treated as a transfer when:
+
 - They are in different accounts within the same household
 - One is a debit (negative amount), one is a credit (positive amount)
 - `abs(amount_a) == abs(amount_b)`
 - `transaction_date` differs by at most 3 days
 
 When a pair is detected:
+
 - Set `is_transfer = TRUE` on both
 - Set `transfer_pair_id` to the same new UUID on both
 - Assign to a "Transfer" system category (seeded in Phase 0)
@@ -67,6 +69,7 @@ CSV import is a two-step process:
 **Step 1 — Upload and preview.** The frontend sends the CSV file to
 `POST /api/v1/accounts/{id}/import/preview`. The backend parses the first
 10 rows and returns:
+
 ```json
 {
   "headers": ["Date", "Amount", "Description", "Balance"],
@@ -89,16 +92,19 @@ is called with the mapping and file, which enqueues an ARQ import job and
 returns the `import_job_id`.
 
 ### Required fields (must be mapped)
+
 - `transaction_date` — parsed with `dateutil.parser.parse`
 - `amount` — parsed as Decimal; handles parentheses for negatives, removes `$`
 
 ### Optional fields
+
 - `payee_raw`
 - `memo`
 - `post_date`
 - `external_id`
 
 ### Debit/credit split columns
+
 Some bank exports have separate Debit and Credit columns instead of a signed
 Amount. If the user maps both `debit_amount` and `credit_amount`, the importer
 combines them: `amount = credit - debit` (both are positive in the CSV).
@@ -109,14 +115,14 @@ combines them: `amount = credit - debit` (both are positive in the CSV).
 
 Uses `ofxparse`. Field mapping is automatic:
 
-| OFX field | transactions column |
-|---|---|
-| `DTPOSTED` | `post_date` |
-| `DTUSER` | `transaction_date` |
-| `TRNAMT` | `amount` |
-| `NAME` | `payee_raw` |
-| `MEMO` | `memo` |
-| `FITID` | `external_id` |
+| OFX field  | transactions column |
+| ---------- | ------------------- |
+| `DTPOSTED` | `post_date`         |
+| `DTUSER`   | `transaction_date`  |
+| `TRNAMT`   | `amount`            |
+| `NAME`     | `payee_raw`         |
+| `MEMO`     | `memo`              |
+| `FITID`    | `external_id`       |
 
 No column mapping UI required for OFX/QFX. Go straight to confirmation
 ("Import N transactions from [filename]?") then enqueue.
@@ -196,6 +202,7 @@ GET    /api/v1/import-jobs                    list recent jobs for household
 ### `/accounts/{id}/transactions`
 
 Transaction list with:
+
 - Date, payee, amount (color-coded: green credit / red debit), category badge
 - Property tag badge (if set)
 - "Unreviewed" filter chip (shows only `is_reviewed = false`)

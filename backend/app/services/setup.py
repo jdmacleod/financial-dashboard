@@ -1,7 +1,7 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, text
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.security import create_access_token, hash_password
@@ -14,7 +14,7 @@ SYSTEM_HOUSEHOLD_ID = "00000000-0000-0000-0000-000000000000"
 
 
 class SetupService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
     async def is_setup_done(self) -> bool:
@@ -36,7 +36,7 @@ class SetupService:
                 detail="Setup already completed",
             )
 
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         household = Household(name=household_name, settings={}, created_at=now)
         self.session.add(household)

@@ -20,12 +20,12 @@ re-authentication before download.
 
 ## Export types and anonymization
 
-| export_type | Account numbers | Institution names | Member names | Values |
-|---|---|---|---|---|
-| `pdf_summary` | Last 4 digits only | Shown | Shown | Shown |
-| `pdf_executor` | Full (decrypted) | Full (decrypted) | Full | Shown |
-| `excel_summary` | Last 4 digits only | Shown | Shown | Shown |
-| `excel_executor` | Full (decrypted) | Full (decrypted) | Full | Shown |
+| export_type      | Account numbers    | Institution names | Member names | Values |
+| ---------------- | ------------------ | ----------------- | ------------ | ------ |
+| `pdf_summary`    | Last 4 digits only | Shown             | Shown        | Shown  |
+| `pdf_executor`   | Full (decrypted)   | Full (decrypted)  | Full         | Shown  |
+| `excel_summary`  | Last 4 digits only | Shown             | Shown        | Shown  |
+| `excel_executor` | Full (decrypted)   | Full (decrypted)  | Full         | Shown  |
 
 Anonymization is a parameter, not a format distinction. The same generator
 handles both modes; the `anonymized` flag controls whether encrypted fields
@@ -175,6 +175,7 @@ async def generate_export(ctx, export_job_id: str) -> None:
 Triggered by "Export" button in the top nav. Two-step:
 
 **Step 1 — Configure:**
+
 - Export format selector (four cards: PDF Summary, PDF Full/Executor,
   Excel Summary, Excel Full/Executor). Executor options are grayed out
   and labeled "Primary members only" for partner users.
@@ -182,6 +183,7 @@ Triggered by "Export" button in the top nav. Two-step:
 - Account selector (all or specific accounts)
 
 **Step 2 (executor only) — Re-authenticate:**
+
 - Password confirmation prompt: "Executor reports contain full account
   numbers and sensitive financial details. Please confirm your password
   to continue."
@@ -189,6 +191,7 @@ Triggered by "Export" button in the top nav. Two-step:
 - On failure: shows error, returns to password prompt (max 3 attempts).
 
 **Step 3 — Generating:**
+
 - "Generating your report..." with spinner.
 - Polls `GET /api/v1/exports/{id}` every 2 seconds.
 - On complete: "Your report is ready" with Download button.

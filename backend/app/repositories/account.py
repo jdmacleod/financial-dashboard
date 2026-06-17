@@ -1,4 +1,5 @@
 import uuid
+from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -11,10 +12,10 @@ from app.db.models.account import Account
 
 
 class AccountRepository:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def get_visible(self, ctx: VisibilityContext, **filters) -> list[Account]:
+    async def get_visible(self, ctx: VisibilityContext, **filters: Any) -> list[Account]:
         """
         THE canonical account query method.
         All code paths that need accounts must call this.

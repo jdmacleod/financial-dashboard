@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.post("/setup", response_model=TokenResponse, status_code=201)
-async def setup(data: SetupRequest, session: AsyncSession = Depends(get_session)):
+async def setup(data: SetupRequest, session: AsyncSession = Depends(get_session)) -> TokenResponse:
     svc = SetupService(session)
     access_token, _ = await svc.run(
         household_name=data.household_name,
@@ -22,7 +22,7 @@ async def setup(data: SetupRequest, session: AsyncSession = Depends(get_session)
 
 
 @router.get("/setup/status")
-async def setup_status(session: AsyncSession = Depends(get_session)):
+async def setup_status(session: AsyncSession = Depends(get_session)) -> dict[str, bool]:
     svc = SetupService(session)
     done = await svc.is_setup_done()
     return {"setup_complete": done}

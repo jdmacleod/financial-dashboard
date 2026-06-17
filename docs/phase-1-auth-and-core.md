@@ -293,6 +293,7 @@ class AccountRepository:
 ```
 POST /api/v1/setup
 ```
+
 Creates the single household, seeds categories, creates the first primary
 member and user. Returns 409 if setup has already been completed.
 Disables itself after first successful call (check households table count).
@@ -322,6 +323,7 @@ POST /api/v1/auth/change-password
 ```
 
 Auth service enforces:
+
 - Increment `failed_login_attempts` on bad password
 - Set `locked_until = now() + LOCKOUT_MINUTES` when attempts >= MAX_LOGIN_ATTEMPTS
 - Reject login if `locked_until` is in the future
@@ -376,6 +378,7 @@ and decrypted before returning in response bodies. The API never exposes the
 raw `BYTEA` values.
 
 Response schema for accounts:
+
 ```json
 {
   "id": "uuid",
@@ -386,7 +389,7 @@ Response schema for accounts:
   "account_number_last4": "4321",
   "include_in_net_worth": true,
   "is_active": true,
-  "current_balance": 12450.00,
+  "current_balance": 12450.0,
   "balance_as_of": "2025-01-14"
 }
 ```
@@ -409,25 +412,31 @@ DELETE /api/v1/accounts/{id}/grants/{gid}  requires: primary
 ## Frontend — Phase 1 pages
 
 ### `/login`
+
 Standard login form. Email + password. Shows error on failed attempt.
 Shows "Account locked, try again in N minutes" on lockout.
 No registration link — accounts are created by a primary member.
 
 ### `/setup`
+
 First-run wizard. Shown only when `GET /api/v1/household` returns 404.
 Three steps:
+
 1. Household name
 2. First primary member name
 3. Email + password for first user
 
 ### `/members`
+
 Member list. Primary sees all members with role badges. Shows "Add member"
 button (primary only). Clicking a member opens a slide-over with edit form.
 
 ### `/accounts`
+
 Account list grouped by type (Assets / Liabilities). Shows nickname,
 institution name, account_number_last4, current balance, owner badge
 (joint vs member name). "Add account" button opens a multi-step modal:
+
 1. Account type selector
 2. Nickname + institution + account number fields
 3. Owner selector (joint or specific member) — primary only sees all members;
@@ -452,7 +461,7 @@ institution name, account_number_last4, current balance, owner badge
 8. The `audit_log` row for account creation contains `nickname` and
    `account_type` but NOT `institution_name_enc` or `account_number_enc`.
 9. `docker compose exec db psql -U hearthledger -c
-   "DELETE FROM audit_log WHERE id = (SELECT id FROM audit_log LIMIT 1)"`
+"DELETE FROM audit_log WHERE id = (SELECT id FROM audit_log LIMIT 1)"`
    returns `ERROR: permission denied`.
 10. The last primary member cannot be deactivated (service returns 409).
 11. Login page renders and submits correctly. Successful login redirects

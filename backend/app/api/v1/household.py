@@ -14,7 +14,7 @@ router = APIRouter()
 async def get_household(
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> Household:
     result = await session.execute(select(Household).where(Household.id == ctx.household_id))
     household = result.scalar_one_or_none()
     if not household:
@@ -27,7 +27,7 @@ async def update_household(
     data: HouseholdUpdate,
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
-):
+) -> Household:
     if not ctx.is_primary:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     result = await session.execute(select(Household).where(Household.id == ctx.household_id))

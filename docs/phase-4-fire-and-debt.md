@@ -327,6 +327,7 @@ headline metric ("FIRE in 14 years") and target spend.
 Two-panel layout:
 
 **Left — Scenario editor:**
+
 - Target annual spend (with tooltip: "Enter your estimated annual retirement
   spending in today's dollars")
 - Safe withdrawal rate (default 4%, with "What is this?" tooltip)
@@ -342,6 +343,7 @@ Two-panel layout:
 - Detection warnings surfaced as yellow alert banners
 
 **Right — Projection chart:**
+
 - Line chart: portfolio value over time + FIRE number horizontal line
 - X-axis: years (or age if DOB known)
 - Annotation at FIRE crossing year: "FIRE at age 52 (2039)"
@@ -352,6 +354,7 @@ Two-panel layout:
 Debt list with current balance, interest rate, minimum payment, payoff date.
 "Extra monthly payment" input field updates both projections in real time.
 Side-by-side comparison: Avalanche vs Snowball.
+
 - Total interest saved
 - Months to payoff
 - Payoff order

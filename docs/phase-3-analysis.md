@@ -229,6 +229,7 @@ DELETE /api/v1/budgets/{id}
 ### Settings > Activity log
 
 `GET /api/v1/audit-log`
+
 ```
 query: entity_type?, user_id?, from?, to?, page, page_size (default 50)
 requires: primary role
@@ -239,15 +240,19 @@ generated client-side from `action` + `previous_value` + `new_value`:
 
 ```typescript
 function describeAuditEvent(event: AuditLogEntry): string {
-  const actor = event.user_display_name ?? "System";
+  const actor = event.user_display_name ?? "System"
   switch (event.action) {
     case "transaction.category_changed":
-      return `${actor} changed category on "${event.context?.payee}" `
-           + `from ${event.previous_value?.category_name} `
-           + `to ${event.new_value?.category_name}`;
+      return (
+        `${actor} changed category on "${event.context?.payee}" ` +
+        `from ${event.previous_value?.category_name} ` +
+        `to ${event.new_value?.category_name}`
+      )
     case "member.role_changed":
-      return `${actor} changed ${event.context?.member_name}'s role `
-           + `from ${event.previous_value?.role} to ${event.new_value?.role}`;
+      return (
+        `${actor} changed ${event.context?.member_name}'s role ` +
+        `from ${event.previous_value?.role} to ${event.new_value?.role}`
+      )
     // ... etc
   }
 }
@@ -305,6 +310,7 @@ Budget list grouped by category. Inline progress bars (actual vs budget).
 ### `/properties/{id}`
 
 Property detail page with two tabs:
+
 - Valuation history (line chart of `property_valuations` over time)
   with "Update manually" button and source badge on latest value.
 - P&L (date range selector, gross/net cards, expense breakdown bar chart,
