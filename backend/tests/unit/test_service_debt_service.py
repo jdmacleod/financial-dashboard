@@ -184,30 +184,38 @@ async def test_get_payoff_comparison_avalanche_vs_snowball(
     primary_member: HouseholdMember,
     primary_user: User,
 ) -> None:
-    """With two debts at different rates, avalanche pays less interest than snowball."""
+    """Avalanche pays less interest than snowball when rates differ and balances diverge.
+
+    Avalanche targets the HIGH-rate debt first (credit card).
+    Snowball targets the LOW-balance debt first (personal loan).
+    These must be DIFFERENT debts to produce different interest totals.
+    """
     ctx = _ctx(household, primary_member, "primary", primary_user)
-    high_rate = await _make_account(
-        db_session, ctx, account_type="credit_card", nickname="High Rate Card"
+    # High-rate, large balance — avalanche targets this first
+    credit_card = await _make_account(
+        db_session, ctx, account_type="credit_card", nickname="Credit Card"
     )
-    low_rate = await _make_account(
-        db_session, ctx, account_type="personal_loan", nickname="Low Rate Loan"
-    )
-    await _make_debt(
-        db_session,
-        high_rate.id,
-        current_balance="3000",
-        interest_rate="0.20",
-        minimum_payment="100",
+    # Low-rate, small balance — snowball targets this first
+    small_loan = await _make_account(
+        db_session, ctx, account_type="personal_loan", nickname="Small Loan"
     )
     await _make_debt(
         db_session,
-        low_rate.id,
-        current_balance="5000",
-        interest_rate="0.05",
-        minimum_payment="100",
+        credit_card.id,
+        current_balance="8000",  # large balance, high rate
+        interest_rate="0.22",
+        minimum_payment="200",
+    )
+    await _make_debt(
+        db_session,
+        small_loan.id,
+        current_balance="500",  # small balance, low rate
+        interest_rate="0.04",
+        minimum_payment="50",
     )
 
     svc = DebtService(db_session)
-    result = await svc.get_payoff_comparison(ctx, extra_monthly_payment=Decimal(200))
+    result = await svc.get_payoff_comparison(ctx, extra_monthly_payment=Decimal(300))
 
+    # Avalanche targets $8000/22% card first → pays less total interest
     assert result.avalanche.total_interest_paid < result.snowball.total_interest_paid

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -150,10 +150,15 @@ async def test_detect_with_income_transactions(
     account = await _make_account(db_session, ctx)
     cat = await _make_category(db_session, household, name="Salary", is_income=True)
 
-    # 3 monthly income transactions
-    for month in range(1, 4):
+    # 3 recent monthly income transactions (within trailing_months=12)
+    today = date.today()
+    for offset in [30, 60, 90]:
         await _make_transaction(
-            db_session, account.id, "5000", date(2025, month, 15), category_id=cat.id
+            db_session,
+            account.id,
+            "5000",
+            today - timedelta(days=offset),
+            category_id=cat.id,
         )
 
     detector = FireInputDetector(db_session)
@@ -176,9 +181,14 @@ async def test_detect_expense_transactions(
     account = await _make_account(db_session, ctx)
     expense_cat = await _make_category(db_session, household, name="Groceries", is_income=False)
 
-    for month in range(1, 4):
+    today = date.today()
+    for offset in [30, 60, 90]:
         await _make_transaction(
-            db_session, account.id, "-500", date(2025, month, 10), category_id=expense_cat.id
+            db_session,
+            account.id,
+            "-500",
+            today - timedelta(days=offset),
+            category_id=expense_cat.id,
         )
 
     detector = FireInputDetector(db_session)
@@ -226,9 +236,14 @@ async def test_detect_sparse_data_warning(
     account = await _make_account(db_session, ctx)
     cat = await _make_category(db_session, household, name="Wages", is_income=True)
 
-    # Only 2 months of data
-    await _make_transaction(db_session, account.id, "4000", date(2025, 1, 1), category_id=cat.id)
-    await _make_transaction(db_session, account.id, "4000", date(2025, 2, 1), category_id=cat.id)
+    # Only 2 months of data (recent, within 12-month trailing window)
+    today = date.today()
+    await _make_transaction(
+        db_session, account.id, "4000", today - timedelta(days=20), category_id=cat.id
+    )
+    await _make_transaction(
+        db_session, account.id, "4000", today - timedelta(days=50), category_id=cat.id
+    )
 
     detector = FireInputDetector(db_session)
     result = await detector.detect(ctx, trailing_months=12)
