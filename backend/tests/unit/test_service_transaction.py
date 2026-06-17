@@ -311,7 +311,9 @@ async def test_create_transaction_forbidden_partner_private_account(
                 payee_normalized="Forbidden",
             ),
         )
-    assert exc_info.value.status_code == 403
+    # AccountRepository.get_by_id hides inaccessible accounts as 404 (not 403)
+    # to prevent resource enumeration — private accounts are invisible to partners
+    assert exc_info.value.status_code == 404
 
 
 async def test_list_for_account(

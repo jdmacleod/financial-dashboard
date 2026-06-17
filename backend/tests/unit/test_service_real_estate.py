@@ -331,7 +331,9 @@ async def test_create_property_forbidden_partner_private_account(
             partner_ctx,
             PropertyCreate(account_id=account.id, address="Partner Forbidden St"),
         )
-    assert exc_info.value.status_code == 403
+    # AccountRepository.get_by_id hides inaccessible accounts as 404 (not 403)
+    # to prevent resource enumeration — private accounts are invisible to partners
+    assert exc_info.value.status_code == 404
 
 
 async def test_get_property_current_value_after_valuation(
