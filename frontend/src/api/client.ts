@@ -58,3 +58,29 @@ export const api = {
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, body),
   delete: <T = void>(path: string) => request<T>("DELETE", path),
 }
+
+// No Content-Type header here — the browser sets the multipart boundary
+// itself when the body is a FormData instance.
+async function requestForm<T>(path: string, form: FormData): Promise<T> {
+  const headers: Record<string, string> = {}
+  if (_accessToken) {
+    headers["Authorization"] = `Bearer ${_accessToken}`
+  }
+
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers,
+    credentials: "include",
+    body: form,
+  })
+
+  const data = await res.json().catch(() => null)
+  if (!res.ok) {
+    throw new ApiError(res.status, data?.detail ?? data ?? res.statusText)
+  }
+  return data as T
+}
+
+export const apiUpload = {
+  post: <T>(path: string, form: FormData) => requestForm<T>(path, form),
+}

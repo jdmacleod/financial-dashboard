@@ -406,7 +406,7 @@ def upgrade() -> None:
             id                   UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             triggered_by         backup_trigger NOT NULL DEFAULT 'scheduled',
             triggered_by_user_id UUID REFERENCES users(id) ON DELETE SET NULL,
-            status               job_status NOT NULL DEFAULT 'running',
+            status               job_status NOT NULL DEFAULT 'processing',
             filename             VARCHAR(255),
             file_size_bytes      BIGINT,
             error_message        TEXT,

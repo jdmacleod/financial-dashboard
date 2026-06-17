@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import DateTime, String
+from sqlalchemy import DateTime, String, text
 from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,4 +21,6 @@ class AuditLog(Base):
     previous_value: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     new_value: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     ip_address: Mapped[str | None] = mapped_column(INET, nullable=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )

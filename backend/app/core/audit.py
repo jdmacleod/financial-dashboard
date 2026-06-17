@@ -1,6 +1,6 @@
 import uuid
 from collections.abc import Callable, Coroutine
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from functools import wraps
 from typing import Any, TypeVar
@@ -38,7 +38,7 @@ def _snapshot(obj: Any, exclude: frozenset[str] = frozenset()) -> dict[str, Any]
         val = getattr(obj, col.name)
         if isinstance(val, uuid.UUID):
             val = str(val)
-        elif isinstance(val, datetime):
+        elif isinstance(val, datetime | date):
             val = val.isoformat()
         elif isinstance(val, Decimal):
             val = str(val)

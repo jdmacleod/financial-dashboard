@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Link } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -263,7 +264,12 @@ function AccountGroup({ title, accounts }: { title: string; accounts: AccountRes
       <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{title}</h2>
       <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 mb-6">
         {accounts.map((a) => (
-          <div key={a.id} className="flex items-center gap-4 px-4 py-3">
+          <Link
+            key={a.id}
+            to="/accounts/$accountId/transactions"
+            params={{ accountId: a.id }}
+            className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
+          >
             <div className="flex-1 min-w-0">
               <p className="font-medium text-gray-900 truncate">{a.nickname}</p>
               <p className="text-sm text-gray-500">
@@ -275,7 +281,7 @@ function AccountGroup({ title, accounts }: { title: string; accounts: AccountRes
               <p className="font-medium text-gray-900">{formatBalance(a.current_balance)}</p>
               {a.balance_as_of && <p className="text-xs text-gray-400">{a.balance_as_of}</p>}
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

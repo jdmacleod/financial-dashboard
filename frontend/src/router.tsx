@@ -12,6 +12,8 @@ import Login from "@/pages/Login"
 import Setup from "@/pages/Setup"
 import Members from "@/pages/Members"
 import Accounts from "@/pages/Accounts"
+import Transactions from "@/pages/Transactions"
+import Categories from "@/pages/Categories"
 
 // Root layout — checks auth + setup state
 const rootRoute = createRootRoute({
@@ -74,10 +76,28 @@ const accountsRoute = createRoute({
   component: Accounts,
 })
 
+const accountTransactionsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/accounts/$accountId/transactions",
+  component: Transactions,
+})
+
+const categoriesRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/categories",
+  component: Categories,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
-  appLayoutRoute.addChildren([indexRoute, membersRoute, accountsRoute]),
+  appLayoutRoute.addChildren([
+    indexRoute,
+    membersRoute,
+    accountsRoute,
+    accountTransactionsRoute,
+    categoriesRoute,
+  ]),
 ])
 
 export const router = createRouter({ routeTree })

@@ -15,6 +15,9 @@ export function AppLayout() {
           <a href="/members" className="text-sm text-gray-600 hover:text-gray-900">
             Members
           </a>
+          <a href="/categories" className="text-sm text-gray-600 hover:text-gray-900">
+            Categories
+          </a>
         </div>
       </nav>
       <Outlet />
