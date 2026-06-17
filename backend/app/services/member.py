@@ -5,7 +5,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import AuditRepository, _snapshot, audit
+from app.core.audit import AUDIT_EXCLUDED_FIELDS, AuditRepository, _snapshot, audit
 from app.core.visibility import VisibilityContext
 from app.db.models.member import HouseholdMember
 from app.schemas.member import MemberCreate, MemberUpdate
@@ -60,7 +60,7 @@ class MemberService:
         if not ctx.is_primary:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         member = await self.get_by_id(ctx, member_id)
-        self._prev_snapshot = _snapshot(member)
+        self._prev_snapshot = _snapshot(member, exclude=AUDIT_EXCLUDED_FIELDS)
 
         # Prevent downgrading the last primary
         if data.role is not None and data.role != member.role and member.role == "primary":
@@ -85,7 +85,7 @@ class MemberService:
         if not ctx.is_primary:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         member = await self.get_by_id(ctx, member_id)
-        self._prev_snapshot = _snapshot(member)
+        self._prev_snapshot = _snapshot(member, exclude=AUDIT_EXCLUDED_FIELDS)
         await self._check_not_last_primary(ctx, member_id)
         member.is_active = False
         member.updated_at = datetime.now(UTC)

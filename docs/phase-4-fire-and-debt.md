@@ -44,7 +44,7 @@ class IncomeStream(BaseModel):
     label: str = Field(max_length=100)
     type: IncomeStreamType
     amount_annual: Decimal = Field(ge=0)
-    growth_rate_annual: float = Field(ge=-1.0, le=1.0)  # e.g. 0.03
+    growth_rate_annual: Decimal = Field(ge=Decimal("-1.0"), le=Decimal("1.0"))  # e.g. 0.03
     start_year: int = Field(ge=1900, le=2200)
     end_year: int | None = None           # None = indefinite
     is_pre_retirement: bool = True
@@ -68,7 +68,7 @@ class FireDetectionResult(BaseModel):
     income_streams: list[IncomeStream]
     gross_income_annual: Decimal
     total_expenses_annual: Decimal
-    savings_rate: float
+    savings_rate: Decimal  # fraction, e.g. 0.30 — persisted to fire_scenarios.detected_savings_rate NUMERIC(5,4)
     current_portfolio_value: Decimal
     current_net_worth: Decimal
     detected_at: datetime
@@ -100,21 +100,23 @@ class FireInputDetector:
         # 3. Months with data (may be < trailing_months for newer accounts)
         months_with_data = await self._count_months_with_data(ctx, since=cutoff)
 
-        # 4. Annualize (scale from actual months to 12)
-        scale = 12 / max(months_with_data, 1)
+        # 4. Annualize (scale from actual months to 12). Decimal division
+        # throughout — months_with_data divides directly into amounts that
+        # are already Decimal, never via float's `/` then Decimal(str(...)).
+        scale = Decimal(12) / Decimal(max(months_with_data, 1))
 
         # 5. Build income streams (one per income category with transactions)
         income_streams = []
         gross_income_annual = Decimal(0)
         for cat_id, cat_name, cat_type, amount in income_by_category:
-            annual = amount * Decimal(str(scale))
+            annual = amount * scale
             gross_income_annual += annual
             income_streams.append(IncomeStream(
                 id=str(uuid4()),
                 label=cat_name,
                 type=_map_category_to_stream_type(cat_name),
                 amount_annual=annual.quantize(Decimal("0.01")),
-                growth_rate_annual=0.03,        # conservative default
+                growth_rate_annual=Decimal("0.03"),  # conservative default
                 start_year=date.today().year,
                 end_year=None,
                 is_pre_retirement=True,
@@ -125,10 +127,10 @@ class FireInputDetector:
         # 6. Current portfolio value (latest snapshots for portfolio accounts)
         portfolio_value = await self._current_portfolio(ctx)
 
-        expenses_annual = total_expenses * Decimal(str(scale))
-        savings_rate = float(
+        expenses_annual = total_expenses * scale
+        savings_rate = (
             (gross_income_annual - expenses_annual) / gross_income_annual
-        ) if gross_income_annual > 0 else 0.0
+        ) if gross_income_annual > 0 else Decimal(0)
 
         warnings = []
         if months_with_data < 6:
@@ -173,6 +175,19 @@ class YearProjection:
     effective_withdrawal: Decimal # annual_spend - supplemental_income
     fire_number: Decimal
     is_fire_year: bool
+
+@dataclass
+class FireScenario:
+    """Mirrors the fire_scenarios row (see docs/data-model.md). All rate and
+    dollar fields are Decimal — these come straight off NUMERIC columns, and
+    must stay Decimal through every projection calculation below."""
+    id: UUID
+    target_annual_spend: Decimal          # NUMERIC(12,2)
+    safe_withdrawal_rate: Decimal         # NUMERIC(5,4), default 0.04
+    expected_annual_return: Decimal       # NUMERIC(5,4), default 0.07
+    expected_inflation_rate: Decimal      # NUMERIC(5,4), default 0.03
+    income_streams: list[IncomeStream]
+    detected_portfolio_value: Decimal | None  # NUMERIC(18,4)
 
 def project(scenario: FireScenario, from_year: int, member_dob: date | None) -> list[YearProjection]:
     portfolio = scenario.detected_portfolio_value or Decimal(0)
@@ -225,9 +240,10 @@ def project(scenario: FireScenario, from_year: int, member_dob: date | None) -> 
 
 def _stream_amount(stream: IncomeStream, year: int) -> Decimal:
     years_elapsed = year - stream.start_year
-    return stream.amount_annual * Decimal(
-        str((1 + stream.growth_rate_annual) ** years_elapsed)
-    )
+    # Stay in Decimal throughout — growth_rate_annual is a Decimal field,
+    # and Decimal ** int is exact, unlike float ** int round-tripped through
+    # str(). Money math must never pass through float (see CLAUDE.md).
+    return stream.amount_annual * (1 + stream.growth_rate_annual) ** years_elapsed
 
 def _stream_active(stream: IncomeStream, year: int) -> bool:
     return stream.start_year <= year and (

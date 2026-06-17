@@ -19,6 +19,12 @@ ENCRYPTED_FIELDS = frozenset(
     }
 )
 
+# Auth secrets are not AES-encrypted PII, but must never land in the audit
+# log either — same rationale as ENCRYPTED_FIELDS (CLAUDE.md rule #4).
+AUTH_SECRET_FIELDS = frozenset({"hashed_password", "refresh_token_hash"})
+
+AUDIT_EXCLUDED_FIELDS = ENCRYPTED_FIELDS | AUTH_SECRET_FIELDS
+
 _F = TypeVar("_F", bound=Callable[..., Coroutine[Any, Any, Any]])
 
 
@@ -109,7 +115,7 @@ def audit(action: str, entity_type: str) -> Callable[[_F], _F]:
             self.__dict__.pop("_prev_snapshot", None)
 
             entity_id: uuid.UUID | None = getattr(result, "id", None)
-            curr = _snapshot(result, exclude=ENCRYPTED_FIELDS) if result is not None else None
+            curr = _snapshot(result, exclude=AUDIT_EXCLUDED_FIELDS) if result is not None else None
 
             diff_prev: dict[str, Any] | None
             diff_curr: dict[str, Any] | None

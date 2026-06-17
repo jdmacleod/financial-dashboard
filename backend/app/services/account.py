@@ -6,7 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import AuditRepository, _snapshot, audit
+from app.core.audit import AUDIT_EXCLUDED_FIELDS, AuditRepository, _snapshot, audit
 from app.core.encryption import decrypt, encrypt
 from app.core.visibility import VisibilityContext
 from app.db.models.access_grant import AccountAccessGrant
@@ -85,6 +85,11 @@ class AccountService:
     async def create(self, ctx: VisibilityContext, data: AccountCreate) -> Account:
         if not ctx.can_write:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+        if not ctx.is_primary and data.owner_member_id not in (None, ctx.member_id):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Partners may only create joint or own-member accounts",
+            )
         now = datetime.now(UTC)
         account = Account(
             household_id=ctx.household_id,
@@ -112,7 +117,16 @@ class AccountService:
         account = await self.account_repo.get_by_id(ctx, account_id)
         if not ctx.is_primary and account.owner_member_id != ctx.member_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-        self._prev_snapshot = _snapshot(account)
+        if (
+            data.owner_member_id is not None
+            and not ctx.is_primary
+            and data.owner_member_id != ctx.member_id
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Partners may only assign accounts to themselves or jointly",
+            )
+        self._prev_snapshot = _snapshot(account, exclude=AUDIT_EXCLUDED_FIELDS)
 
         if data.nickname is not None:
             account.nickname = data.nickname
@@ -139,7 +153,7 @@ class AccountService:
         if not ctx.is_primary:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         account = await self.account_repo.get_by_id(ctx, account_id)
-        self._prev_snapshot = _snapshot(account)
+        self._prev_snapshot = _snapshot(account, exclude=AUDIT_EXCLUDED_FIELDS)
         account.is_active = False
         account.updated_at = datetime.now(UTC)
         await self.session.flush()

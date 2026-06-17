@@ -6,7 +6,7 @@ import {
   redirect,
 } from "@tanstack/react-router"
 import { authApi } from "@/api/auth"
-import { setAccessToken } from "@/api/client"
+import { useAuth } from "@/hooks/useAuth"
 import { AppLayout } from "@/components/app/AppLayout"
 import Login from "@/pages/Login"
 import Setup from "@/pages/Setup"
@@ -46,7 +46,7 @@ const appLayoutRoute = createRoute({
       }
       throw redirect({ to: "/login" })
     }
-    setAccessToken(stored)
+    useAuth.getState().restoreToken(stored)
   },
   component: AppLayout,
 })

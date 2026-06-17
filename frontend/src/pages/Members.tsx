@@ -1,6 +1,10 @@
 import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { membersApi } from "@/api/members"
+import { useAuth } from "@/hooks/useAuth"
 import type { MemberResponse } from "@/api/types"
 
 const ROLE_LABELS: Record<string, string> = {
@@ -85,7 +89,106 @@ function MemberSlideOver({ member, onClose }: { member: MemberResponse; onClose:
   )
 }
 
+const createSchema = z.object({
+  display_name: z.string().min(1, "Required"),
+  role: z.enum(["partner", "dependent"]),
+  date_of_birth: z.string().optional(),
+})
+type CreateForm = z.infer<typeof createSchema>
+
+function AddMemberModal({ onClose }: { onClose: () => void }) {
+  const queryClient = useQueryClient()
+  const [error, setError] = useState<string | null>(null)
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CreateForm>({
+    resolver: zodResolver(createSchema),
+    defaultValues: { role: "partner" },
+  })
+
+  const create = useMutation({
+    mutationFn: (data: CreateForm) =>
+      membersApi.create({
+        display_name: data.display_name,
+        role: data.role,
+        date_of_birth: data.date_of_birth || null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["members"] })
+      onClose()
+    },
+    onError: () => setError("Failed to add member."),
+  })
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="w-full max-w-sm bg-white rounded-xl shadow-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Add member</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            ✕
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit((d) => create.mutate(d))} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Display name</label>
+            <input
+              {...register("display_name")}
+              placeholder="e.g. Jamie Smith"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            {errors.display_name && (
+              <p className="mt-1 text-xs text-red-600">{errors.display_name.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+            <select
+              {...register("role")}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="partner">Partner</option>
+              <option value="dependent">Dependent</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Date of birth (optional)
+            </label>
+            <input
+              type="date"
+              {...register("date_of_birth")}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={create.isPending}
+            className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+          >
+            {create.isPending ? "Adding…" : "Add member"}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function Members() {
+  const isPrimary = useAuth((s) => s.role === "primary")
   const {
     data: members,
     isLoading,
@@ -95,6 +198,7 @@ export default function Members() {
     queryFn: membersApi.list,
   })
   const [selected, setSelected] = useState<MemberResponse | null>(null)
+  const [showAdd, setShowAdd] = useState(false)
 
   if (isLoading) return <div className="p-8 text-gray-500">Loading members…</div>
   if (error) return <div className="p-8 text-red-600">Failed to load members.</div>
@@ -103,6 +207,14 @@ export default function Members() {
     <div className="p-8 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Members</h1>
+        {isPrimary && (
+          <button
+            onClick={() => setShowAdd(true)}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+          >
+            Add member
+          </button>
+        )}
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
@@ -132,6 +244,7 @@ export default function Members() {
       </div>
 
       {selected && <MemberSlideOver member={selected} onClose={() => setSelected(null)} />}
+      {showAdd && <AddMemberModal onClose={() => setShowAdd(false)} />}
     </div>
   )
 }

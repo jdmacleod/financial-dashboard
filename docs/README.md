@@ -19,6 +19,7 @@ that apply to every phase.
 | `docs/phase-4-fire-and-debt.md`  | FIRE modeling, income streams, debt payoff projections                     |
 | `docs/phase-5-exports.md`        | PDF and Excel exports, executor re-auth gate                               |
 | `docs/phase-6-polish.md`         | Backup UI, valuation management, dark mode, dashboard customization        |
+| `docs/test-plan.md`              | Prioritized test list to reach ≥90% coverage; infra gaps to close first    |
 
 ## Design amendments (incorporated into spec above)
 

@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { accountsApi } from "@/api/accounts"
 import { membersApi } from "@/api/members"
+import { useAuth } from "@/hooks/useAuth"
 import type { AccountResponse, AccountType } from "@/api/types"
 
 const ASSET_TYPES: AccountType[] = [
@@ -65,7 +66,13 @@ type CreateForm = z.infer<typeof createSchema>
 
 function AddAccountModal({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient()
-  const { data: members } = useQuery({ queryKey: ["members"], queryFn: membersApi.list })
+  const isPrimary = useAuth((s) => s.role === "primary")
+  const memberId = useAuth((s) => s.memberId)
+  const { data: allMembers } = useQuery({ queryKey: ["members"], queryFn: membersApi.list })
+  // Partners may only own accounts jointly or as themselves — same rule
+  // AccountService.create enforces server-side; this just keeps the UI from
+  // offering choices the API will reject with 403.
+  const members = isPrimary ? allMembers : allMembers?.filter((m) => m.id === memberId)
   const [modalStep, setModalStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
 

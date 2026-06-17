@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.visibility import VisibilityContext, get_visibility_ctx
@@ -18,10 +18,8 @@ async def create_user(
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
 ) -> User:
-    if not ctx.is_primary:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     svc = UserService(session)
-    user = await svc.create(data)
+    user = await svc.create(ctx, data)
     await session.commit()
     await session.refresh(user)
     return user
@@ -35,7 +33,7 @@ async def update_user(
     session: AsyncSession = Depends(get_session),
 ) -> User:
     svc = UserService(session)
-    user = await svc.update(user_id, data, ctx.user_id, ctx.is_primary)
+    user = await svc.update(ctx, user_id, data)
     await session.commit()
     await session.refresh(user)
     return user
@@ -48,5 +46,5 @@ async def deactivate_user(
     session: AsyncSession = Depends(get_session),
 ) -> None:
     svc = UserService(session)
-    await svc.deactivate(user_id, ctx.is_primary)
+    await svc.deactivate(ctx, user_id)
     await session.commit()

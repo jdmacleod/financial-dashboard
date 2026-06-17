@@ -4,7 +4,9 @@ from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.audit import AuditRepository
 from app.core.security import create_access_token, hash_password
+from app.core.visibility import VisibilityContext
 from app.db.models.category import Category
 from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
@@ -16,6 +18,7 @@ SYSTEM_HOUSEHOLD_ID = "00000000-0000-0000-0000-000000000000"
 class SetupService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+        self.audit_repo = AuditRepository(session)
 
     async def is_setup_done(self) -> bool:
         result = await self.session.execute(
@@ -83,6 +86,16 @@ class SetupService:
         await self.session.flush()
         await self.session.refresh(user)
         await self.session.refresh(member)
+
+        await self.audit_repo.write(
+            ctx=VisibilityContext(
+                user_id=user.id, member_id=member.id, role="primary", household_id=household.id
+            ),
+            action="household.setup_completed",
+            entity_type="household",
+            entity_id=household.id,
+            new_value={"household_name": household_name, "member_name": member_name},
+        )
 
         access_token = create_access_token(str(user.id), str(member.id), "primary")
         await self.session.commit()

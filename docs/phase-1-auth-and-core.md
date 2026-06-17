@@ -372,6 +372,10 @@ PATCH  /api/v1/accounts/{id}             visibility-checked + must be owner or p
 DELETE /api/v1/accounts/{id}             requires: primary; soft-delete
 ```
 
+Constraint: a `partner` may only set `owner_member_id` to `null` (joint) or
+their own `member_id`, on both create and update. Enforce in the service
+layer, not just the frontend.
+
 Encrypted fields (`institution_name`, `account_number`, `routing_number`, `notes`)
 are accepted as plaintext strings in request bodies, encrypted before DB write,
 and decrypted before returning in response bodies. The API never exposes the
