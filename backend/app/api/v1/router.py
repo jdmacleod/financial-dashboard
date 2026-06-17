@@ -2,11 +2,15 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     accounts,
+    audit_log,
     auth,
+    budgets,
     categories,
     household,
     imports,
     members,
+    properties,
+    reports,
     setup,
     snapshots,
     transactions,
@@ -25,3 +29,7 @@ router.include_router(transactions.router)
 router.include_router(categories.router)
 router.include_router(snapshots.router)
 router.include_router(imports.router)
+router.include_router(budgets.router)
+router.include_router(properties.router)
+router.include_router(reports.router)
+router.include_router(audit_log.router)

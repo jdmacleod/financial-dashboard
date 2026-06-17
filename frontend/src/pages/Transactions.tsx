@@ -5,6 +5,7 @@ import { transactionsApi } from "@/api/transactions"
 import { categoriesApi } from "@/api/categories"
 import { accountsApi } from "@/api/accounts"
 import { ImportModal } from "@/components/app/ImportModal"
+import { HistoryPanel } from "@/components/app/HistoryPanel"
 import { formatCurrency, formatDate } from "@/lib/formatters"
 import type { CategoryResponse, TransactionResponse } from "@/api/types"
 
@@ -67,6 +68,7 @@ export default function Transactions() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkCategoryId, setBulkCategoryId] = useState("")
   const [showImport, setShowImport] = useState(false)
+  const [expandedHistory, setExpandedHistory] = useState<string | null>(null)
 
   const { data: account } = useQuery({
     queryKey: ["accounts", accountId],
@@ -198,43 +200,57 @@ export default function Transactions() {
       {!isLoading && !error && (
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
           {transactions.map((t) => (
-            <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-              <input
-                type="checkbox"
-                checked={selected.has(t.id)}
-                onChange={() => toggleSelected(t.id)}
-                className="rounded border-gray-300"
-              />
-              <div className="w-20 shrink-0 text-xs text-gray-500">
-                {formatDate(t.transaction_date)}
+            <div key={t.id}>
+              <div className="flex items-center gap-3 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={selected.has(t.id)}
+                  onChange={() => toggleSelected(t.id)}
+                  className="rounded border-gray-300"
+                />
+                <div className="w-20 shrink-0 text-xs text-gray-500">
+                  {formatDate(t.transaction_date)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-900 truncate">
+                    {t.payee_normalized ?? t.payee_raw ?? "—"}
+                  </p>
+                  {t.memo && <p className="text-xs text-gray-400 truncate">{t.memo}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                  {t.real_estate_property_id && (
+                    <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
+                      Property
+                    </span>
+                  )}
+                  {categories && (
+                    <CategoryBadge
+                      transaction={t}
+                      categories={categories}
+                      onChange={(categoryId) => updateCategory.mutate({ id: t.id, categoryId })}
+                    />
+                  )}
+                </div>
+                <div
+                  className={`w-24 text-right text-sm font-medium ${
+                    Number(t.amount) < 0 ? "text-red-600" : "text-emerald-600"
+                  }`}
+                >
+                  {formatCurrency(t.amount)}
+                </div>
+                <button
+                  onClick={() => setExpandedHistory((prev) => (prev === t.id ? null : t.id))}
+                  className="text-xs text-gray-400 hover:text-gray-600 shrink-0"
+                  title="View history"
+                >
+                  {expandedHistory === t.id ? "▲" : "▾"}
+                </button>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
-                  {t.payee_normalized ?? t.payee_raw ?? "—"}
-                </p>
-                {t.memo && <p className="text-xs text-gray-400 truncate">{t.memo}</p>}
-              </div>
-              <div className="flex items-center gap-2">
-                {t.real_estate_property_id && (
-                  <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                    Property
-                  </span>
-                )}
-                {categories && (
-                  <CategoryBadge
-                    transaction={t}
-                    categories={categories}
-                    onChange={(categoryId) => updateCategory.mutate({ id: t.id, categoryId })}
-                  />
-                )}
-              </div>
-              <div
-                className={`w-24 text-right text-sm font-medium ${
-                  Number(t.amount) < 0 ? "text-red-600" : "text-emerald-600"
-                }`}
-              >
-                {formatCurrency(t.amount)}
-              </div>
+              {expandedHistory === t.id && (
+                <div className="px-4 pb-3">
+                  <HistoryPanel entityType="transaction" entityId={t.id} />
+                </div>
+              )}
             </div>
           ))}
           {transactions.length === 0 && (

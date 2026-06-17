@@ -14,6 +14,14 @@ import Members from "@/pages/Members"
 import Accounts from "@/pages/Accounts"
 import Transactions from "@/pages/Transactions"
 import Categories from "@/pages/Categories"
+import Dashboard from "@/pages/Dashboard"
+import ReportNetWorth from "@/pages/ReportNetWorth"
+import ReportCashFlow from "@/pages/ReportCashFlow"
+import ReportSpending from "@/pages/ReportSpending"
+import Budgets from "@/pages/Budgets"
+import PropertyDetail from "@/pages/PropertyDetail"
+import SettingsActivity from "@/pages/SettingsActivity"
+import SettingsSecurity from "@/pages/SettingsSecurity"
 
 // Root layout — checks auth + setup state
 const rootRoute = createRootRoute({
@@ -56,12 +64,7 @@ const appLayoutRoute = createRoute({
 const indexRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/",
-  component: () => (
-    <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-semibold mb-2">Dashboard</h1>
-      <p className="text-gray-500">Dashboard will be built in Phase 3.</p>
-    </div>
-  ),
+  component: Dashboard,
 })
 
 const membersRoute = createRoute({
@@ -88,6 +91,48 @@ const categoriesRoute = createRoute({
   component: Categories,
 })
 
+const reportsNetWorthRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/reports/net-worth",
+  component: ReportNetWorth,
+})
+
+const reportsCashFlowRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/reports/cash-flow",
+  component: ReportCashFlow,
+})
+
+const reportsSpendingRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/reports/spending",
+  component: ReportSpending,
+})
+
+const budgetsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/budgets",
+  component: Budgets,
+})
+
+const propertyDetailRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/properties/$propertyId",
+  component: PropertyDetail,
+})
+
+const settingsActivityRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/settings/activity",
+  component: SettingsActivity,
+})
+
+const settingsSecurityRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/settings/security",
+  component: SettingsSecurity,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
@@ -97,6 +142,13 @@ const routeTree = rootRoute.addChildren([
     accountsRoute,
     accountTransactionsRoute,
     categoriesRoute,
+    reportsNetWorthRoute,
+    reportsCashFlowRoute,
+    reportsSpendingRoute,
+    budgetsRoute,
+    propertyDetailRoute,
+    settingsActivityRoute,
+    settingsSecurityRoute,
   ]),
 ])
 

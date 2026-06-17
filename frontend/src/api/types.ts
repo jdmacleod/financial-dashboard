@@ -142,3 +142,189 @@ export interface ImportJobResponse {
 export interface ApiError {
   detail: string | Record<string, unknown>
 }
+
+export type BudgetPeriod = "monthly" | "annual"
+
+export interface BudgetResponse {
+  id: string
+  household_id: string
+  category_id: string
+  period: BudgetPeriod
+  amount: string
+  effective_from: string
+  effective_to: string | null
+}
+
+export type ValuationSource = "manual" | "api_attom" | "api_estated"
+
+export interface PropertyResponse {
+  id: string
+  account_id: string
+  nickname: string
+  address: string
+  purchase_date: string | null
+  purchase_price: string | null
+  linked_mortgage_account_id: string | null
+  current_estimated_value: string | null
+  current_value_as_of: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface ValuationResponse {
+  id: string
+  real_estate_property_id: string
+  valuation_date: string
+  estimated_value: string
+  source: ValuationSource
+  confidence_score: string | null
+  created_at: string
+}
+
+export interface NetWorthBreakdown {
+  checking_savings: string
+  investment: string
+  retirement: string
+  real_estate: string
+  hsa: string
+  other_assets: string
+  mortgage: string
+  other_liabilities: string
+}
+
+export interface NetWorthPoint {
+  date: string
+  total_assets: string
+  total_liabilities: string
+  net_worth: string
+  breakdown: NetWorthBreakdown
+}
+
+export interface NetWorthReport {
+  series: NetWorthPoint[]
+  current: NetWorthPoint | null
+}
+
+export interface CashFlowPeriod {
+  period: string
+  income: string
+  expenses: string
+  net: string
+  savings_rate: number
+}
+
+export interface CashFlowReport {
+  series: CashFlowPeriod[]
+  totals: CashFlowPeriod
+}
+
+export interface SpendingCategoryItem {
+  category_id: string | null
+  name: string
+  amount: string
+  percentage: number
+  transaction_count: number
+  has_children: boolean
+}
+
+export interface SpendingByCategoryReport {
+  total: string
+  categories: SpendingCategoryItem[]
+}
+
+export interface BudgetVsActualsItem {
+  category_id: string
+  name: string
+  budget: string
+  actual: string
+  remaining: string
+  percentage_used: number
+}
+
+export interface BudgetVsActualsReport {
+  period: string
+  categories: BudgetVsActualsItem[]
+}
+
+export interface PropertyExpenseItem {
+  category_id: string | null
+  name: string
+  amount: string
+}
+
+export interface PropertyMonthlyPoint {
+  period: string
+  income: string
+  expenses: string
+  net: string
+}
+
+export interface PropertyPnLReport {
+  property_id: string
+  nickname: string
+  address: string
+  period: { from: string; to: string }
+  gross_income: string
+  total_expenses: string
+  net_income: string
+  net_yield_pct: number | null
+  expense_breakdown: PropertyExpenseItem[]
+  monthly_series: PropertyMonthlyPoint[]
+}
+
+export interface DashboardNetWorth {
+  current: string
+  change_30d: string
+  change_30d_pct: number | null
+}
+
+export interface DashboardCashFlow {
+  income: string
+  expenses: string
+  net: string
+}
+
+export interface DashboardSpendingCategory {
+  category_id: string | null
+  name: string
+  amount: string
+}
+
+export interface DashboardBudgetAlert {
+  category: string
+  used_pct: number
+}
+
+export interface DashboardAccountsSummary {
+  total_assets: string
+  total_liabilities: string
+}
+
+export interface DashboardResponse {
+  net_worth: DashboardNetWorth
+  cash_flow_mtd: DashboardCashFlow
+  top_spending_categories: DashboardSpendingCategory[]
+  budget_alerts: DashboardBudgetAlert[]
+  accounts_summary: DashboardAccountsSummary
+}
+
+export interface AuditLogEntryResponse {
+  id: string
+  action: string
+  entity_type: string
+  entity_id: string | null
+  previous_value: Record<string, unknown> | null
+  new_value: Record<string, unknown> | null
+  user_id: string | null
+  user_display_name: string | null
+  context: Record<string, unknown>
+  ip_address: string | null
+  created_at: string
+}
+
+export interface PaginatedAuditLog {
+  items: AuditLogEntryResponse[]
+  page: number
+  page_size: number
+  total: number
+}
