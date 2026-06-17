@@ -22,6 +22,9 @@ import Budgets from "@/pages/Budgets"
 import PropertyDetail from "@/pages/PropertyDetail"
 import SettingsActivity from "@/pages/SettingsActivity"
 import SettingsSecurity from "@/pages/SettingsSecurity"
+import Fire from "@/pages/Fire"
+import FireDetail from "@/pages/FireDetail"
+import Debt from "@/pages/Debt"
 
 // Root layout — checks auth + setup state
 const rootRoute = createRootRoute({
@@ -133,6 +136,24 @@ const settingsSecurityRoute = createRoute({
   component: SettingsSecurity,
 })
 
+const fireRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/fire",
+  component: Fire,
+})
+
+const fireDetailRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/fire/$scenarioId",
+  component: FireDetail,
+})
+
+const debtRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/debt",
+  component: Debt,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
@@ -149,6 +170,9 @@ const routeTree = rootRoute.addChildren([
     propertyDetailRoute,
     settingsActivityRoute,
     settingsSecurityRoute,
+    fireRoute,
+    fireDetailRoute,
+    debtRoute,
   ]),
 ])
 

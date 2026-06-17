@@ -328,3 +328,113 @@ export interface PaginatedAuditLog {
   page_size: number
   total: number
 }
+
+// ---- FIRE Modeling ----
+
+export type IncomeStreamType =
+  | "salary"
+  | "rental"
+  | "consulting"
+  | "pension"
+  | "social_security"
+  | "investment"
+  | "other"
+
+export interface IncomeStream {
+  id: string
+  label: string
+  type: IncomeStreamType
+  amount_annual: string
+  growth_rate_annual: string
+  start_year: number
+  end_year: number | null
+  is_pre_retirement: boolean
+  notes: string | null
+  real_estate_property_id: string | null
+  auto_detected: boolean
+  detected_at: string | null
+}
+
+export interface FireScenarioResponse {
+  id: string
+  household_id: string
+  name: string
+  target_annual_spend: string
+  safe_withdrawal_rate: string
+  expected_annual_return: string
+  expected_inflation_rate: string
+  target_retirement_age: number | null
+  additional_income_streams: IncomeStream[]
+  detected_annual_income: string | null
+  detected_annual_expenses: string | null
+  detected_savings_rate: string | null
+  detected_portfolio_value: string | null
+  detection_trailing_months: number
+  detected_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface FireDetectionResponse {
+  scenario: FireScenarioResponse
+  warnings: string[]
+}
+
+export interface YearProjectionResponse {
+  year: number
+  age: number | null
+  portfolio: string
+  annual_income: string
+  annual_spend: string
+  annual_savings: string
+  supplemental_income: string
+  effective_withdrawal: string
+  fire_number: string
+  is_fire_year: boolean
+}
+
+export interface FireProjectionSummary {
+  fire_year: number | null
+  fire_age: number | null
+  years_to_fire: number | null
+  fire_number: string
+  headline: string
+}
+
+export interface FireProjectionResponse {
+  summary: FireProjectionSummary
+  projections: YearProjectionResponse[]
+}
+
+// ---- Debt Payoff ----
+
+export interface DebtWithAccountResponse {
+  debt_id: string
+  account_id: string
+  nickname: string
+  current_balance: string
+  interest_rate: string
+  minimum_payment: string
+}
+
+export interface DebtPayoffMonthResponse {
+  month: number
+  date: string
+  total_remaining: string
+  per_debt: Record<string, string>
+}
+
+export interface DebtPayoffPlanResponse {
+  strategy: string
+  months_to_payoff: number
+  total_interest_paid: string
+  payoff_date: string
+  monthly_series: DebtPayoffMonthResponse[]
+  payoff_order: string[]
+}
+
+export interface DebtPayoffComparisonResponse {
+  debts: DebtWithAccountResponse[]
+  avalanche: DebtPayoffPlanResponse
+  snowball: DebtPayoffPlanResponse
+}
