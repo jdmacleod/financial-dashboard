@@ -258,3 +258,116 @@ async def test_reauth_token_single_use_enforcement(
             reauth_token=reauth,
         )
     assert exc_info.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_create_export_dependent_role_raises_403(
+    db_session: AsyncSession,
+    household: Household,
+    make_member: Any,
+    make_user: Any,
+) -> None:
+    """Dependent role (can_write=False) cannot create any export."""
+    dep_member = await make_member(role="dependent", display_name="Dependent")
+    dep_user = await make_user(dep_member, "dependent@example.com")
+    ctx = VisibilityContext(
+        user_id=dep_user.id,
+        member_id=dep_member.id,
+        role="dependent",
+        household_id=household.id,
+    )
+    pool = FakeArqPool()
+    svc = ExportService(db_session, pool)  # type: ignore[arg-type]
+
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.create(ctx, _ec("pdf_summary"))
+
+    assert exc_info.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_create_executor_export_invalid_reauth_raises_403(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """An expired or tampered reauth token must be rejected with 403."""
+    ctx = _primary_ctx(household, primary_member, primary_user)
+    pool = FakeArqPool()
+    svc = ExportService(db_session, pool)  # type: ignore[arg-type]
+
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.create(
+            ctx,
+            _ec("pdf_executor"),
+            reauth_token="not.a.valid.jwt",
+        )
+
+    assert exc_info.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_get_export_job_success(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """get() returns the job when the household matches."""
+    ctx = _primary_ctx(household, primary_member, primary_user)
+    pool = FakeArqPool()
+    svc = ExportService(db_session, pool)  # type: ignore[arg-type]
+
+    job = await svc.create(ctx, _ec("excel_summary"))
+    fetched = await svc.get(ctx, job.id)
+
+    assert fetched.id == job.id
+    assert fetched.household_id == household.id
+
+
+@pytest.mark.asyncio
+async def test_get_file_path_pending_job_raises_404(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """get_file_path() raises 404 when the job is still pending."""
+    ctx = _primary_ctx(household, primary_member, primary_user)
+    pool = FakeArqPool()
+    svc = ExportService(db_session, pool)  # type: ignore[arg-type]
+
+    job = await svc.create(ctx, _ec("pdf_summary"))
+
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.get_file_path(ctx, job.id)
+
+    assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_file_path_complete_job_returns_path(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """get_file_path() returns the full path when job is complete."""
+    from datetime import UTC, datetime
+
+    ctx = _primary_ctx(household, primary_member, primary_user)
+    pool = FakeArqPool()
+    svc = ExportService(db_session, pool)  # type: ignore[arg-type]
+
+    job = await svc.create(ctx, _ec("pdf_summary"))
+
+    # Simulate worker completion
+    job.status = "complete"
+    job.filename = "hearthledger_pdf_summary_test.pdf"
+    job.completed_at = datetime.now(UTC)
+    await db_session.flush()
+
+    file_path = await svc.get_file_path(ctx, job.id)
+
+    assert file_path.endswith("hearthledger_pdf_summary_test.pdf")
