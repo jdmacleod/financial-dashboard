@@ -72,6 +72,8 @@ export function AppLayout() {
             )}
           </div>
 
+          <NavLink to="/fire">FIRE</NavLink>
+          <NavLink to="/debt">Debt</NavLink>
           <NavLink to="/members">Members</NavLink>
           <NavLink to="/categories">Categories</NavLink>
 

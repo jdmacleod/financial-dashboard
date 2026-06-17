@@ -6,6 +6,8 @@ from app.api.v1 import (
     auth,
     budgets,
     categories,
+    debt,
+    fire,
     household,
     imports,
     members,
@@ -33,3 +35,5 @@ router.include_router(budgets.router)
 router.include_router(properties.router)
 router.include_router(reports.router)
 router.include_router(audit_log.router)
+router.include_router(fire.router)
+router.include_router(debt.router)
