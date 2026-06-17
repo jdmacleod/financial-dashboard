@@ -7,6 +7,7 @@ from app.api.v1 import (
     budgets,
     categories,
     debt,
+    exports,
     fire,
     household,
     imports,
@@ -37,3 +38,4 @@ router.include_router(reports.router)
 router.include_router(audit_log.router)
 router.include_router(fire.router)
 router.include_router(debt.router)
+router.include_router(exports.router)

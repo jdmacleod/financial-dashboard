@@ -438,3 +438,26 @@ export interface DebtPayoffComparisonResponse {
   avalanche: DebtPayoffPlanResponse
   snowball: DebtPayoffPlanResponse
 }
+
+// ---- Exports ----
+
+export type ExportType = "pdf_summary" | "pdf_executor" | "excel_summary" | "excel_executor"
+export type ExportJobStatus = "pending" | "processing" | "complete" | "failed"
+
+export interface ExportJobResponse {
+  id: string
+  household_id: string
+  export_type: ExportType
+  anonymized: boolean
+  parameters: Record<string, unknown>
+  status: ExportJobStatus
+  filename: string | null
+  error_message: string | null
+  generated_by: string
+  created_at: string
+  completed_at: string | null
+}
+
+export interface ExportCreateResponse {
+  export_job_id: string
+}

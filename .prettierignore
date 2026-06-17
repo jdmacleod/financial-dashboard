@@ -4,3 +4,4 @@ backend
 data
 *.lock
 package-lock.json
+.claude

@@ -186,9 +186,17 @@ class FakeArqPool:
 
     def __init__(self) -> None:
         self.enqueued: list[tuple[Any, ...]] = []
+        self._kv: dict[str, str] = {}
 
     async def enqueue_job(self, *args: Any, **kwargs: Any) -> None:
         self.enqueued.append(args)
+
+    async def set(self, key: str, value: str | bytes, ex: int | None = None) -> None:
+        self._kv[key] = str(value) if isinstance(value, bytes) else value
+
+    async def get(self, key: str) -> bytes | None:
+        val = self._kv.get(key)
+        return val.encode() if val is not None else None
 
 
 @pytest_asyncio.fixture

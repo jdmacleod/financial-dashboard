@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link, Outlet } from "@tanstack/react-router"
 import { useAuth } from "@/hooks/useAuth"
+import { ExportModal } from "@/components/app/ExportModal"
 
 function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
@@ -18,9 +19,11 @@ export function AppLayout() {
   const isPrimary = useAuth((s) => s.role === "primary")
   const [reportsOpen, setReportsOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} />
       <nav className="bg-white border-b border-gray-200 relative">
         <div className="max-w-5xl mx-auto px-4 flex items-center gap-6 h-14">
           <Link to="/" className="font-semibold text-gray-900 hover:text-gray-700">
@@ -77,6 +80,14 @@ export function AppLayout() {
           <NavLink to="/members">Members</NavLink>
           <NavLink to="/categories">Categories</NavLink>
 
+          {/* Export button */}
+          <button
+            onClick={() => setExportOpen(true)}
+            className="text-sm text-gray-600 hover:text-gray-900"
+          >
+            Export
+          </button>
+
           {/* Settings dropdown */}
           <div className="relative ml-auto">
             <button
@@ -110,6 +121,13 @@ export function AppLayout() {
                     Activity Log
                   </Link>
                 )}
+                <Link
+                  to="/settings/exports"
+                  onClick={() => setSettingsOpen(false)}
+                  className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Exports
+                </Link>
               </div>
             )}
           </div>

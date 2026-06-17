@@ -4,6 +4,7 @@ from arq.connections import RedisSettings
 
 from app.core.config import settings
 from app.db.base import AsyncSessionLocal
+from app.worker.tasks.export_tasks import run_export_job
 from app.worker.tasks.import_tasks import run_import_job
 
 
@@ -19,7 +20,7 @@ class WorkerSettings:
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
     on_startup = startup
     on_shutdown = shutdown
-    functions: ClassVar[list[Any]] = [run_import_job]
+    functions: ClassVar[list[Any]] = [run_import_job, run_export_job]
 
 
 if __name__ == "__main__":

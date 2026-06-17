@@ -25,6 +25,7 @@ import SettingsSecurity from "@/pages/SettingsSecurity"
 import Fire from "@/pages/Fire"
 import FireDetail from "@/pages/FireDetail"
 import Debt from "@/pages/Debt"
+import ExportsHistory from "@/pages/ExportsHistory"
 
 // Root layout — checks auth + setup state
 const rootRoute = createRootRoute({
@@ -154,6 +155,12 @@ const debtRoute = createRoute({
   component: Debt,
 })
 
+const settingsExportsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/settings/exports",
+  component: ExportsHistory,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
@@ -173,6 +180,7 @@ const routeTree = rootRoute.addChildren([
     fireRoute,
     fireDetailRoute,
     debtRoute,
+    settingsExportsRoute,
   ]),
 ])
 

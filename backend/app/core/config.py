@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     backup_path: str = "/data/backups"
     backup_retention_days: int = 30
     backup_schedule: str = "0 2 * * *"
+    export_path: str = "/data/exports"
     allowed_origins: list[str] = ["http://localhost"]
 
     @field_validator("allowed_origins", mode="before")
