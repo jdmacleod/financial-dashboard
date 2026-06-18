@@ -3,6 +3,51 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.2.0.0] - 2026-06-18
+
+### Added
+
+- **CSV import** — upload a bank export, map columns interactively (preview 10
+  rows, confirm mapping), and import in the background via ARQ worker; duplicate
+  rows are silently skipped by `external_id` exact match or fuzzy payee+date+amount
+  match (>80% similarity)
+- **OFX/QFX import** — drag-and-drop an OFX or QFX file; fields map automatically
+  (`FITID`→`external_id`, `DTUSER`→`transaction_date`, `TRNAMT`→`amount`,
+  `NAME`→`payee_raw`, `MEMO`→`memo`), no column-mapping step required
+- **Transfer detection** — pairs of transactions in different accounts with equal
+  and opposite amounts within a 3-day window are automatically linked
+  (`is_transfer = true`, shared `transfer_pair_id`) and excluded from income/expense
+  totals
+- **Import job tracking** — `GET /api/v1/import-jobs/{id}` polls job status;
+  frontend polls every 2 s and shows final counts ("Imported N, skipped M duplicates")
+- **Category management** — create, rename, and delete custom categories; system
+  categories (Income, Expenses, Transfer, …) are protected from edit or deletion
+- **Balance snapshots** — manually record point-in-time balances for any account,
+  with optional `contributed_ytd`, `employer_match_ytd`, and memo fields
+- **Bulk categorize** — select multiple transactions and apply a category in one
+  operation; each transaction receives its own audit event
+- **Property tag** — transactions can be linked to a real-estate property via
+  `real_estate_property_id`; the field is returned in responses and filterable via
+  `GET /api/v1/accounts/{id}/transactions?real_estate_property_id=…`
+- **Debit/credit split columns** — CSV importer accepts separate Debit and Credit
+  columns; combined as `amount = credit − debit`
+
+### Changed
+
+- Category badge on transaction list is now clickable inline — selecting a new
+  category immediately PATCHes the transaction and marks it reviewed
+- Import modal supports a full four-step flow: file pick → column mapping
+  (CSV only) → confirmation → live progress indicator
+
+### Fixed
+
+- Dependency updates: uvicorn 0.49, SQLAlchemy 2.0.51, pydantic 2.13.4,
+  python-jose 3.5.0, passlib 1.7.4, fastapi 0.137.2, ruff 0.15.18,
+  Recharts 3, Redis 8, Node 26, PostgreSQL 18; `bcrypt<4.1` pin preserved
+  to prevent passlib self-test crash
+
+---
+
 ## [0.1.0.0] - 2026-06-18
 
 ### Added
