@@ -167,25 +167,65 @@ For a real estate property, shows income (rent transactions linked to the proper
 
 ## FIRE Planning
 
-FIRE (Financial Independence, Retire Early) scenarios let you model retirement timelines based on your current financial position.
+FIRE (Financial Independence, Retire Early) scenarios let you model retirement timelines based on your current financial position. Go to **FIRE** in the sidebar to manage your scenarios.
 
 ### Creating a scenario
 
-Go to **FIRE** in the sidebar and click **New scenario**. Fill in:
+Click **New scenario** and fill in:
 
-- **Name** — e.g. "Coast FIRE at 45"
-- **Target year** — when you want to retire
-- **Annual expenses** — estimated annual spending in retirement (today's dollars)
-- **Safe withdrawal rate** — typically 4.0%
-- **Income streams** — salary, rental income, Social Security, etc. Each stream has a name, annual amount, start year, and end year
+- **Name** — e.g. "Lean FIRE at 45" or "Coast FIRE"
+- **Target annual spend** — estimated annual spending in retirement, in today's dollars
+- **Safe withdrawal rate** — the annual percentage you plan to withdraw from your portfolio (default 4%). Your FIRE number is computed as `target_annual_spend ÷ safe_withdrawal_rate`; at 4% and $48,000/year, the FIRE number is $1,200,000
+- **Expected annual return** — projected portfolio growth rate (default 7%)
+- **Expected inflation rate** — used to inflation-adjust your spend target each year in the projection (default 3%)
+- **Target retirement age** (optional) — shown on the projection chart
 
-### Auto-detect
+### Income streams
 
-Click **Detect from history** to have HearthLedger calculate your trailing average income and expenses from actual transactions. The trailing window defaults to 12 months (configurable 1–60 months).
+Each scenario tracks income streams — sources of money that affect your path to FIRE. Add them under the **Income Streams** section of the scenario editor.
 
-### Projection
+Each stream has:
+| Field | Description |
+|---|---|
+| **Label** | Display name, e.g. "Salary", "Rental income" |
+| **Type** | `salary`, `rental`, `consulting`, `pension`, `social_security`, `investment`, or `other` |
+| **Annual amount** | Gross annual amount in today's dollars |
+| **Annual growth rate** | How fast this income grows per year (e.g. `0.03` for 3%) |
+| **Start year / End year** | Active range — leave end year blank for indefinite |
+| **Pre-retirement?** | Toggle on for income you earn before FIRE; toggle off for post-retirement income (e.g. Social Security, pension). Post-retirement streams reduce your effective withdrawal need rather than boosting savings |
+| **Property link** | Rental streams can be linked to a real estate property |
 
-After saving a scenario, click **Projection** to see a year-by-year chart of portfolio value vs. the FIRE target. The projection uses compound growth on your current net worth and shows the projected retirement year.
+Consulting and other variable-income streams show a yellow "Variable income — review estimate" warning as a reminder to sanity-check the amount.
+
+### Auto-detect income streams
+
+Click **Auto-detect from transactions** to have HearthLedger analyse your actual transaction history and generate income stream entries automatically.
+
+The detector groups your income transactions by category (using the trailing 12 months by default), annualises them, and merges the results into your scenario. Streams detected this way are marked with a **Detected** badge and a timestamp.
+
+**Important behaviours:**
+
+- Manually-entered streams are never overwritten by detection
+- Running detection a second time updates existing auto-detected streams rather than duplicating them
+- If fewer than 6 months of transaction data are available, the detection result includes a warning message displayed as a yellow alert banner; you can still use the values but should review them carefully
+
+Change the trailing window (1–60 months) to include more or less history before clicking detect.
+
+### Reading the projection chart
+
+After saving a scenario, the right panel shows the projection chart:
+
+- **Blue line** — projected portfolio value over time, starting from the detected or manually-entered current portfolio value
+- **Orange dashed line** — your FIRE number (grows with inflation each year)
+- **FIRE crossing annotation** — the year and age at which your portfolio crosses the FIRE number ("FIRE at age 52, 2039")
+
+Below the chart, a year-by-year table shows: year, age, portfolio value, annual income, annual savings, and effective withdrawal amount for each year.
+
+If the projection doesn't cross the FIRE number within 75 years, the chart shows the full 75-year horizon with no crossing annotation.
+
+### Scenario list
+
+The **FIRE** index page (`/fire`) shows all your scenarios as cards. Each card displays the scenario name, target annual spend, and the headline metric from the most recent projection (e.g. "FIRE in 15 years at age 52").
 
 ---
 
@@ -193,17 +233,39 @@ After saving a scenario, click **Projection** to see a year-by-year chart of por
 
 Go to **Debt** in the sidebar to see a payoff analysis of all your loan and credit accounts.
 
-The analysis shows:
+### Reading the debt list
 
-- Current balance and interest rate for each debt
+The top of the page shows each of your active loan and credit accounts with:
+
+- Current balance
+- Interest rate (APR)
 - Minimum monthly payment
-- Payoff date under the current plan
-- How much faster you'd pay off with an extra monthly payment
 
-Set the **extra monthly payment** slider to model accelerated payoff. Two strategies are available:
+### Modelling extra payments
 
-- **Avalanche** — pay highest-interest debt first (minimizes total interest)
-- **Snowball** — pay smallest balance first (psychological wins)
+Enter an amount in the **Extra monthly payment** field to model paying more than the minimums. Both payoff plans update in real time as you type.
+
+### Avalanche vs Snowball
+
+The page shows both strategies side by side so you can compare them directly.
+
+| Strategy      | How it works                                                  | Best for                                       |
+| ------------- | ------------------------------------------------------------- | ---------------------------------------------- |
+| **Avalanche** | Directs extra payment to the highest-interest-rate debt first | Minimising total interest paid                 |
+| **Snowball**  | Directs extra payment to the lowest-balance debt first        | Motivation — individual debts disappear faster |
+
+When a debt reaches $0, its former minimum payment is automatically redirected to the next target debt (this is the "rollover" or "snowball roll" effect).
+
+### What each plan shows
+
+Each strategy panel shows:
+
+- **Months to payoff** and **Payoff date**
+- **Total interest paid** across all debts
+- **Payoff order** — the sequence in which individual debts are cleared
+- **Balance over time chart** — stacked area chart showing remaining balances by debt month by month
+
+The avalanche strategy will always pay equal or less total interest than snowball when interest rates differ across your debts.
 
 ---
 

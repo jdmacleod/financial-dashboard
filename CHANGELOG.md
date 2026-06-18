@@ -3,6 +3,47 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0.0] - 2026-06-18
+
+### Added
+
+- **FIRE scenario modeling** — create and manage FIRE scenarios with target
+  annual spend, safe withdrawal rate, expected return, inflation rate, and
+  optional target retirement age. Full CRUD via `GET/POST/PATCH/DELETE
+/api/v1/fire-scenarios`.
+- **Auto-detect income streams** — `POST /api/v1/fire-scenarios/{id}/detect`
+  analyzes the trailing 12 months of transaction data to identify income streams
+  by category, estimate annual gross income and expenses, compute savings rate,
+  and snapshot the current portfolio value. Re-running detection merges results
+  without duplicating streams; manually-overridden amounts are preserved.
+- **Income stream editor** — add, edit, and remove income streams on each FIRE
+  scenario. Streams have a type (salary, rental, consulting, pension, Social
+  Security, investment, other), annual amount, growth rate, start/end year, and
+  a pre- vs. post-retirement flag for supplemental income after FIRE.
+- **FIRE projection engine** — `GET /api/v1/fire-scenarios/{id}/projection`
+  runs a year-by-year compound projection of portfolio value vs. the FIRE
+  number (target spend ÷ SWR). Returns per-year breakdown (portfolio, income,
+  spend, savings, effective withdrawal) and a summary with FIRE year, FIRE age,
+  years-to-FIRE, and a human-readable headline ("FIRE in 14 years at age 52").
+  Post-retirement supplemental income streams correctly reduce effective
+  withdrawal rather than savings.
+- **Debt payoff projector** — `GET /api/v1/debt-payoff` computes both
+  avalanche (highest interest rate first) and snowball (lowest balance first)
+  strategies side by side. When a debt reaches zero, its minimum payment rolls
+  into the extra payment for the next target. Returns total interest paid,
+  months to payoff, payoff date, and payoff order for each strategy.
+- **FIRE pages** — `/fire` lists all scenarios with headline metrics; `/fire/{id}`
+  shows a two-panel layout with the scenario editor on the left and a portfolio
+  projection chart on the right. Auto-detect button populates income streams
+  from transaction history with a spinner and detection-warning banners.
+- **Debt page** — `/debt` lists all debts with current balance, interest rate,
+  minimum payment, and projected payoff date. Extra monthly payment input
+  updates both strategy projections in real time. Side-by-side avalanche vs.
+  snowball comparison shows total interest saved and a stacked-area balance
+  chart.
+
+---
+
 ## [0.3.0.0] - 2026-06-18
 
 ### Added

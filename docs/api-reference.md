@@ -865,35 +865,99 @@ Creates a FIRE scenario.
 ```json
 {
   "name": "Lean FIRE at 45",
-  "target_year": 2040,
-  "annual_expenses": "48000.0000",
+  "target_annual_spend": "48000.00",
   "safe_withdrawal_rate": "0.0400",
-  "income_streams": [
+  "expected_annual_return": "0.0700",
+  "expected_inflation_rate": "0.0300",
+  "target_retirement_age": 45,
+  "additional_income_streams": [
     {
-      "name": "Salary",
-      "annual_amount": "95000.0000",
+      "id": "client-generated-uuid",
+      "label": "Salary",
+      "type": "salary",
+      "amount_annual": "95000.00",
+      "growth_rate_annual": "0.0300",
       "start_year": 2025,
-      "end_year": 2040
+      "end_year": 2040,
+      "is_pre_retirement": true,
+      "notes": null,
+      "real_estate_property_id": null
     },
     {
-      "name": "Social Security",
-      "annual_amount": "18000.0000",
+      "id": "client-generated-uuid",
+      "label": "Social Security",
+      "type": "social_security",
+      "amount_annual": "18000.00",
+      "growth_rate_annual": "0.0200",
       "start_year": 2055,
-      "end_year": null
+      "end_year": null,
+      "is_pre_retirement": false,
+      "notes": null,
+      "real_estate_property_id": null
     }
   ]
 }
 ```
 
+Income stream `type` values: `salary`, `rental`, `consulting`, `pension`, `social_security`, `investment`, `other`.
+
+Safe withdrawal rate defaults to `0.04` (4%) if omitted. Expected return defaults to `0.07` (7%); inflation defaults to `0.03` (3%).
+
 **Response:** `FireScenarioResponse` — `201 Created`
+
+```json
+{
+  "id": "uuid",
+  "name": "Lean FIRE at 45",
+  "target_annual_spend": "48000.00",
+  "safe_withdrawal_rate": "0.0400",
+  "expected_annual_return": "0.0700",
+  "expected_inflation_rate": "0.0300",
+  "target_retirement_age": 45,
+  "additional_income_streams": [
+    {
+      "id": "uuid",
+      "label": "Salary",
+      "type": "salary",
+      "amount_annual": "95000.00",
+      "growth_rate_annual": "0.0300",
+      "start_year": 2025,
+      "end_year": 2040,
+      "is_pre_retirement": true,
+      "notes": null,
+      "real_estate_property_id": null,
+      "auto_detected": false,
+      "detected_at": null
+    }
+  ],
+  "detected_savings_rate": null,
+  "detected_portfolio_value": null,
+  "created_at": "2025-01-15T10:00:00Z",
+  "updated_at": "2025-01-15T10:00:00Z"
+}
+```
 
 ### `GET /fire-scenarios/{scenario_id}`
 
 Returns a single scenario.
 
+**Response:** `FireScenarioResponse`
+
 ### `PATCH /fire-scenarios/{scenario_id}`
 
 Updates a scenario. All fields optional.
+
+**Request body (example):**
+
+```json
+{
+  "name": "Lean FIRE at 47",
+  "target_annual_spend": "52000.00",
+  "safe_withdrawal_rate": "0.0350"
+}
+```
+
+**Response:** `FireScenarioResponse`
 
 ### `DELETE /fire-scenarios/{scenario_id}`
 
@@ -903,50 +967,92 @@ Deletes a scenario.
 
 ### `POST /fire-scenarios/{scenario_id}/detect`
 
-Calculates trailing average income and expenses from actual transactions and updates the scenario's detected inputs.
+Runs `FireInputDetector` against the member's transaction history and merges the results into the scenario. Auto-detected income streams are added or updated; manually-entered streams are preserved.
 
 **Query parameters:**
 | Parameter | Type | Description |
 |---|---|---|
-| `trailing_months` | int | Number of months to average (default: 12, range: 1–60) |
+| `trailing_months` | int | Months of history to analyse (default: 12, range: 1–60) |
 
-**Response:**
+**Response:** `FireDetectionResponse`
 
 ```json
 {
-  "detected_annual_income": "96000.0000",
-  "detected_annual_expenses": "52000.0000",
-  "trailing_months": 12
+  "scenario": {
+    "id": "uuid",
+    "name": "Lean FIRE at 45",
+    "target_annual_spend": "48000.00",
+    "safe_withdrawal_rate": "0.0400",
+    "expected_annual_return": "0.0700",
+    "expected_inflation_rate": "0.0300",
+    "target_retirement_age": 45,
+    "additional_income_streams": [
+      {
+        "id": "uuid",
+        "label": "Payroll",
+        "type": "salary",
+        "amount_annual": "96000.00",
+        "growth_rate_annual": "0.0300",
+        "start_year": 2026,
+        "end_year": null,
+        "is_pre_retirement": true,
+        "notes": null,
+        "real_estate_property_id": null,
+        "auto_detected": true,
+        "detected_at": "2026-06-18T10:00:00Z"
+      }
+    ],
+    "detected_savings_rate": "0.3200",
+    "detected_portfolio_value": "125000.0000",
+    "created_at": "2025-01-15T10:00:00Z",
+    "updated_at": "2026-06-18T10:00:00Z"
+  },
+  "warnings": [
+    "Only 5 months of transaction data available. Detected values may not reflect your typical financial picture."
+  ]
 }
 ```
 
+Income streams are returned under `scenario.additional_income_streams`. The `warnings` array is empty when detection ran normally (12+ months of data). Auto-detected streams have `auto_detected: true` and a `detected_at` timestamp.
+
 ### `GET /fire-scenarios/{scenario_id}/projection`
 
-Returns the year-by-year projection.
+Returns a year-by-year FIRE projection using the scenario's income streams, portfolio value, and rate assumptions.
 
 **Query parameters:**
 | Parameter | Type | Description |
 |---|---|---|
-| `from_year` | int | Start year (default: current year) |
+| `from_year` | int | First year of the projection (default: current year) |
 
-**Response:**
+**Response:** `FireProjectionResponse`
 
 ```json
 {
-  "scenario_id": "uuid",
-  "fire_year": 2041,
-  "fire_number": "1200000.0000",
-  "years": [
+  "summary": {
+    "fire_year": 2041,
+    "fire_age": 52,
+    "years_to_fire": 15,
+    "fire_number": "1200000.00",
+    "headline": "FIRE in 15 years at age 52"
+  },
+  "projections": [
     {
-      "year": 2025,
-      "portfolio_value": "125000.0000",
-      "annual_savings": "43000.0000",
-      "fire_target": "1200000.0000",
-      "on_track": false
+      "year": 2026,
+      "age": 37,
+      "portfolio": "125000.0000",
+      "annual_income": "96000.00",
+      "annual_spend": "48000.00",
+      "annual_savings": "48000.00",
+      "supplemental_income": "0.00",
+      "effective_withdrawal": "48000.00",
+      "fire_number": "1200000.00",
+      "is_fire_year": false
     }
   ]
 }
 ```
+
+`summary.fire_number` is computed as `target_annual_spend / safe_withdrawal_rate`. `fire_age` and `years_to_fire` are `null` when no FIRE crossing is found within the 75-year projection horizon. `age` per projection row is `null` if the primary member's date of birth is not recorded.
 
 ---
 
@@ -954,36 +1060,69 @@ Returns the year-by-year projection.
 
 ### `GET /debt-payoff`
 
-Returns a payoff analysis for all loan and credit accounts.
+Returns a side-by-side avalanche and snowball payoff analysis for all loan and credit accounts, with an optional extra monthly payment applied.
 
 **Query parameters:**
 | Parameter | Type | Description |
 |---|---|---|
-| `extra_monthly_payment` | decimal | Additional monthly payment across all debts (default: 0) |
-| `strategy` | string | `avalanche` or `snowball` (optional) |
+| `extra_monthly_payment` | decimal | Additional monthly payment applied on top of all minimums (default: `0`) |
+| `strategy` | string | `avalanche` or `snowball` — if supplied, only that plan is computed; both are returned when omitted |
 
-**Response:**
+**Response:** `DebtPayoffComparisonResponse`
 
 ```json
 {
-  "total_balance": "24500.0000",
-  "total_monthly_minimum": "480.0000",
-  "months_to_payoff_minimum_only": 84,
-  "months_to_payoff_with_extra": 62,
-  "total_interest_minimum_only": "3200.0000",
-  "total_interest_with_extra": "2100.0000",
   "debts": [
     {
       "account_id": "uuid",
       "name": "Chase Credit Card",
       "balance": "4500.0000",
-      "apr": "0.2199",
-      "monthly_minimum": "90.0000",
-      "payoff_month": "2030-06"
+      "interest_rate": "0.2199",
+      "monthly_minimum": "90.0000"
+    },
+    {
+      "account_id": "uuid",
+      "name": "Student Loan",
+      "balance": "12000.0000",
+      "interest_rate": "0.0650",
+      "monthly_minimum": "130.0000"
     }
-  ]
+  ],
+  "avalanche": {
+    "strategy": "avalanche",
+    "months_to_payoff": 62,
+    "total_interest_paid": "2100.0000",
+    "payoff_date": "2031-08-01",
+    "payoff_order": ["Chase Credit Card", "Student Loan"],
+    "monthly_series": [
+      {
+        "month": 1,
+        "date": "2026-07-01",
+        "total_remaining": "16280.0000",
+        "per_debt": {
+          "uuid-chase": "4280.0000",
+          "uuid-student": "12000.0000"
+        }
+      }
+    ]
+  },
+  "snowball": {
+    "strategy": "snowball",
+    "months_to_payoff": 64,
+    "total_interest_paid": "2350.0000",
+    "payoff_date": "2031-10-01",
+    "payoff_order": ["Chase Credit Card", "Student Loan"],
+    "monthly_series": [...]
+  }
 }
 ```
+
+**Strategies:**
+
+- **Avalanche** — directs extra payment to the highest-interest-rate debt first. Minimises total interest paid.
+- **Snowball** — directs extra payment to the lowest-balance debt first. Provides earlier psychological wins as individual debts clear sooner.
+
+When a debt reaches $0 its former minimum payment is automatically rolled into the extra pool for the next target debt.
 
 ---
 
