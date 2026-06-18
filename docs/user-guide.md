@@ -319,8 +319,18 @@ The preference is stored locally in your browser.
 
 Go to **Settings → Security** to change your password. You'll need to enter your current password. Changing your password invalidates all existing refresh tokens (you'll be logged out of other devices).
 
+### Security log
+
+Go to **Settings → Security** and scroll down to the **Login history** section to see your authentication event feed — logins, logouts, failed attempts, and password changes, with timestamps and IP address. Primary members can see all household members' auth events; other roles see only their own.
+
 ### Activity log
 
-Go to **Settings → Activity** to see the household audit log — a record of every mutation (account created, transaction updated, etc.) with timestamps, the actor, and before/after values.
+Go to **Settings → Activity** to see the household audit log — a chronological feed of every data mutation (account created, transaction updated, category renamed, etc.) with timestamps, the actor, and before/after values. The list is filterable by member, entity type, and date range.
 
 The audit log is append-only and cannot be modified or deleted through the application.
+
+Primary members see all household events. Partner and dependent members see events for entities they have access to.
+
+### Per-record history
+
+On any transaction or account detail page, expand the **History** section (collapsible panel at the bottom) to see the full change history for that specific record — who changed what and when, displayed oldest-first as a timeline.
