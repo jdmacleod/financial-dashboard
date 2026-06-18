@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from decimal import Decimal
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -43,6 +44,162 @@ async def test_refresh_valuations_skips_when_no_properties() -> None:
         await refresh_valuations(_arq_ctx(mock_session))
 
     mock_session.commit.assert_not_called()
+
+
+async def test_refresh_valuations_attom_full_path() -> None:
+    """Covers the attom provider branch and successful valuation creation."""
+    mock_session = AsyncMock(spec=AsyncSession)
+
+    fake_prop = MagicMock()
+    fake_prop.id = "prop-1"
+    fake_prop.address_enc = b"encrypted"
+
+    result_mock = MagicMock()
+    result_mock.scalars.return_value.all.return_value = [fake_prop]
+    mock_session.execute = AsyncMock(return_value=result_mock)
+    mock_session.flush = AsyncMock()
+
+    with (
+        patch("app.worker.tasks.valuation_tasks.settings") as mock_settings,
+        patch("app.worker.tasks.valuation_tasks.decrypt", return_value="123 Main St"),
+        patch(
+            "app.worker.tasks.valuation_tasks._get_estimate_attom",
+            new=AsyncMock(return_value=(Decimal("500000"), Decimal("0.90"))),
+        ),
+    ):
+        mock_settings.re_valuation_provider = "attom"
+        from app.worker.tasks.valuation_tasks import refresh_valuations
+
+        await refresh_valuations(_arq_ctx(mock_session))
+
+    mock_session.commit.assert_called_once()
+
+
+async def test_refresh_valuations_estated_path() -> None:
+    """Covers the estated provider branch."""
+    mock_session = AsyncMock(spec=AsyncSession)
+
+    fake_prop = MagicMock()
+    fake_prop.id = "prop-2"
+    fake_prop.address_enc = b"encrypted"
+
+    result_mock = MagicMock()
+    result_mock.scalars.return_value.all.return_value = [fake_prop]
+    mock_session.execute = AsyncMock(return_value=result_mock)
+    mock_session.flush = AsyncMock()
+
+    with (
+        patch("app.worker.tasks.valuation_tasks.settings") as mock_settings,
+        patch("app.worker.tasks.valuation_tasks.decrypt", return_value="456 Oak Ave"),
+        patch(
+            "app.worker.tasks.valuation_tasks._get_estimate_estated",
+            new=AsyncMock(return_value=(Decimal("350000"), None)),
+        ),
+    ):
+        mock_settings.re_valuation_provider = "estated"
+        from app.worker.tasks.valuation_tasks import refresh_valuations
+
+        await refresh_valuations(_arq_ctx(mock_session))
+
+    mock_session.commit.assert_called_once()
+
+
+async def test_refresh_valuations_unknown_provider_continues() -> None:
+    """Unknown provider logs a warning and skips each property without raising."""
+    mock_session = AsyncMock(spec=AsyncSession)
+
+    fake_prop = MagicMock()
+    fake_prop.id = "prop-3"
+    fake_prop.address_enc = b"encrypted"
+
+    result_mock = MagicMock()
+    result_mock.scalars.return_value.all.return_value = [fake_prop]
+    mock_session.execute = AsyncMock(return_value=result_mock)
+
+    with (
+        patch("app.worker.tasks.valuation_tasks.settings") as mock_settings,
+        patch("app.worker.tasks.valuation_tasks.decrypt", return_value="789 Pine Rd"),
+    ):
+        mock_settings.re_valuation_provider = "unsupported_api"
+        from app.worker.tasks.valuation_tasks import refresh_valuations
+
+        await refresh_valuations(_arq_ctx(mock_session))
+
+    mock_session.commit.assert_called_once()
+
+
+async def test_get_estimate_attom_returns_value_and_confidence() -> None:
+    """Covers _get_estimate_attom with a non-zero score."""
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {
+        "property": [{"avm": {"amount": {"value": "480000"}, "score": 85}}]
+    }
+
+    mock_client = MagicMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    with (
+        patch("httpx.AsyncClient", return_value=mock_client),
+        patch("app.worker.tasks.valuation_tasks.settings") as mock_settings,
+    ):
+        mock_settings.re_valuation_api_key = "test-key"  # pragma: allowlist secret
+        from app.worker.tasks.valuation_tasks import _get_estimate_attom
+
+        value, confidence = await _get_estimate_attom("123 Main St")
+
+    assert value == Decimal("480000")
+    assert confidence == Decimal("85") / 100
+
+
+async def test_get_estimate_attom_no_score_returns_none_confidence() -> None:
+    """When the ATTOM response has no score, confidence is None."""
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {"property": [{"avm": {"amount": {"value": "300000"}}}]}
+
+    mock_client = MagicMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    with (
+        patch("httpx.AsyncClient", return_value=mock_client),
+        patch("app.worker.tasks.valuation_tasks.settings") as mock_settings,
+    ):
+        mock_settings.re_valuation_api_key = "test-key"  # pragma: allowlist secret
+        from app.worker.tasks.valuation_tasks import _get_estimate_attom
+
+        value, confidence = await _get_estimate_attom("123 Main St")
+
+    assert value == Decimal("300000")
+    assert confidence is None
+
+
+async def test_get_estimate_estated_returns_value_and_none_confidence() -> None:
+    """Covers _get_estimate_estated — confidence is always None from Estated."""
+    mock_response = MagicMock()
+    mock_response.raise_for_status = MagicMock()
+    mock_response.json.return_value = {"data": {"valuation": {"value": "275000"}}}
+
+    mock_client = MagicMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=False)
+    mock_client.get = AsyncMock(return_value=mock_response)
+
+    with (
+        patch("httpx.AsyncClient", return_value=mock_client),
+        patch("app.worker.tasks.valuation_tasks.settings") as mock_settings,
+    ):
+        mock_settings.re_valuation_api_key = "test-key"  # pragma: allowlist secret
+        from app.worker.tasks.valuation_tasks import _get_estimate_estated
+
+        value, confidence = await _get_estimate_estated("456 Oak Ave")
+
+    assert value == Decimal("275000")
+    assert confidence is None
 
 
 async def test_refresh_valuations_logs_and_continues_on_property_error() -> None:

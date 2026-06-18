@@ -76,3 +76,47 @@ async def test_get_backup_not_found(session: AsyncMock) -> None:
     with pytest.raises(HTTPException) as exc_info:
         await svc.get(ctx, uuid.uuid4())
     assert exc_info.value.status_code == 404
+
+
+async def test_list_backups_returns_jobs(session: AsyncMock) -> None:
+    from unittest.mock import MagicMock
+
+    from app.db.models.backup_job import BackupJob
+
+    ctx = _ctx("primary")
+    fake_job = MagicMock(spec=BackupJob)
+    result_mock = MagicMock()
+    result_mock.scalars.return_value.all.return_value = [fake_job]
+    session.execute = AsyncMock(return_value=result_mock)
+
+    svc = BackupService(session)
+    jobs = await svc.list(ctx)
+
+    assert jobs == [fake_job]
+
+
+async def test_get_backup_forbidden_for_non_primary(session: AsyncMock) -> None:
+    from fastapi import HTTPException
+
+    ctx = _ctx("partner")
+    svc = BackupService(session)
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.get(ctx, uuid.uuid4())
+    assert exc_info.value.status_code == 403
+
+
+async def test_get_backup_success(session: AsyncMock) -> None:
+    from unittest.mock import MagicMock
+
+    from app.db.models.backup_job import BackupJob
+
+    ctx = _ctx("primary")
+    fake_job = MagicMock(spec=BackupJob)
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = fake_job
+    session.execute = AsyncMock(return_value=result_mock)
+
+    svc = BackupService(session)
+    job = await svc.get(ctx, uuid.uuid4())
+
+    assert job is fake_job

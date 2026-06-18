@@ -105,3 +105,16 @@ async def test_get_visibility_ctx_missing_role_defaults_to_partner(
     token = jwt.encode(payload, settings.secret_key, algorithm="HS256")
     ctx = await get_visibility_ctx(_fake_request(), _bearer(token), db_session)
     assert ctx.role == "partner"
+
+
+async def test_get_visibility_ctx_no_client_ip_is_none(
+    db_session: AsyncSession,
+    primary_user: User,
+    primary_member: HouseholdMember,
+) -> None:
+    """Covers the request.client is None branch — ip_address should be None."""
+    token = create_access_token(str(primary_user.id), str(primary_member.id), "primary")
+    # A request with no client (e.g. internal/test invocation with no peer address)
+    no_client_request = Request({"type": "http", "client": None, "headers": []})
+    ctx = await get_visibility_ctx(no_client_request, _bearer(token), db_session)
+    assert ctx.ip_address is None

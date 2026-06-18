@@ -69,7 +69,7 @@ class WorkerSettings:
     ]
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     from arq import run_worker
 
     run_worker(WorkerSettings)  # type: ignore[arg-type]
