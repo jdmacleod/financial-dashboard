@@ -6,6 +6,12 @@ re-authentication before download.
 
 ---
 
+## Status
+
+**Complete** — shipped 2026-06-18, version v0.5.0.0.
+
+---
+
 ## Deliverables
 
 - [ ] PDF summary report (anonymized — account numbers last-4 only)
