@@ -16,9 +16,11 @@ class TransactionCreate(BaseModel):
 
 
 class TransactionUpdate(BaseModel):
-    category_id: uuid.UUID | None = None
+    transaction_date: date | None = None
     amount: Decimal | None = None
     payee_normalized: str | None = None
+    memo: str | None = None
+    category_id: uuid.UUID | None = None
     is_transfer: bool | None = None
     real_estate_property_id: uuid.UUID | None = None
     is_reviewed: bool | None = None

@@ -47,6 +47,9 @@ services:
 
   redis:
     image: redis:7-alpine
+    command: redis-server /etc/redis/redis.conf
+    volumes:
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
     networks: [hearthledger_net]
     # No ports: — never expose to host
 
@@ -55,12 +58,28 @@ services:
     env_file: .env
     depends_on: [db, redis]
     networks: [hearthledger_net]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   worker:
     build: ./backend
     command: python -m app.worker.main
     env_file: .env
-    depends_on: [db, redis]
+    depends_on:
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - ./data/backups:/data/backups
     networks: [hearthledger_net]

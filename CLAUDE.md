@@ -34,7 +34,7 @@ relevant phase doc before starting any implementation work.
 - Vite 5
 - TanStack Query v5
 - TanStack Router v1
-- Tailwind CSS v3
+- Tailwind CSS v4
 - shadcn/ui
 - Recharts
 - React Hook Form + Zod
@@ -61,6 +61,7 @@ hearthledger/
 │   ├── Dockerfile
 │   ├── pyproject.toml
 │   ├── alembic.ini
+│   ├── start.sh                  # runs Alembic migrations then starts uvicorn
 │   ├── alembic/
 │   │   ├── env.py
 │   │   └── versions/
@@ -159,10 +160,15 @@ hearthledger/
 │       ├── hooks/
 │       ├── stores/               # Zustand stores (UI state only)
 │       └── lib/
+│           ├── accountTypes.ts   # RETIREMENT_ACCOUNT_TYPES, INVESTMENT_ACCOUNT_TYPES
+│           ├── errorHandlers.ts  # shared API error extraction helpers
 │           ├── formatters.ts     # currency, date, number formatting
+│           ├── transactionSchema.ts  # Zod schema for transaction form
 │           └── utils.ts
 ├── nginx/
 │   └── nginx.conf
+├── redis/
+│   └── redis.conf                # Redis configuration (maxmemory, eviction policy)
 └── data/                         # gitignored — Docker volume mounts
     ├── postgres/
     └── backups/
@@ -221,6 +227,7 @@ All defined in `.env`, documented in `.env.example`.
 ```bash
 # Database
 DATABASE_URL=postgresql+asyncpg://hearthledger:password@db:5432/hearthledger  # pragma: allowlist secret
+DB_PASSWORD=<postgres password (also set in POSTGRES_PASSWORD)>
 
 # Redis / worker
 REDIS_URL=redis://redis:6379/0
@@ -244,6 +251,9 @@ RE_VALUATION_REFRESH_SCHEDULE=0 3 * * 1      # cron; weekly Monday 3am
 BACKUP_PATH=/data/backups
 BACKUP_RETENTION_DAYS=30
 BACKUP_SCHEDULE=0 2 * * *                     # cron; daily 2am
+
+# Exports
+EXPORT_PATH=/data/exports
 
 # CORS (lock to localhost in production)
 ALLOWED_ORIGINS=http://localhost,http://localhost:80

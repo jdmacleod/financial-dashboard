@@ -367,3 +367,57 @@ async def test_delete_transaction_not_found(
     with pytest.raises(HTTPException) as exc_info:
         await svc.delete(ctx, uuid.uuid4())
     assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_update_transaction_date(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx)
+
+    svc = TransactionService(db_session)
+    txn = await svc.create(
+        ctx,
+        account.id,
+        TransactionCreate(
+            transaction_date=date(2025, 1, 15),
+            amount=Decimal("-50.00"),
+            payee_normalized="Grocery Store",
+        ),
+    )
+
+    updated = await svc.update(ctx, txn.id, TransactionUpdate(transaction_date=date(2025, 2, 1)))
+    assert updated.transaction_date == date(2025, 2, 1)
+
+
+@pytest.mark.asyncio
+async def test_update_transaction_memo(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx)
+
+    svc = TransactionService(db_session)
+    txn = await svc.create(
+        ctx,
+        account.id,
+        TransactionCreate(
+            transaction_date=date(2025, 1, 15),
+            amount=Decimal("-50.00"),
+            payee_normalized="Grocery Store",
+            memo="Initial memo",
+        ),
+    )
+
+    updated = await svc.update(ctx, txn.id, TransactionUpdate(memo="Updated memo"))
+    assert updated.memo == "Updated memo"
+
+    cleared = await svc.update(ctx, txn.id, TransactionUpdate(memo=None))
+    assert cleared.memo is None

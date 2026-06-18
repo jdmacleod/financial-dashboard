@@ -116,6 +116,15 @@ export interface PaginatedTransactions {
   page_size: number
 }
 
+export interface TransactionCreate {
+  transaction_date: string
+  amount: string
+  payee_normalized: string
+  memo?: string
+  category_id?: string | null
+  // is_transfer intentionally omitted from forms — backend defaults to false
+}
+
 export type ImportFormat = "csv" | "ofx" | "qfx"
 export type ImportJobStatus = "pending" | "processing" | "complete" | "failed"
 

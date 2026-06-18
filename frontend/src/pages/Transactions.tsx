@@ -1,12 +1,16 @@
 import { useState } from "react"
 import { useParams } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { Pencil, Trash2 } from "lucide-react"
 import { transactionsApi } from "@/api/transactions"
 import { categoriesApi } from "@/api/categories"
 import { accountsApi } from "@/api/accounts"
 import { ImportModal } from "@/components/app/ImportModal"
+import { AddTransactionModal } from "@/components/app/AddTransactionModal"
+import { EditTransactionModal } from "@/components/app/EditTransactionModal"
 import { HistoryPanel } from "@/components/app/HistoryPanel"
 import { formatCurrency, formatDate } from "@/lib/formatters"
+import { INVESTMENT_ACCOUNT_TYPES } from "@/lib/accountTypes"
 import type { CategoryResponse, TransactionResponse } from "@/api/types"
 
 const PAGE_SIZE = 50
@@ -59,6 +63,47 @@ function CategoryBadge({
   )
 }
 
+function DeleteConfirmDialog({
+  onConfirm,
+  onCancel,
+  isPending,
+  hasError,
+}: {
+  onConfirm: () => void
+  onCancel: () => void
+  isPending: boolean
+  hasError: boolean
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="w-full max-w-sm bg-white rounded-xl shadow-xl p-6">
+        <h2 className="text-lg font-semibold mb-2">Delete transaction?</h2>
+        <p className="text-sm text-gray-600 mb-4">This cannot be undone.</p>
+        {hasError && (
+          <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            Failed to delete. Please try again.
+          </p>
+        )}
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isPending}
+            className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+          >
+            {isPending ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Transactions() {
   const { accountId } = useParams({ strict: false }) as { accountId: string }
   const queryClient = useQueryClient()
@@ -68,6 +113,9 @@ export default function Transactions() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [bulkCategoryId, setBulkCategoryId] = useState("")
   const [showImport, setShowImport] = useState(false)
+  const [showAdd, setShowAdd] = useState(false)
+  const [editingTransaction, setEditingTransaction] = useState<TransactionResponse | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null)
 
   const { data: account } = useQuery({
@@ -111,6 +159,14 @@ export default function Transactions() {
     },
   })
 
+  const deleteTransaction = useMutation({
+    mutationFn: (id: string) => transactionsApi.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions", accountId] })
+      setDeletingId(null)
+    },
+  })
+
   function toggleSelected(id: string) {
     setSelected((prev) => {
       const next = new Set(prev)
@@ -122,6 +178,8 @@ export default function Transactions() {
 
   const transactions = page_?.items ?? []
   const totalPages = page_ ? Math.max(1, Math.ceil(page_.total / PAGE_SIZE)) : 1
+  const accountType = account?.account_type
+  const isInvestmentAccount = accountType ? INVESTMENT_ACCOUNT_TYPES.includes(accountType) : false
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -130,12 +188,20 @@ export default function Transactions() {
           <h1 className="text-2xl font-semibold">{account?.nickname ?? "Transactions"}</h1>
           <p className="text-sm text-gray-500">Transactions</p>
         </div>
-        <button
-          onClick={() => setShowImport(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
-        >
-          Import
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAdd(true)}
+            className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors"
+          >
+            New entry
+          </button>
+          <button
+            onClick={() => setShowImport(true)}
+            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+          >
+            Import
+          </button>
+        </div>
       </div>
 
       <div className="flex items-center gap-3 mb-4">
@@ -238,13 +304,29 @@ export default function Transactions() {
                 >
                   {formatCurrency(t.amount)}
                 </div>
-                <button
-                  onClick={() => setExpandedHistory((prev) => (prev === t.id ? null : t.id))}
-                  className="text-xs text-gray-400 hover:text-gray-600 shrink-0"
-                  title="View history"
-                >
-                  {expandedHistory === t.id ? "▲" : "▾"}
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={() => setEditingTransaction(t)}
+                    className="p-1 text-gray-400 hover:text-indigo-600 transition-colors"
+                    title="Edit transaction"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => setDeletingId(t.id)}
+                    className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                    title="Delete transaction"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <button
+                    onClick={() => setExpandedHistory((prev) => (prev === t.id ? null : t.id))}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                    title="View history"
+                  >
+                    {expandedHistory === t.id ? "▲" : "▾"}
+                  </button>
+                </div>
               </div>
               {expandedHistory === t.id && (
                 <div className="px-4 pb-3">
@@ -254,7 +336,41 @@ export default function Transactions() {
             </div>
           ))}
           {transactions.length === 0 && (
-            <p className="px-4 py-8 text-center text-gray-400">No transactions found.</p>
+            <div className="px-4 py-10 text-center">
+              {isInvestmentAccount ? (
+                <>
+                  <p className="text-gray-400 mb-3">
+                    No transactions recorded yet. Add your first entry →
+                  </p>
+                  <button
+                    onClick={() => setShowAdd(true)}
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+                  >
+                    New entry
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-400 mb-3">
+                    No transactions yet. Import a file or add one manually.
+                  </p>
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => setShowImport(true)}
+                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+                    >
+                      Import
+                    </button>
+                    <button
+                      onClick={() => setShowAdd(true)}
+                      className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    >
+                      New entry
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -282,6 +398,32 @@ export default function Transactions() {
       )}
 
       {showImport && <ImportModal accountId={accountId} onClose={() => setShowImport(false)} />}
+
+      {showAdd && accountType && categories && (
+        <AddTransactionModal
+          accountId={accountId}
+          accountType={accountType}
+          categories={categories}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {editingTransaction && categories && (
+        <EditTransactionModal
+          transaction={editingTransaction}
+          categories={categories}
+          onClose={() => setEditingTransaction(null)}
+        />
+      )}
+
+      {deletingId && (
+        <DeleteConfirmDialog
+          onConfirm={() => deleteTransaction.mutate(deletingId)}
+          onCancel={() => setDeletingId(null)}
+          isPending={deleteTransaction.isPending}
+          hasError={deleteTransaction.isError}
+        />
+      )}
     </div>
   )
 }

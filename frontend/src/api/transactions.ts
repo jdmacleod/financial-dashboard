@@ -1,5 +1,5 @@
 import { api } from "./client"
-import type { PaginatedTransactions, TransactionResponse } from "./types"
+import type { PaginatedTransactions, TransactionCreate, TransactionResponse } from "./types"
 
 export interface TransactionFilters {
   from?: string
@@ -34,12 +34,17 @@ export const transactionsApi = {
   list: (accountId: string, filters: TransactionFilters = {}) =>
     api.get<PaginatedTransactions>(`/accounts/${accountId}/transactions${buildQuery(filters)}`),
 
+  create: (accountId: string, data: TransactionCreate) =>
+    api.post<TransactionResponse>(`/accounts/${accountId}/transactions`, data),
+
   update: (
     id: string,
     data: Partial<{
-      category_id: string | null
+      transaction_date: string
       amount: string
       payee_normalized: string
+      memo: string | null
+      category_id: string | null
       is_transfer: boolean
       real_estate_property_id: string | null
       is_reviewed: boolean
