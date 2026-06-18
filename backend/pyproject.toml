@@ -9,7 +9,7 @@ dependencies = [
     "asyncpg>=0.29",
     "alembic>=1.13",
     "pydantic[email]>=2.0",
-    "pydantic-settings>=2.0",
+    "pydantic-settings>=2.6,<3.0",
     "python-jose[cryptography]>=3.3",
     "passlib[bcrypt]>=1.7",
     "bcrypt<4.1",  # passlib 1.7.4 predates bcrypt 4.1's strict 72-byte enforcement and crashes on its own self-test

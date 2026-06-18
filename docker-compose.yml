@@ -5,6 +5,11 @@ services:
       POSTGRES_DB: hearthledger
       POSTGRES_USER: hearthledger
       POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # Alpine (musl libc) has no locale data; C is the only safe choice.
+      # POSTGRES_INITDB_ARGS applies only on first cluster creation.
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+      LC_ALL: C
+      LANG: C
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
       - ./backend/db_init.sql:/docker-entrypoint-initdb.d/01_init.sql
@@ -13,6 +18,9 @@ services:
 
   redis:
     image: redis:7-alpine
+    command: redis-server /etc/redis/redis.conf
+    volumes:
+      - ./redis/redis.conf:/etc/redis/redis.conf:ro
     networks: [hearthledger_net]
     # No ports: — never expose to host
 
@@ -21,12 +29,28 @@ services:
     env_file: .env
     depends_on: [db, redis]
     networks: [hearthledger_net]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   worker:
     build: ./backend
     command: python -m app.worker.main
     env_file: .env
-    depends_on: [db, redis]
+    depends_on:
+      backend:
+        condition: service_healthy
+      redis:
+        condition: service_started
     volumes:
       - ./data/backups:/data/backups
     networks: [hearthledger_net]
