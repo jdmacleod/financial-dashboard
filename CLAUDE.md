@@ -227,6 +227,7 @@ All defined in `.env`, documented in `.env.example`.
 ```bash
 # Database
 DATABASE_URL=postgresql+asyncpg://hearthledger:password@db:5432/hearthledger  # pragma: allowlist secret
+DB_PASSWORD=<postgres password (also set in POSTGRES_PASSWORD)>
 
 # Redis / worker
 REDIS_URL=redis://redis:6379/0
@@ -250,6 +251,9 @@ RE_VALUATION_REFRESH_SCHEDULE=0 3 * * 1      # cron; weekly Monday 3am
 BACKUP_PATH=/data/backups
 BACKUP_RETENTION_DAYS=30
 BACKUP_SCHEDULE=0 2 * * *                     # cron; daily 2am
+
+# Exports
+EXPORT_PATH=/data/exports
 
 # CORS (lock to localhost in production)
 ALLOWED_ORIGINS=http://localhost,http://localhost:80

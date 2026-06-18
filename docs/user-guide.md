@@ -68,7 +68,7 @@ Pagination defaults to 50 per page (up to 500 per page via the `page_size` query
 
 ### Adding a transaction manually
 
-Click **New entry** and fill in the date, amount, payee, memo, and optional category. The category field pre-selects a sensible default based on the account type — retirement accounts (401k, 403b, IRA, Roth IRA) default to "Contributions"; pension accounts default to "Income". Mark a transaction as a transfer if money moved between two of your accounts.
+Click **New entry** and fill in the date, amount, payee, memo, and optional category. The category field pre-selects a sensible default based on the account type — retirement accounts (401k, 403b, IRA, Roth IRA) default to "Contributions"; pension accounts default to "Income".
 
 ### Editing a transaction
 

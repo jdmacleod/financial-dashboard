@@ -62,7 +62,7 @@ ALLOWED_ORIGINS=http://localhost,http://localhost:80
 ## 3. Create the data directories
 
 ```bash
-mkdir -p data/postgres data/backups
+mkdir -p data/postgres data/backups data/exports
 ```
 
 ## 4. Start the stack
