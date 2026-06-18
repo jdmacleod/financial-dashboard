@@ -9,12 +9,11 @@ from sqlalchemy import select
 from app.core.config import settings
 from app.db.models.audit_log import AuditLog
 from app.db.models.export_job import ExportJob
+from app.exporters import excel_exporter, pdf_exporter
 
 
 async def run_export_job(ctx: dict[str, Any], job_id: str) -> None:
     """ARQ worker task: generate a PDF or Excel export file."""
-    from app.exporters import excel_exporter, pdf_exporter
-
     session_factory = ctx["db"]
     async with session_factory() as session:
         result = await session.execute(select(ExportJob).where(ExportJob.id == uuid.UUID(job_id)))

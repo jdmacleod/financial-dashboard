@@ -52,9 +52,9 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 CONTAINER_NAME = "hearthledger-test-db"
 DB_NAME = "hearthledger"
 DB_USER = "hearthledger"
-DB_PASSWORD = "test"  # noqa: S105 — ephemeral throwaway test container only
+DB_PASSWORD = "test"  # noqa: S105 — ephemeral throwaway test container only  # pragma: allowlist secret
 APP_ROLE = "hearthledger_app"
-APP_ROLE_PASSWORD = "changeme"  # noqa: S105 — fixed value from db_init.sql, ephemeral test DB only
+APP_ROLE_PASSWORD = "changeme"  # noqa: S105 — fixed value from db_init.sql, ephemeral test DB only  # pragma: allowlist secret
 SYSTEM_HOUSEHOLD_ID = "00000000-0000-0000-0000-000000000000"
 
 
@@ -302,6 +302,16 @@ async def primary_member(make_member: Any) -> HouseholdMember:
 @pytest_asyncio.fixture
 async def primary_user(make_user: Any, primary_member: HouseholdMember) -> User:
     return await make_user(primary_member, "primary@example.com")
+
+
+@pytest_asyncio.fixture
+async def partner_member(make_member: Any) -> HouseholdMember:
+    return await make_member(role="partner", display_name="Partner")
+
+
+@pytest_asyncio.fixture
+async def partner_user(make_user: Any, partner_member: HouseholdMember) -> User:
+    return await make_user(partner_member, "partner@example.com")
 
 
 @pytest.fixture

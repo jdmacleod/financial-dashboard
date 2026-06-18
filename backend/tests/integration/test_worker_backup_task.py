@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import uuid
 from contextlib import asynccontextmanager
 from typing import Any
 from unittest.mock import MagicMock, patch
@@ -28,7 +27,6 @@ async def test_run_backup_completes_successfully(db_session: AsyncSession) -> No
 
     job = BackupJob(
         triggered_by="manual",
-        triggered_by_user_id=uuid.uuid4(),
         status="pending",
     )
     db_session.add(job)
@@ -40,6 +38,7 @@ async def test_run_backup_completes_successfully(db_session: AsyncSession) -> No
         patch("app.worker.tasks.backup_tasks.encrypt_file") as mock_enc,
         patch("app.worker.tasks.backup_tasks.decrypt_file_to_devnull") as mock_dec,
         patch("app.worker.tasks.backup_tasks._prune_old_backups"),
+        patch("pathlib.Path.mkdir"),
         patch("pathlib.Path.stat") as mock_stat,
     ):
         mock_run.return_value = MagicMock(returncode=0)
@@ -62,16 +61,18 @@ async def test_run_backup_sets_failed_on_error(db_session: AsyncSession) -> None
 
     job = BackupJob(
         triggered_by="manual",
-        triggered_by_user_id=uuid.uuid4(),
         status="pending",
     )
     db_session.add(job)
     await db_session.flush()
     job_id = str(job.id)
 
-    with patch(
-        "app.worker.tasks.backup_tasks.subprocess.run",
-        side_effect=RuntimeError("pg_dump failed"),
+    with (
+        patch("pathlib.Path.mkdir"),
+        patch(
+            "app.worker.tasks.backup_tasks.subprocess.run",
+            side_effect=RuntimeError("pg_dump failed"),
+        ),
     ):
         await run_backup(_arq_ctx(db_session, backup_job_id=job_id))
 
@@ -88,6 +89,7 @@ async def test_run_backup_creates_scheduled_job_when_no_id(db_session: AsyncSess
         patch("app.worker.tasks.backup_tasks.encrypt_file"),
         patch("app.worker.tasks.backup_tasks.decrypt_file_to_devnull"),
         patch("app.worker.tasks.backup_tasks._prune_old_backups"),
+        patch("pathlib.Path.mkdir"),
         patch("pathlib.Path.stat") as mock_stat,
     ):
         mock_run.return_value = MagicMock(returncode=0)

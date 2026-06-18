@@ -265,6 +265,7 @@ async def test_generate_pdf_executor_with_debts_and_fire(
     credit = await _seed_account(db_session, household, "credit_card", "Visa")
     debt = Debt(
         account_id=credit.id,
+        original_balance=Decimal("1500"),
         current_balance=Decimal("1500"),
         interest_rate=Decimal("0.22"),
         minimum_payment=Decimal("30"),

@@ -247,6 +247,7 @@ async def test_generate_excel_with_debts(
     credit = await _seed_account(db_session, household, "credit_card", "Visa")
     debt = Debt(
         account_id=credit.id,
+        original_balance=Decimal("2000"),
         current_balance=Decimal("2000"),
         interest_rate=Decimal("0.2199"),
         minimum_payment=Decimal("50"),
