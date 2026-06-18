@@ -11,7 +11,7 @@ The dashboard shows a real-time summary of your household finances.
 **Widgets:**
 
 - **KPI Cards** — net worth, MTD income, MTD expenses, savings rate
-- **Budget Alerts** — categories that have reached 75%+ or 100% of their monthly budget
+- **Budget Alerts** — categories that have exceeded 90% of their monthly budget
 - **Net Worth Chart** — trailing 12-month trend line
 - **Spending by Category** — current month, donut chart
 
@@ -125,9 +125,9 @@ Budgets set monthly spending targets per category.
 1. Go to **Budgets** in the sidebar.
 2. Click **New budget**.
 3. Choose a category and set the monthly limit.
-4. Optionally set an `effective_date` — budgets are effective from that date forward.
+4. Optionally set an `effective_from` date — budgets take effect from that date forward. An `effective_to` date can also be set to retire a budget at a future date without deleting it.
 
-The dashboard shows budget alerts for categories at 75%+ of their limit. The **Budget vs Actuals** report (under Reports) shows a full breakdown for any month.
+The dashboard shows budget alerts for categories that have exceeded 90% of their limit. The **Budget vs Actuals** report (under Reports) shows a full breakdown for any month.
 
 ---
 

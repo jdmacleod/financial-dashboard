@@ -542,7 +542,8 @@ Lists budgets with optional filtering.
     "id": "uuid",
     "category_id": "uuid",
     "monthly_limit": "500.0000",
-    "effective_from": "2025-01-01"
+    "effective_from": "2025-01-01",
+    "effective_to": null
   }
 ]
 ```
@@ -557,7 +558,8 @@ Creates a budget.
 {
   "category_id": "uuid",
   "monthly_limit": "500.0000",
-  "effective_from": "2025-01-01"
+  "effective_from": "2025-01-01",
+  "effective_to": null
 }
 ```
 
@@ -694,9 +696,26 @@ Net worth over time.
       "date": "2025-01-01",
       "total_assets": "250000.0000",
       "total_liabilities": "180000.0000",
-      "net_worth": "70000.0000"
+      "net_worth": "70000.0000",
+      "breakdown": {
+        "checking_savings": "24500.0000",
+        "investment": "148000.0000",
+        "retirement": "201000.0000",
+        "real_estate": "420000.0000",
+        "hsa": "8200.0000",
+        "other_assets": "0.0000",
+        "mortgage": "-298000.0000",
+        "other_liabilities": "-14000.0000"
+      }
     }
-  ]
+  ],
+  "current": {
+    "date": "2025-01-01",
+    "total_assets": "250000.0000",
+    "total_liabilities": "180000.0000",
+    "net_worth": "70000.0000",
+    "breakdown": { "...": "..." }
+  }
 }
 ```
 
@@ -715,14 +734,21 @@ Income and expenses over time.
 
 ```json
 {
-  "periods": [
+  "series": [
     {
       "period": "2025-01",
       "income": "5800.0000",
       "expenses": "3200.0000",
-      "net": "2600.0000"
+      "net": "2600.0000",
+      "savings_rate": 44.8
     }
-  ]
+  ],
+  "totals": {
+    "income": "5800.0000",
+    "expenses": "3200.0000",
+    "net": "2600.0000",
+    "savings_rate": 44.8
+  }
 }
 ```
 
@@ -741,12 +767,15 @@ Spending totals per category.
 
 ```json
 {
+  "total": "-3490.0000",
   "categories": [
     {
       "category_id": "uuid",
       "name": "Groceries",
       "amount": "-642.5000",
-      "pct_of_total": 18.4
+      "percentage": 18.4,
+      "transaction_count": 14,
+      "has_children": false
     }
   ]
 }
@@ -765,14 +794,15 @@ Budget vs. actual spending for a month.
 
 ```json
 {
-  "month": "2025-01",
-  "rows": [
+  "period": "2025-01",
+  "categories": [
     {
       "category_id": "uuid",
       "name": "Groceries",
       "budget": "500.0000",
       "actual": "642.5000",
-      "used_pct": 128.5
+      "remaining": "-142.5000",
+      "percentage_used": 128.5
     }
   ]
 }
@@ -808,7 +838,11 @@ Aggregated dashboard data: net worth summary, MTD cash flow, budget alerts, and 
     "net": "2600.0000"
   },
   "budget_alerts": [{ "category": "Dining Out", "used_pct": 92.3 }],
-  "top_spending_categories": [{ "name": "Groceries", "amount": "-642.5000" }]
+  "top_spending_categories": [{ "name": "Groceries", "amount": "-642.5000" }],
+  "accounts_summary": {
+    "total_assets": "675200.0000",
+    "total_liabilities": "312000.0000"
+  }
 }
 ```
 
@@ -1089,15 +1123,19 @@ Downloads the backup file for a completed job. Primary only. Returns `404` if th
 
 ### `GET /audit-log`
 
-Returns the household audit log. Primary only.
+Returns the household audit log. Access control: primary members see all events; partners and dependents may only query per-record history for entities they can see; all users can see their own auth events.
 
 **Query parameters:**
 | Parameter | Type | Description |
 |---|---|---|
 | `page` | int | Page number (default: 1) |
 | `page_size` | int | Results per page (default: 50, max: 200) |
-| `actor_member_id` | uuid | Filter by actor |
+| `member_id` | uuid | Filter by actor member |
+| `user_id` | uuid | Filter by actor user |
 | `entity_type` | string | Filter by entity type (e.g. `account`, `transaction`) |
+| `entity_id` | uuid | Filter to a single record's history |
+| `from` | datetime | Start of date range (ISO 8601) |
+| `to` | datetime | End of date range (ISO 8601) |
 
 **Response:**
 
