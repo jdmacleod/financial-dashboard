@@ -119,13 +119,17 @@ class TransactionService:
             data.category_id is not None and data.category_id != transaction.category_id
         )
 
-        if data.category_id is not None:
-            transaction.category_id = data.category_id
-            transaction.is_reviewed = True
+        if data.transaction_date is not None:
+            transaction.transaction_date = data.transaction_date
         if data.amount is not None:
             transaction.amount = data.amount
         if data.payee_normalized is not None:
             transaction.payee_normalized = data.payee_normalized
+        if "memo" in data.model_fields_set:
+            transaction.memo = data.memo
+        if data.category_id is not None:
+            transaction.category_id = data.category_id
+            transaction.is_reviewed = True
         if data.is_transfer is not None:
             transaction.is_transfer = data.is_transfer
         if data.real_estate_property_id is not None:
