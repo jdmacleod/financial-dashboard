@@ -3,6 +3,65 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0.0] - 2026-06-18
+
+### Added
+
+- **Net worth over time** — `GET /api/v1/reports/net-worth` returns a monthly,
+  quarterly, or annual series with per-account-type breakdown (checking/savings,
+  investment, retirement, real estate, HSA, liabilities). Accounts with no
+  snapshots fall back to running transaction balance automatically.
+- **Cash flow report** — `GET /api/v1/reports/cash-flow` returns income vs.
+  expenses by month or quarter with savings rate per period. Transfer transactions
+  are excluded from both sides of the ledger.
+- **Spending by category** — `GET /api/v1/reports/spending-by-category` with
+  optional `parent_category_id` drilldown; uncategorized transactions grouped
+  separately; sorted by spend descending.
+- **Budget management** — full CRUD for `Budget` records: set a monthly/annual
+  amount per category with `effective_from`/`effective_to` date ranges so budgets
+  can change over time without losing history.
+- **Budget vs actuals** — `GET /api/v1/reports/budget-vs-actuals?month=YYYY-MM`
+  matches each category to the most recent effective budget row, computes
+  `actual`, `remaining`, and `percentage_used`.
+- **Property P&L** — `GET /api/v1/reports/property-pnl` aggregates income and
+  expense transactions tagged to a real-estate property; returns gross income, net
+  income, net yield %, expense breakdown by category, and a monthly series.
+- **Dashboard** — `GET /api/v1/dashboard` aggregates net worth (with 30-day
+  change), MTD cash flow, top-5 spending categories, budget alerts (>90% used),
+  and total assets/liabilities into a single endpoint — loads from one request.
+- **Audit log API** — `GET /api/v1/audit-log` with filtering by `entity_type`,
+  `entity_id`, `user_id`, date range, and pagination. Access control: primary
+  members see all events; partners/dependents may only query per-record history
+  for entities they can see; auth events show own events for all users.
+- **Activity log page** (`/settings/activity`) — chronological audit event feed
+  for primary members; filterable by member, entity type, and date. Human-readable
+  event descriptions generated client-side from `action` + context fields.
+- **Security log page** (`/settings/security`) — auth event feed accessible to
+  all users (own events only); primary sees all users' auth events.
+- **Per-record history panel** — collapsible History section on transaction detail
+  and account detail pages, queries
+  `GET /api/v1/audit-log?entity_type=transaction&entity_id={id}`, rendered
+  oldest-first as a timeline.
+
+### Changed
+
+- Dashboard homepage replaced with metric cards (net worth, MTD income/expenses,
+  savings rate) + 12-month net worth line chart + spending donut chart + budget
+  alert chips.
+- `/reports/net-worth` page: date range picker, monthly/quarterly/annual toggle,
+  stacked area breakdown chart.
+- `/reports/cash-flow` page: grouped bar chart with net overlay, month-by-month
+  table with savings rate column.
+- `/reports/spending` page: donut chart + ranked list with category drilldown;
+  custom date range selector.
+- `/budgets` page: budget list grouped by category with inline progress bars;
+  current month selector; "Add budget" modal.
+- `/properties/{id}` now has two tabs — Valuation history (line chart + manual
+  update button) and P&L (date range, gross/net cards, expense breakdown,
+  monthly series table).
+
+---
+
 ## [0.2.0.0] - 2026-06-18
 
 ### Added
