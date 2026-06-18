@@ -124,7 +124,7 @@ export default function ReportNetWorth() {
                 axisLine={false}
                 tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
               />
-              <Tooltip formatter={(v: number) => formatCurrency(v)} />
+              <Tooltip formatter={(v) => formatCurrency(v as number)} />
               <Legend iconType="circle" iconSize={8} />
               <Area
                 type="monotone"

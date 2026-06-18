@@ -196,7 +196,7 @@ export default function Debt() {
                         axisLine={false}
                         tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
                       />
-                      <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                      <Tooltip formatter={(v) => formatCurrency(v as number)} />
                       {data.debts.map((d, i) => (
                         <Area
                           key={d.debt_id}
