@@ -8,7 +8,7 @@ async def test_setup_happy_path_returns_access_token(client: AsyncClient) -> Non
             "household_name": "The MacLeods",
             "member_name": "Jason",
             "email": "jason@example.com",
-            "password": "CorrectHorse123!",
+            "password": "CorrectHorse123!",  # pragma: allowlist secret  # pragma: allowlist secret
         },
     )
     assert resp.status_code == 201
@@ -20,7 +20,7 @@ async def test_setup_second_call_returns_409(client: AsyncClient) -> None:
         "household_name": "The MacLeods",
         "member_name": "Jason",
         "email": "jason@example.com",
-        "password": "CorrectHorse123!",
+        "password": "CorrectHorse123!",  # pragma: allowlist secret
     }
     first = await client.post("/api/v1/setup", json=payload)
     assert first.status_code == 201
@@ -31,7 +31,7 @@ async def test_setup_second_call_returns_409(client: AsyncClient) -> None:
             "household_name": "Another Household",
             "member_name": "Someone",
             "email": "someone@example.com",
-            "password": "CorrectHorse123!",
+            "password": "CorrectHorse123!",  # pragma: allowlist secret  # pragma: allowlist secret
         },
     )
     assert second.status_code == 409
@@ -47,7 +47,7 @@ async def test_setup_status_reflects_completion(client: AsyncClient) -> None:
             "household_name": "The MacLeods",
             "member_name": "Jason",
             "email": "jason@example.com",
-            "password": "CorrectHorse123!",
+            "password": "CorrectHorse123!",  # pragma: allowlist secret  # pragma: allowlist secret
         },
     )
 

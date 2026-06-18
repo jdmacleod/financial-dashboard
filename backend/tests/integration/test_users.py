@@ -31,7 +31,7 @@ async def test_create_user_writes_audit_row_excluding_hashed_password(
         json={
             "member_id": str(target_member.id),
             "email": "new@example.com",
-            "password": "CorrectHorse123!",
+            "password": "CorrectHorse123!",  # pragma: allowlist secret
         },
         headers=auth_headers(primary_user, primary_member, "primary"),
     )
@@ -104,7 +104,7 @@ async def test_partner_cannot_create_user(
         json={
             "member_id": str(partner_member.id),
             "email": "new@example.com",
-            "password": "CorrectHorse123!",
+            "password": "CorrectHorse123!",  # pragma: allowlist secret
         },
         headers=auth_headers(partner_user, partner_member, "partner"),
     )

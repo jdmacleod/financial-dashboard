@@ -14,7 +14,7 @@ async def test_run_creates_household_member_user(db_session: AsyncSession) -> No
         household_name="The MacLeods",
         member_name="Jason",
         email="jason@example.com",
-        password="CorrectHorse123!",
+        password="CorrectHorse123!",  # pragma: allowlist secret
     )
     assert isinstance(token, str)
     assert member_name == "Jason"
@@ -26,14 +26,14 @@ async def test_run_rejects_second_call(db_session: AsyncSession) -> None:
         household_name="The MacLeods",
         member_name="Jason",
         email="jason@example.com",
-        password="CorrectHorse123!",
+        password="CorrectHorse123!",  # pragma: allowlist secret
     )
     with pytest.raises(HTTPException) as exc_info:
         await service.run(
             household_name="Another Household",
             member_name="Someone",
             email="someone@example.com",
-            password="CorrectHorse123!",
+            password="CorrectHorse123!",  # pragma: allowlist secret
         )
     assert exc_info.value.status_code == 409
 
@@ -44,7 +44,7 @@ async def test_run_writes_exactly_one_setup_completed_audit_row(db_session: Asyn
         household_name="The MacLeods",
         member_name="Jason",
         email="jason@example.com",
-        password="CorrectHorse123!",
+        password="CorrectHorse123!",  # pragma: allowlist secret
     )
     rows = (
         (
@@ -75,7 +75,7 @@ async def test_run_copies_system_categories_into_new_household(db_session: Async
         household_name="The MacLeods",
         member_name="Jason",
         email="jason@example.com",
-        password="CorrectHorse123!",
+        password="CorrectHorse123!",  # pragma: allowlist secret
     )
 
     new_household_result = await db_session.execute(

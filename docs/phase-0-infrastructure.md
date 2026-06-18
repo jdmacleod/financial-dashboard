@@ -77,7 +77,7 @@ services:
 
 ```bash
 # Database
-DATABASE_URL=postgresql+asyncpg://hearthledger:changeme@db:5432/hearthledger
+DATABASE_URL=postgresql+asyncpg://hearthledger:changeme@db:5432/hearthledger  # pragma: allowlist secret
 DB_PASSWORD=changeme
 
 # Redis / worker
@@ -219,7 +219,7 @@ settings = Settings()
 
 ```sql
 -- Create restricted application role
-CREATE ROLE hearthledger_app LOGIN PASSWORD 'changeme';
+CREATE ROLE hearthledger_app LOGIN PASSWORD 'changeme'; -- pragma: allowlist secret
 GRANT CONNECT ON DATABASE hearthledger TO hearthledger_app;
 GRANT USAGE ON SCHEMA public TO hearthledger_app;
 -- Table-level grants are applied per-table in Alembic migrations.

@@ -11,7 +11,10 @@ async def test_login_success_sets_refresh_cookie_and_returns_access_token(
 ) -> None:
     resp = await client.post(
         "/api/v1/auth/login",
-        json={"email": primary_user.email, "password": "CorrectHorse123!"},
+        json={
+            "email": primary_user.email,
+            "password": "CorrectHorse123!",  # pragma: allowlist secret
+        },
     )
     assert resp.status_code == 200
     assert "access_token" in resp.json()
@@ -23,7 +26,10 @@ async def test_login_wrong_password_returns_401(
 ) -> None:
     resp = await client.post(
         "/api/v1/auth/login",
-        json={"email": primary_user.email, "password": "wrong"},
+        json={
+            "email": primary_user.email,
+            "password": "wrong",  # pragma: allowlist secret
+        },
     )
     assert resp.status_code == 401
 
@@ -33,7 +39,10 @@ async def test_refresh_rotates_token_via_cookie(
 ) -> None:
     login_resp = await client.post(
         "/api/v1/auth/login",
-        json={"email": primary_user.email, "password": "CorrectHorse123!"},
+        json={
+            "email": primary_user.email,
+            "password": "CorrectHorse123!",  # pragma: allowlist secret
+        },
     )
     assert login_resp.status_code == 200
 
@@ -52,7 +61,10 @@ async def test_logout_requires_auth_and_clears_cookie(
 ) -> None:
     login_resp = await client.post(
         "/api/v1/auth/login",
-        json={"email": primary_user.email, "password": "CorrectHorse123!"},
+        json={
+            "email": primary_user.email,
+            "password": "CorrectHorse123!",  # pragma: allowlist secret
+        },
     )
     access_token = login_resp.json()["access_token"]
 
@@ -72,13 +84,16 @@ async def test_reauth_success_returns_reauth_token(
 ) -> None:
     login_resp = await client.post(
         "/api/v1/auth/login",
-        json={"email": primary_user.email, "password": "CorrectHorse123!"},
+        json={
+            "email": primary_user.email,
+            "password": "CorrectHorse123!",  # pragma: allowlist secret
+        },
     )
     access_token = login_resp.json()["access_token"]
 
     resp = await client.post(
         "/api/v1/auth/reauth",
-        json={"password": "CorrectHorse123!"},
+        json={"password": "CorrectHorse123!"},  # pragma: allowlist secret
         headers={"Authorization": f"Bearer {access_token}"},
     )
     assert resp.status_code == 200
@@ -90,13 +105,16 @@ async def test_reauth_wrong_password_returns_401(
 ) -> None:
     login_resp = await client.post(
         "/api/v1/auth/login",
-        json={"email": primary_user.email, "password": "CorrectHorse123!"},
+        json={
+            "email": primary_user.email,
+            "password": "CorrectHorse123!",  # pragma: allowlist secret
+        },
     )
     access_token = login_resp.json()["access_token"]
 
     resp = await client.post(
         "/api/v1/auth/reauth",
-        json={"password": "wrong"},
+        json={"password": "wrong"},  # pragma: allowlist secret
         headers={"Authorization": f"Bearer {access_token}"},
     )
     assert resp.status_code == 401
@@ -108,12 +126,18 @@ async def test_login_locks_account_after_max_attempts(
     for _ in range(settings.max_login_attempts):
         resp = await client.post(
             "/api/v1/auth/login",
-            json={"email": primary_user.email, "password": "wrong"},
+            json={
+                "email": primary_user.email,
+                "password": "wrong",  # pragma: allowlist secret
+            },
         )
         assert resp.status_code == 401
 
     locked_resp = await client.post(
         "/api/v1/auth/login",
-        json={"email": primary_user.email, "password": "CorrectHorse123!"},
+        json={
+            "email": primary_user.email,
+            "password": "CorrectHorse123!",  # pragma: allowlist secret
+        },
     )
     assert locked_resp.status_code == 423

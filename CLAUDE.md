@@ -220,7 +220,7 @@ All defined in `.env`, documented in `.env.example`.
 
 ```bash
 # Database
-DATABASE_URL=postgresql+asyncpg://hearthledger:password@db:5432/hearthledger
+DATABASE_URL=postgresql+asyncpg://hearthledger:password@db:5432/hearthledger  # pragma: allowlist secret
 
 # Redis / worker
 REDIS_URL=redis://redis:6379/0

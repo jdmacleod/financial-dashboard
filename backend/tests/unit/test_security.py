@@ -114,6 +114,13 @@ def test_decode_token_rejects_expired_token() -> None:
 
 def test_decode_token_rejects_tampered_signature() -> None:
     token = create_access_token(str(uuid.uuid4()), None, "primary")
-    tampered = token[:-1] + ("a" if token[-1] != "a" else "b")
+    # Tamper the signature segment (third part), not the last char of the token.
+    # The last base64url char may encode only padding bits, so changing it can
+    # leave the actual HMAC bytes intact and verification would pass. Modifying
+    # a character in the middle of the signature segment reliably corrupts it.
+    header, payload, sig = token.split(".")
+    mid = len(sig) // 2
+    corrupted_sig = sig[:mid] + ("a" if sig[mid] != "a" else "b") + sig[mid + 1 :]
+    tampered = f"{header}.{payload}.{corrupted_sig}"
     with pytest.raises(JWTError):
         decode_token(tampered, "access")
