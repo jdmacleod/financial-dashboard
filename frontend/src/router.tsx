@@ -2,6 +2,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  isRedirect,
   Outlet,
   redirect,
 } from "@tanstack/react-router"
@@ -60,7 +61,7 @@ const appLayoutRoute = createRoute({
         const res = await authApi.setupStatus()
         if (!res.setup_complete) throw redirect({ to: "/setup" })
       } catch (e: unknown) {
-        if (e && typeof e === "object" && "to" in e) throw e
+        if (isRedirect(e)) throw e
       }
       throw redirect({ to: "/login" })
     }
