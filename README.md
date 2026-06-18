@@ -14,7 +14,7 @@ Self-hosted household financial tracking. Runs entirely on your own machine — 
 ## Features
 
 - **Accounts** — checking, savings, credit, investment, retirement, loans
-- **Transactions** — CSV and OFX/QFX import, bulk categorize, duplicate detection
+- **Transactions** — manual entry, edit, and delete; CSV and OFX/QFX import; bulk categorize; duplicate detection
 - **Budgets** — monthly limits per category with dashboard alerts
 - **Reports** — net worth, cash flow, spending by category, budget vs actuals, property P&L
 - **FIRE planning** — retirement projections with multiple income streams and scenario modeling
