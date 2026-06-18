@@ -4,6 +4,10 @@ Implements the backup service UI, real estate valuation management,
 dashboard customization, and import history. These features refine the
 system after core functionality is complete and verified.
 
+## Status
+
+**Complete** — v0.6.0.0 — 2026-06-18
+
 ---
 
 ## Deliverables
