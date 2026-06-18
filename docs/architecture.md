@@ -15,7 +15,7 @@
 │                                    ┌──────┴──────┐             │
 │                               ┌────▼────┐   ┌────▼────┐        │
 │                               │Postgres │   │  Redis  │        │
-│                               │   16    │   │    7    │        │
+│                               │   18    │   │    8    │        │
 │                               │internal │   │internal │        │
 │                               └─────────┘   └────┬────┘        │
 │                                                  │             │
@@ -34,7 +34,7 @@ Only port 80 is exposed to the host machine.
 ```yaml
 services:
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_DB: hearthledger
       POSTGRES_USER: hearthledger
@@ -46,7 +46,7 @@ services:
     # No ports: — never expose to host
 
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     command: redis-server /etc/redis/redis.conf
     volumes:
       - ./redis/redis.conf:/etc/redis/redis.conf:ro

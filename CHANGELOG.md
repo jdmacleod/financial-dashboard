@@ -41,7 +41,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- Dependency updates: uvicorn 0.49, SQLAlchemy 2.0.51, pydantic 2.13.4,
+- **Dependency updates** — updated all runtime and toolchain dependencies for
+  security and compatibility: uvicorn 0.49, SQLAlchemy 2.0.51, pydantic 2.13.4,
   python-jose 3.5.0, passlib 1.7.4, fastapi 0.137.2, ruff 0.15.18,
   Recharts 3, Redis 8, Node 26, PostgreSQL 18; `bcrypt<4.1` pin preserved
   to prevent passlib self-test crash

@@ -29,21 +29,21 @@ relevant phase doc before starting any implementation work.
 
 ### Frontend
 
-- Node 20 LTS
+- Node 26
 - React 18 + TypeScript (strict mode)
 - Vite 5
 - TanStack Query v5
 - TanStack Router v1
 - Tailwind CSS v4
 - shadcn/ui
-- Recharts
+- Recharts 3
 - React Hook Form + Zod
 - date-fns
 
 ### Infrastructure
 
-- PostgreSQL 16 (Docker)
-- Redis 7 (Docker)
+- PostgreSQL 18 (Docker)
+- Redis 8 (Docker)
 - nginx (Alpine, Docker — serves built frontend + proxies API)
 
 ---

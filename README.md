@@ -3,7 +3,7 @@
 [![CI](https://github.com/jdmacleod/financial-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/jdmacleod/financial-dashboard/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/jdmacleod/financial-dashboard/graph/badge.svg)](https://codecov.io/gh/jdmacleod/financial-dashboard)
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/)
-[![Node 20 LTS](https://img.shields.io/badge/node-20_LTS-green.svg)](https://nodejs.org/)
+[![Node 26](https://img.shields.io/badge/node-26-green.svg)](https://nodejs.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com/)
 [![React 18](https://img.shields.io/badge/React-18-61dafb.svg)](https://react.dev/)
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ed.svg)](https://docs.docker.com/compose/)
@@ -63,8 +63,8 @@ See [docs/getting-started.md](docs/getting-started.md) for the full walkthrough.
 | Layer           | Technology                                                                      |
 | --------------- | ------------------------------------------------------------------------------- |
 | API             | Python 3.12, FastAPI 0.115+, SQLAlchemy 2 async, Pydantic v2                    |
-| Database        | PostgreSQL 16                                                                   |
-| Background jobs | ARQ (Redis 7), APScheduler                                                      |
+| Database        | PostgreSQL 18                                                                   |
+| Background jobs | ARQ (Redis 8), APScheduler                                                      |
 | Frontend        | React 18, TypeScript, Vite 5, TanStack Query/Router, Tailwind CSS v4, shadcn/ui |
 | Proxy           | nginx (Alpine)                                                                  |
 | Deployment      | Docker Compose                                                                  |
