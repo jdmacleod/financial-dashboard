@@ -108,7 +108,7 @@ export default function ReportSpending() {
                       <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                  <Tooltip formatter={(v) => formatCurrency(v as number)} />
                   <Legend iconType="circle" iconSize={8} />
                 </PieChart>
               </ResponsiveContainer>

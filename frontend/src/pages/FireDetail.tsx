@@ -513,7 +513,9 @@ export default function FireDetail() {
                       axisLine={false}
                       tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
                     />
-                    <Tooltip formatter={(v: number, name: string) => [formatCurrency(v), name]} />
+                    <Tooltip
+                      formatter={(v, name) => [formatCurrency(v as number), name as string]}
+                    />
                     <Line
                       type="monotone"
                       dataKey="Portfolio"

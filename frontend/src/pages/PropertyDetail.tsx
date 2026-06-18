@@ -199,7 +199,7 @@ export default function PropertyDetail() {
                     axisLine={false}
                     tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
                   />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                  <Tooltip formatter={(v) => formatCurrency(v as number)} />
                   <Line
                     type="monotone"
                     dataKey="Value"
@@ -308,7 +308,7 @@ export default function PropertyDetail() {
                         axisLine={false}
                         width={100}
                       />
-                      <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                      <Tooltip formatter={(v) => formatCurrency(v as number)} />
                       <Bar dataKey="Amount" fill="#6366f1" radius={[0, 3, 3, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
