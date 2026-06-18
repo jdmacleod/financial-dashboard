@@ -3,6 +3,46 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.6.0.0] - 2026-06-18
+
+### Added
+
+- **Backup service** — scheduled ARQ task (`run_backup`) performs `pg_dump` daily
+  at 2am, AES-256-GCM encrypts the dump, verifies integrity by decrypting to
+  `/dev/null`, then prunes backups older than `BACKUP_RETENTION_DAYS`. Manual
+  trigger via `POST /api/v1/backups`; download via `GET /api/v1/backups/{id}/download`.
+  Encrypted `.dump.enc` files use the same `SECRET_ENCRYPTION_KEY` as field
+  encryption. Backup jobs older than the retention window are pruned automatically.
+- **Settings > Backups page** — summary bar with last-backup timestamp and size;
+  amber warning banner when the most recent successful backup is more than 48 hours
+  old; "Run backup now" button with spinner; paginated backup history table with
+  Download button; collapsible "How to restore" CLI instructions.
+- **Real estate valuation refresh** — `refresh_valuations` ARQ task runs weekly
+  (Monday 3am); supports ATTOM Data and Estated providers; API failures are caught
+  and logged per-property without interrupting the rest of the run. The last known
+  value is used in net worth calculations when a provider is unavailable.
+- **Property detail valuation UI** — current value card with source badge
+  (`Manual · Jan 10` / `ATTOM · Jan 14`) and confidence score; "Update manually"
+  modal with date picker; valuation history chart with source color-coding.
+- **Settings > Properties panel** — valuation provider selector (Manual / ATTOM /
+  Estated), API key input, "Test connection" button, "Last refresh" timestamp per
+  property.
+- **Dashboard widget customization** — drag-to-reorder and show/hide per widget,
+  stored in `household_members.settings` JSONB (per-member, not household-wide).
+  Persists across page reloads. Six widgets: Net Worth, Cash Flow MTD, Spending by
+  Category, Budget Alerts, Account Balances, Recent Transactions. "Reset to default"
+  button.
+- **Dark mode** — Tailwind `dark:` class toggle; three modes (Light / Dark / System);
+  system follows `prefers-color-scheme`; toggle stored in `localStorage`; all
+  shadcn/ui components and Recharts charts render with theme-aware colors via
+  `useThemeColors()` hook. Settings > Appearance toggle.
+- **Import history page** (`/settings/imports`) — table of all past import jobs
+  with account nickname, filename, format badge (CSV/OFX/QFX), status badge, records
+  imported/skipped counts, triggered-by user, and expandable error message for failed
+  imports. Filterable by account and date range.
+
+---
+
 ## [0.5.0.0] - 2026-06-18
 
 ### Added
