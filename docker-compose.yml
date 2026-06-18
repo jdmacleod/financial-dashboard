@@ -11,9 +11,15 @@ services:
       LC_ALL: C
       LANG: C
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - ./data/postgres:/var/lib/postgresql
       - ./backend/db_init.sql:/docker-entrypoint-initdb.d/01_init.sql
     networks: [hearthledger_net]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hearthledger"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     # No ports: — never expose to host
 
   redis:
@@ -27,7 +33,11 @@ services:
   backend:
     build: ./backend
     env_file: .env
-    depends_on: [db, redis]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
     networks: [hearthledger_net]
     healthcheck:
       test:
