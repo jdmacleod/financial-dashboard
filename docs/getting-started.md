@@ -73,8 +73,8 @@ docker compose up -d
 
 This starts six services:
 
-- `db` — PostgreSQL 16
-- `redis` — Redis 7
+- `db` — PostgreSQL 18
+- `redis` — Redis 8
 - `backend` — FastAPI application
 - `worker` — ARQ background job worker
 - `frontend` — React/Vite build

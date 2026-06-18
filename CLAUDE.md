@@ -14,7 +14,7 @@ relevant phase doc before starting any implementation work.
 
 - Python 3.12
 - uv (dependency management — not pip directly)
-- FastAPI 0.115+
+- FastAPI 0.137+
 - SQLAlchemy 2.x async (asyncpg driver)
 - Alembic (migrations)
 - Pydantic v2
@@ -29,21 +29,21 @@ relevant phase doc before starting any implementation work.
 
 ### Frontend
 
-- Node 20 LTS
-- React 18 + TypeScript (strict mode)
-- Vite 5
+- Node 26
+- React 19 + TypeScript (strict mode)
+- Vite 8
 - TanStack Query v5
 - TanStack Router v1
 - Tailwind CSS v4
 - shadcn/ui
-- Recharts
+- Recharts 3
 - React Hook Form + Zod
 - date-fns
 
 ### Infrastructure
 
-- PostgreSQL 16 (Docker)
-- Redis 7 (Docker)
+- PostgreSQL 18 (Docker)
+- Redis 8 (Docker)
 - nginx (Alpine, Docker — serves built frontend + proxies API)
 
 ---
