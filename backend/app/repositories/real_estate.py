@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -43,6 +44,20 @@ class RealEstateRepository:
         result = await self.session.execute(
             select(PropertyValuation)
             .where(PropertyValuation.real_estate_property_id == property_id)
+            .order_by(PropertyValuation.valuation_date.desc())
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def latest_valuation_as_of(
+        self, property_id: uuid.UUID, as_of: date
+    ) -> PropertyValuation | None:
+        result = await self.session.execute(
+            select(PropertyValuation)
+            .where(
+                PropertyValuation.real_estate_property_id == property_id,
+                PropertyValuation.valuation_date <= as_of,
+            )
             .order_by(PropertyValuation.valuation_date.desc())
             .limit(1)
         )

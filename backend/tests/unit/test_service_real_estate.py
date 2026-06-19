@@ -13,6 +13,7 @@ from app.core.visibility import VisibilityContext
 from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
 from app.db.models.user import User
+from app.repositories.real_estate import RealEstateRepository
 from app.schemas.account import AccountCreate, AccountType
 from app.schemas.real_estate import PropertyCreate, PropertyUpdate, ValuationCreate
 from app.services.account import AccountService
@@ -541,3 +542,107 @@ async def test_update_property_uses_model_fields_set(
     updated = await svc.update(ctx, prop.id, PropertyUpdate(address="456 New St"))
     assert updated.address == "456 New St"
     assert updated.purchase_price == Decimal("300000.00")
+
+
+# ---------------------------------------------------------------------------
+# RealEstateRepository.latest_valuation_as_of tests
+# ---------------------------------------------------------------------------
+
+
+async def test_latest_valuation_as_of_returns_most_recent_before_date(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx)
+    svc = RealEstateService(db_session)
+    prop = await svc.create(ctx, PropertyCreate(account_id=account.id, address="1 Main St"))
+
+    await svc.add_valuation(
+        ctx,
+        prop.id,
+        ValuationCreate(valuation_date=date(2024, 6, 1), estimated_value=Decimal("300000")),
+    )
+    await svc.add_valuation(
+        ctx,
+        prop.id,
+        ValuationCreate(valuation_date=date(2025, 1, 1), estimated_value=Decimal("350000")),
+    )
+    await svc.add_valuation(
+        ctx,
+        prop.id,
+        ValuationCreate(valuation_date=date(2025, 6, 1), estimated_value=Decimal("400000")),
+    )
+
+    repo = RealEstateRepository(db_session)
+    result = await repo.latest_valuation_as_of(prop.id, date(2025, 3, 31))
+
+    assert result is not None
+    assert result.estimated_value == Decimal("350000")
+    assert result.valuation_date == date(2025, 1, 1)
+
+
+async def test_latest_valuation_as_of_exact_date_match(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx)
+    svc = RealEstateService(db_session)
+    prop = await svc.create(ctx, PropertyCreate(account_id=account.id, address="2 Main St"))
+
+    await svc.add_valuation(
+        ctx,
+        prop.id,
+        ValuationCreate(valuation_date=date(2025, 3, 15), estimated_value=Decimal("425000")),
+    )
+
+    repo = RealEstateRepository(db_session)
+    result = await repo.latest_valuation_as_of(prop.id, date(2025, 3, 15))
+
+    assert result is not None
+    assert result.estimated_value == Decimal("425000")
+
+
+async def test_latest_valuation_as_of_returns_none_when_all_after(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx)
+    svc = RealEstateService(db_session)
+    prop = await svc.create(ctx, PropertyCreate(account_id=account.id, address="3 Main St"))
+
+    await svc.add_valuation(
+        ctx,
+        prop.id,
+        ValuationCreate(valuation_date=date(2025, 6, 1), estimated_value=Decimal("500000")),
+    )
+
+    repo = RealEstateRepository(db_session)
+    result = await repo.latest_valuation_as_of(prop.id, date(2025, 1, 1))
+
+    assert result is None
+
+
+async def test_latest_valuation_as_of_returns_none_when_no_valuations(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx)
+    svc = RealEstateService(db_session)
+    prop = await svc.create(ctx, PropertyCreate(account_id=account.id, address="4 Main St"))
+
+    repo = RealEstateRepository(db_session)
+    result = await repo.latest_valuation_as_of(prop.id, date(2025, 12, 31))
+
+    assert result is None

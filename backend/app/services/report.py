@@ -138,12 +138,21 @@ class ReportService:
         )
         return result.scalar_one_or_none()
 
+    async def _property_value_at(self, account_id: uuid.UUID, as_of: date) -> Decimal:
+        prop = await self.property_repo.get_by_account_id(account_id)
+        if prop is None:
+            return Decimal("0")
+        valuation = await self.property_repo.latest_valuation_as_of(prop.id, as_of)
+        return valuation.estimated_value if valuation is not None else Decimal("0")
+
     async def _asset_value_at(self, account: Account, as_of: date) -> Decimal:
         snap = await self._snapshot_balance_at(account.id, as_of)
         if snap is not None:
             return snap
         if account.account_type in ("checking", "savings"):
             return await self._running_txn_balance_at(account.id, as_of)
+        if account.account_type == "real_estate":
+            return await self._property_value_at(account.id, as_of)
         return Decimal("0")
 
     async def _liability_value_at(self, account: Account, as_of: date) -> Decimal:
