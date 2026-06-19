@@ -145,13 +145,20 @@ class ReportService:
         valuation = await self.property_repo.latest_valuation_as_of(prop.id, as_of)
         return valuation.estimated_value if valuation is not None else Decimal("0")
 
-    async def _asset_value_at(self, account: Account, as_of: date) -> Decimal:
+    async def _asset_value_at(
+        self,
+        account: Account,
+        as_of: date,
+        property_values: dict[uuid.UUID, Decimal] | None = None,
+    ) -> Decimal:
         snap = await self._snapshot_balance_at(account.id, as_of)
         if snap is not None:
             return snap
         if account.account_type in ("checking", "savings"):
             return await self._running_txn_balance_at(account.id, as_of)
         if account.account_type == "real_estate":
+            if property_values is not None:
+                return property_values.get(account.id, Decimal("0"))
             return await self._property_value_at(account.id, as_of)
         return Decimal("0")
 
@@ -165,13 +172,18 @@ class ReportService:
         snap = await self._snapshot_balance_at(account.id, as_of)
         return abs(snap) if snap is not None else Decimal("0")
 
-    async def _net_worth_point(self, accounts: list[Account], as_of: date) -> NetWorthPoint:
+    async def _net_worth_point(
+        self,
+        accounts: list[Account],
+        as_of: date,
+        property_values: dict[uuid.UUID, Decimal] | None = None,
+    ) -> NetWorthPoint:
         breakdown = {key: Decimal("0") for key in BREAKDOWN_KEYS}
         total_assets = Decimal("0")
         total_liabilities = Decimal("0")
         for account in accounts:
             if account.account_type in ASSET_TYPES:
-                value = await self._asset_value_at(account, as_of)
+                value = await self._asset_value_at(account, as_of, property_values)
                 breakdown[ASSET_BUCKET[account.account_type]] += value
                 total_assets += value
             elif account.account_type in LIABILITY_TYPES:
@@ -206,7 +218,25 @@ class ReportService:
         if not month_ends:
             month_ends = [to_date]
 
-        series = [await self._net_worth_point(accounts, as_of) for as_of in month_ends]
+        # Pre-load real_estate properties once; then batch-fetch valuations per
+        # date point (1 query/point instead of 2xN queries/point for N properties).
+        re_account_ids = [a.id for a in accounts if a.account_type == "real_estate"]
+        props = await self.property_repo.list_for_accounts(re_account_ids) if re_account_ids else []
+        account_to_prop_id = {p.account_id: p.id for p in props}
+
+        series = []
+        for as_of in month_ends:
+            if account_to_prop_id:
+                raw = await self.property_repo.batch_latest_valuations_as_of(
+                    list(account_to_prop_id.values()), as_of
+                )
+                property_values = {
+                    acc_id: raw.get(prop_id, Decimal("0"))
+                    for acc_id, prop_id in account_to_prop_id.items()
+                }
+            else:
+                property_values = {}
+            series.append(await self._net_worth_point(accounts, as_of, property_values))
         pension_annotations = await self._pension_annotations(ctx, accounts)
         return NetWorthReport(
             series=series,

@@ -322,14 +322,8 @@ export default function PropertyDetail() {
   if (propLoading) return <div className="p-8 text-gray-500">Loading…</div>
   if (!property) return <div className="p-8 text-red-600">Property not found.</div>
 
-  const gainLoss =
-    property.purchase_price && property.current_estimated_value
-      ? Number(property.current_estimated_value) - Number(property.purchase_price)
-      : null
-  const gainLossPct =
-    gainLoss !== null && property.purchase_price && Number(property.purchase_price) !== 0
-      ? (gainLoss / Number(property.purchase_price)) * 100
-      : null
+  const gainLoss = property.gain_loss !== null ? Number(property.gain_loss) : null
+  const gainLossPct = property.gain_loss_pct !== null ? Number(property.gain_loss_pct) : null
 
   const valuationChartData = valuations
     ?.slice()
