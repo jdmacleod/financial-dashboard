@@ -38,8 +38,12 @@ Account types:
 | `savings` | Interest-bearing savings |
 | `credit` | Credit card (balance is a liability) |
 | `investment` | Brokerage, taxable investing |
-| `retirement` | 401k, IRA, Roth IRA |
-| `loan` | Mortgage, car loan, student loan |
+| `retirement` | 401k, 403b, IRA, Roth IRA |
+| `pension` | Defined-benefit pension plan — see [Pension accounts](#pension-accounts) below |
+| `hsa` | Health savings account |
+| `real_estate` | Real estate property — see [Real Estate](#real-estate) |
+| `mortgage` | Mortgage (balance is a liability) |
+| `loan` | Auto loan, student loan, personal loan |
 
 **Access grants (partner visibility):**
 By default, partner members can only see accounts they own. The primary member can grant read access to an account: go to the account detail page and click **Manage access** to add or remove grants.
@@ -49,6 +53,28 @@ Rather than individual holdings, HearthLedger uses balance snapshots. Go to the 
 
 **Deactivating an account:**
 Click the **…** menu on an account and choose **Deactivate**. Deactivated accounts are hidden from lists but historical data is preserved.
+
+---
+
+## Pension accounts
+
+When you create an account of type `pension`, a **Pension details** card appears on the account page. Click **Add pension details** (or the pencil icon) to record:
+
+| Field                        | Description                                                              |
+| ---------------------------- | ------------------------------------------------------------------------ |
+| **Plan name**                | Name of the plan (e.g. "State Teachers Pension Fund") — stored encrypted |
+| **Administrator**            | Plan administrator name — stored encrypted                               |
+| **Monthly benefit estimate** | Estimated monthly payout in retirement                                   |
+| **Eligibility age / date**   | When you can start drawing — set one or the other                        |
+| **COLA adjustment rate**     | Annual cost-of-living increase rate (default 2%)                         |
+| **Vested**                   | Toggle on when vesting requirements are met                              |
+| **Vesting date**             | Date vesting was achieved                                                |
+| **Survivor benefit %**       | Survivor benefit as a percentage (0–100%)                                |
+| **Notes**                    | Free-form notes — stored encrypted                                       |
+
+The account's transaction list shows a **Defined-benefit summary card** above the transactions, with plan name, monthly benefit, eligibility info, and vested status. If no detail record exists yet, a prompt to "Add pension details →" is shown.
+
+The FIRE detector automatically creates a `pension` income stream for each vested pension with a non-zero monthly benefit estimate. See [Auto-detect income streams](#auto-detect-income-streams).
 
 ---
 
@@ -144,6 +170,8 @@ Shows total assets, total liabilities, and net worth over time. Configure:
 
 Assets include: account balances + property valuations. Liabilities include: credit card balances + loan balances.
 
+**Pension annotations:** Below the net worth chart, each pension account with a defined monthly benefit estimate is listed with annual benefit, eligibility info, and a **Show PV** toggle. Toggling on converts the annual benefit stream to present value using a 4% discount rate, giving you a sense of the economic value of the pension alongside your portfolio.
+
 ### Cash Flow
 
 Shows income and expenses grouped by time period. Configure:
@@ -201,7 +229,7 @@ Consulting and other variable-income streams show a yellow "Variable income — 
 
 Click **Auto-detect from transactions** to have HearthLedger analyse your actual transaction history and generate income stream entries automatically.
 
-The detector groups your income transactions by category (using the trailing 12 months by default), annualises them, and merges the results into your scenario. Streams detected this way are marked with a **Detected** badge and a timestamp.
+The detector groups your income transactions by category (using the trailing 12 months by default), annualises them, and merges the results into your scenario. It also creates a `pension` income stream for each vested pension account that has a non-zero monthly benefit estimate, using the pension's eligibility age/date as the stream start year and its COLA rate as the annual growth rate. Streams detected this way are marked with a **Detected** badge and a timestamp.
 
 **Important behaviours:**
 
@@ -278,8 +306,11 @@ Real estate properties are tracked under **Properties** in the sidebar.
 Click **New property** and enter:
 
 - Address (stored encrypted)
+- Property type: Primary Residence, Rental, Vacation, Commercial, Land, or Other
 - Purchase date and price
 - Current estimated value (or use a valuation provider — see below)
+
+The property type is displayed on the account list and transaction list banner, and is also available in the Property P&L report.
 
 ### Manual valuations
 
@@ -366,6 +397,12 @@ See [Access grants](#access-grants-partner-visibility) under Accounts.
 ---
 
 ## Settings
+
+Settings are accessed via the **user menu** in the top-right of the navigation bar. The menu shows your initials (indigo avatar), first name, and a dropdown with:
+
+- Your household name, display name, and role
+- Links to Security Log, Activity Log (primary only), Exports, Import History, Backups (primary only), Dashboard Layout, and Appearance
+- A **Log out** button that clears your session and returns to the login page
 
 ### Appearance
 

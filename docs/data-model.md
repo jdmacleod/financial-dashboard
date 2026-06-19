@@ -1,6 +1,6 @@
 # Data Model
 
-Consolidated schema incorporating all design amendments (1–3).
+Consolidated schema incorporating all design amendments (1–4) and migrations 0001–0004.
 All tables use UUID primary keys. All timestamps are TIMESTAMPTZ.
 All monetary values are NUMERIC(18,4). Currency is USD only (v1).
 
@@ -240,12 +240,17 @@ CREATE INDEX idx_txn_import_job       ON transactions (import_job_id)
 Companion table to an account of type `real_estate`.
 
 ```sql
+CREATE TYPE property_type AS ENUM (
+    'primary_residence', 'rental', 'vacation', 'commercial', 'land', 'other'
+);
+
 CREATE TABLE real_estate_properties (
     id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     account_id                  UUID NOT NULL UNIQUE REFERENCES accounts(id) ON DELETE CASCADE,
     address_enc                 BYTEA NOT NULL,   -- AES-256-GCM encrypted
     purchase_date               DATE,
     purchase_price              NUMERIC(18,4),
+    property_type               property_type NOT NULL DEFAULT 'primary_residence',
     linked_mortgage_account_id  UUID REFERENCES accounts(id) ON DELETE SET NULL,
     created_at                  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at                  TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -281,6 +286,38 @@ CREATE INDEX idx_valuations_property_date
 
 To get current value: `SELECT estimated_value FROM property_valuations
 WHERE real_estate_property_id = $1 ORDER BY valuation_date DESC LIMIT 1`
+
+---
+
+## pension_accounts
+
+Companion table to an account of type `pension`. Tracks defined-benefit plan
+details. Encrypted fields use AES-256-GCM via `SECRET_ENCRYPTION_KEY`.
+
+```sql
+CREATE TABLE pension_accounts (
+    id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    account_id               UUID NOT NULL UNIQUE REFERENCES accounts(id) ON DELETE CASCADE,
+    member_id                UUID REFERENCES household_members(id) ON DELETE SET NULL,
+    plan_name_enc            BYTEA,            -- AES-256-GCM encrypted
+    administrator_enc        BYTEA,            -- AES-256-GCM encrypted
+    monthly_benefit_estimate NUMERIC(18,4),
+    eligibility_age          SMALLINT,         -- 50–90; mutually exclusive with eligibility_date
+    eligibility_date         DATE,
+    cola_adjustment_rate     NUMERIC(5,4) NOT NULL DEFAULT 0.02,
+    is_vested                BOOLEAN NOT NULL DEFAULT FALSE,
+    vesting_date             DATE,
+    survivor_benefit_percent NUMERIC(5,4),     -- 0.0000–1.0000
+    notes_enc                BYTEA,            -- AES-256-GCM encrypted
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+```
+
+The FIRE detector creates an income stream of type `pension` for each vested
+pension with a non-zero `monthly_benefit_estimate`, using `cola_adjustment_rate`
+as the stream's annual growth rate and deriving `start_year` from `eligibility_age`
+or `eligibility_date`.
 
 ---
 
@@ -522,6 +559,7 @@ households
   │     │     └── [real_estate_property_id → real_estate_properties]
   │     ├── real_estate_properties
   │     │     └── property_valuations
+  │     ├── pension_accounts
   │     ├── debts
   │     └── import_jobs
   ├── categories (hierarchical)
