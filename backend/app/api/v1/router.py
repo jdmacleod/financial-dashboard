@@ -13,6 +13,7 @@ from app.api.v1 import (
     household,
     imports,
     members,
+    pension,
     properties,
     reports,
     setup,
@@ -35,6 +36,7 @@ router.include_router(snapshots.router)
 router.include_router(imports.router)
 router.include_router(budgets.router)
 router.include_router(properties.router)
+router.include_router(pension.router)
 router.include_router(reports.router)
 router.include_router(audit_log.router)
 router.include_router(fire.router)

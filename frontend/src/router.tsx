@@ -21,6 +21,7 @@ import ReportCashFlow from "@/pages/ReportCashFlow"
 import ReportSpending from "@/pages/ReportSpending"
 import Budgets from "@/pages/Budgets"
 import PropertyDetail from "@/pages/PropertyDetail"
+import PensionDetail from "@/pages/PensionDetail"
 import SettingsActivity from "@/pages/SettingsActivity"
 import SettingsSecurity from "@/pages/SettingsSecurity"
 import Fire from "@/pages/Fire"
@@ -130,6 +131,12 @@ const propertyDetailRoute = createRoute({
   component: PropertyDetail,
 })
 
+const pensionDetailRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/accounts/$accountId/pension",
+  component: PensionDetail,
+})
+
 const settingsActivityRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/settings/activity",
@@ -204,6 +211,7 @@ const routeTree = rootRoute.addChildren([
     reportsSpendingRoute,
     budgetsRoute,
     propertyDetailRoute,
+    pensionDetailRoute,
     settingsActivityRoute,
     settingsSecurityRoute,
     fireRoute,

@@ -21,7 +21,7 @@ import { formatCurrency } from "@/lib/formatters"
 import { lastNMonthsRange } from "@/lib/dateRange"
 import { HistoryPanel } from "@/components/app/HistoryPanel"
 
-type Tab = "valuations" | "pnl" | "history"
+type Tab = "valuations" | "equity" | "pnl" | "history"
 
 const valuationSchema = z.object({
   valuation_date: z.string().min(1, "Required"),
@@ -124,6 +124,17 @@ export default function PropertyDetail() {
     enabled: tab === "valuations",
   })
 
+  const {
+    data: equity,
+    isLoading: equityLoading,
+    error: equityError,
+  } = useQuery({
+    queryKey: ["property-equity", propertyId],
+    queryFn: () => propertiesApi.getEquity(propertyId),
+    enabled: tab === "equity",
+    retry: false,
+  })
+
   const { data: pnl, isLoading: pnlLoading } = useQuery({
     queryKey: ["reports", "property-pnl", propertyId, range],
     queryFn: () => reportsApi.propertyPnl(propertyId, range.from, range.to),
@@ -159,6 +170,7 @@ export default function PropertyDetail() {
         {(
           [
             { key: "valuations", label: "Valuation History" },
+            { key: "equity", label: "Equity" },
             { key: "pnl", label: "P&L" },
             { key: "history", label: "Change History" },
           ] as { key: Tab; label: string }[]
@@ -249,6 +261,76 @@ export default function PropertyDetail() {
 
           {(!valuations || valuations.length === 0) && (
             <p className="text-sm text-gray-400 py-8 text-center">No valuations yet.</p>
+          )}
+        </div>
+      )}
+
+      {tab === "equity" && (
+        <div className="space-y-4">
+          {equityLoading && (
+            <div className="grid grid-cols-3 gap-4">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="bg-gray-100 rounded-xl h-24 animate-pulse" />
+              ))}
+            </div>
+          )}
+
+          {!equityLoading && (equityError as { status?: number } | null)?.status === 404 && (
+            <div className="text-center py-12 text-gray-400">
+              <p className="text-base mb-1">No valuation available</p>
+              <p className="text-sm">Add a valuation to calculate equity.</p>
+            </div>
+          )}
+
+          {equity && (
+            <>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-xs text-gray-500 mb-1">Property Value</p>
+                  <p className="text-xl font-semibold text-gray-900">
+                    {formatCurrency(equity.property_value)}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    as of {equity.valuation_date} · {equity.valuation_source.replace("api_", "")}
+                  </p>
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-xs text-gray-500 mb-1">Mortgage Balance</p>
+                  {!equity.mortgage_balance_visible ? (
+                    <p className="text-sm text-gray-400 mt-1">Not visible</p>
+                  ) : equity.mortgage_balance !== null ? (
+                    <>
+                      <p className="text-xl font-semibold text-gray-900">
+                        {formatCurrency(equity.mortgage_balance)}
+                      </p>
+                      {equity.mortgage_balance_as_of && (
+                        <p className="text-xs text-gray-400 mt-1">
+                          as of {equity.mortgage_balance_as_of}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-sm text-gray-400 mt-1">No mortgage linked</p>
+                  )}
+                </div>
+
+                <div className="bg-white rounded-xl border border-gray-200 p-4">
+                  <p className="text-xs text-gray-500 mb-1">Equity</p>
+                  {equity.equity !== null ? (
+                    <p
+                      className={`text-xl font-semibold ${
+                        Number(equity.equity) < 0 ? "text-red-600" : "text-indigo-600"
+                      }`}
+                    >
+                      {formatCurrency(equity.equity)}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-gray-400 mt-1">—</p>
+                  )}
+                </div>
+              </div>
+            </>
           )}
         </div>
       )}

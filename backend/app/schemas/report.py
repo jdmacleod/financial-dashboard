@@ -5,6 +5,14 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class PensionAnnotation(BaseModel):
+    account_id: uuid.UUID
+    nickname: str
+    monthly_benefit: Decimal | None
+    eligibility_age: int | None
+    eligibility_date: date | None
+
+
 class NetWorthBreakdown(BaseModel):
     checking_savings: Decimal
     investment: Decimal
@@ -27,6 +35,7 @@ class NetWorthPoint(BaseModel):
 class NetWorthReport(BaseModel):
     series: list[NetWorthPoint]
     current: NetWorthPoint | None
+    pension_annotations: list[PensionAnnotation] = []
 
 
 class CashFlowPeriod(BaseModel):

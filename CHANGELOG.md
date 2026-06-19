@@ -3,6 +3,48 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.0.0] - 2026-06-18
+
+### Added
+
+- **Pension accounts** — new `pension` account type tracks defined-benefit pension plans.
+  Add plan name, administrator, monthly benefit estimate, eligibility age or date, COLA
+  adjustment rate, vesting status, survivor benefit percentage, and notes. Data is
+  AES-256-GCM encrypted at rest.
+- **Pension detail page** — dedicated edit form at `/accounts/{id}/pension` with inline
+  editing of all pension fields; vested/unvested badge; blank state with "Add pension
+  details" prompt.
+- **Pension info on Transactions page** — defined-benefit summary card shown above the
+  transaction list for pension accounts, showing plan name, monthly benefit, eligibility,
+  and vested status. "Add pension details →" link when no record exists.
+- **Property type selection** — choose the property type (Primary Residence, Rental,
+  Vacation, Commercial, Land, Other) when adding a Real Estate account; value stored in
+  database and shown throughout the UI.
+- **Property info banner on Transactions page** — real estate accounts show a banner with
+  property address and a "Track this property →" link to the Property Detail page.
+- **`GET /accounts/{id}/property` endpoint** — fetch the property record for a real
+  estate account by account ID, enabling direct navigation from account context to
+  property detail.
+- **FIRE pension income streams** — FIRE detect automatically creates an income stream
+  for each vested pension with a non-zero benefit estimate. Streams include eligibility
+  year, COLA rate, and member attribution.
+- **Net Worth report pension annotations** — pension accounts appear below the net worth
+  chart with annual benefit, eligibility info, and a "Show PV" toggle that converts annual
+  benefit to present value using a 4% discount rate.
+
+### Fixed
+
+- Equity calculation now uses `abs(mortgage_balance)` so mortgages stored as negative
+  balances compute correct equity instead of inflating it.
+- `PATCH /properties/{id}` no longer crashes with 500 when `property_type: null` is
+  sent explicitly — null is now treated as "no change".
+- `PATCH /accounts/{id}/pension` no longer crashes with 500 when `is_vested: null` is
+  sent explicitly — null is now treated as "no change".
+- Migration 0004 now grants `SELECT, INSERT, UPDATE, DELETE` on `pension_accounts` to
+  the application role, preventing `permission denied` errors on first deploy.
+
+---
+
 ## [0.6.0.0] - 2026-06-18
 
 ### Added

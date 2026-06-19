@@ -16,6 +16,8 @@ ENCRYPTED_FIELDS = frozenset(
         "routing_number_enc",
         "address_enc",
         "notes_enc",
+        "plan_name_enc",
+        "administrator_enc",
     }
 )
 

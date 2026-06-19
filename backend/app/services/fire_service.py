@@ -194,13 +194,24 @@ class FireScenarioService:
             IncomeStream(**s) for s in (row.additional_income_streams or [])
         ]
         manual_streams = [s for s in existing_streams if not s.auto_detected]
-        existing_auto = {s.label: s for s in existing_streams if s.auto_detected}
+        # Dual-dict: prefer source_account_id match; fall back to label match
+        existing_auto_by_source = {
+            str(s.source_account_id): s
+            for s in existing_streams
+            if s.auto_detected and s.source_account_id is not None
+        }
+        existing_auto_by_label = {
+            s.label: s for s in existing_streams if s.auto_detected and s.source_account_id is None
+        }
 
         merged: list[IncomeStream] = list(manual_streams)
         for detected_stream in result.income_streams:
-            if detected_stream.label in existing_auto:
-                # Update existing auto-detected stream in-place (preserve id, update amount)
-                existing = existing_auto[detected_stream.label]
+            existing = existing_auto_by_source.get(
+                str(detected_stream.source_account_id)
+                if detected_stream.source_account_id is not None
+                else ""
+            ) or existing_auto_by_label.get(detected_stream.label)
+            if existing is not None:
                 updated = IncomeStream(
                     **{
                         **existing.model_dump(),

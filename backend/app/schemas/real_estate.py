@@ -6,6 +6,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict
 
 ValuationSource = Literal["manual", "api_attom", "api_estated"]
+PropertyTypeLiteral = Literal[
+    "primary_residence", "rental", "vacation", "commercial", "land", "other"
+]
 
 
 class PropertyCreate(BaseModel):
@@ -14,6 +17,7 @@ class PropertyCreate(BaseModel):
     purchase_date: date | None = None
     purchase_price: Decimal | None = None
     linked_mortgage_account_id: uuid.UUID | None = None
+    property_type: PropertyTypeLiteral = "primary_residence"
 
 
 class PropertyUpdate(BaseModel):
@@ -21,6 +25,7 @@ class PropertyUpdate(BaseModel):
     purchase_date: date | None = None
     purchase_price: Decimal | None = None
     linked_mortgage_account_id: uuid.UUID | None = None
+    property_type: PropertyTypeLiteral | None = None
 
 
 class PropertyResponse(BaseModel):
@@ -31,10 +36,21 @@ class PropertyResponse(BaseModel):
     purchase_date: date | None
     purchase_price: Decimal | None
     linked_mortgage_account_id: uuid.UUID | None
+    property_type: str
     current_estimated_value: Decimal | None
     current_value_as_of: date | None
     created_at: datetime
     updated_at: datetime
+
+
+class PropertyEquityResponse(BaseModel):
+    property_value: Decimal
+    valuation_date: date
+    valuation_source: str
+    mortgage_balance: Decimal | None
+    mortgage_balance_as_of: date | None
+    mortgage_balance_visible: bool
+    equity: Decimal | None
 
 
 class ValuationCreate(BaseModel):

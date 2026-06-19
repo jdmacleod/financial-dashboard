@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import {
   AreaChart,
@@ -17,6 +18,8 @@ import { lastNMonthsRange, lastNYearsRange } from "@/lib/dateRange"
 type Interval = "monthly" | "quarterly" | "annual"
 type Preset = "1y" | "2y" | "5y"
 
+const PENSION_PV_DISCOUNT_RATE = 0.04
+
 const PRESETS: { label: string; key: Preset }[] = [
   { label: "1 Year", key: "1y" },
   { label: "2 Years", key: "2y" },
@@ -32,6 +35,7 @@ function presetRange(p: Preset) {
 export default function ReportNetWorth() {
   const [preset, setPreset] = useState<Preset>("1y")
   const [interval, setInterval] = useState<Interval>("monthly")
+  const [showPV, setShowPV] = useState(false)
 
   const range = presetRange(preset)
 
@@ -188,6 +192,75 @@ export default function ReportNetWorth() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {data?.pension_annotations && data.pension_annotations.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-700">Pension Accounts</h2>
+            <button
+              onClick={() => setShowPV(!showPV)}
+              className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+                showPV
+                  ? "bg-indigo-600 border-indigo-600 text-white"
+                  : "border-gray-300 text-gray-600 hover:bg-gray-50"
+              }`}
+            >
+              {showPV ? "Showing PV" : "Show PV"}
+            </button>
+          </div>
+          <div className="space-y-3">
+            {data.pension_annotations.map((ann) => {
+              const annualBenefit =
+                ann.monthly_benefit != null ? Number(ann.monthly_benefit) * 12 : null
+              const presentValue =
+                annualBenefit != null ? annualBenefit / PENSION_PV_DISCOUNT_RATE : null
+              return (
+                <div
+                  key={ann.account_id}
+                  className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+                >
+                  <div>
+                    <Link
+                      to="/accounts/$accountId/pension"
+                      params={{ accountId: ann.account_id }}
+                      className="font-medium text-sm text-indigo-600 hover:underline"
+                    >
+                      {ann.nickname}
+                    </Link>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {ann.eligibility_age != null && `Eligible at ${ann.eligibility_age}`}
+                      {ann.eligibility_age != null && ann.eligibility_date && " · "}
+                      {ann.eligibility_date && ann.eligibility_date}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    {ann.monthly_benefit != null ? (
+                      <>
+                        <p className="text-sm font-medium text-gray-900">
+                          {showPV && presentValue != null
+                            ? `${formatCurrency(String(presentValue))} PV`
+                            : `${formatCurrency(String(annualBenefit))} / yr`}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {formatCurrency(ann.monthly_benefit)} / mo
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-gray-400">No estimate</p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+          {showPV && (
+            <p className="mt-3 text-xs text-gray-400">
+              Present value estimated using {PENSION_PV_DISCOUNT_RATE * 100}% discount rate (annual
+              benefit ÷ {PENSION_PV_DISCOUNT_RATE}).
+            </p>
+          )}
         </div>
       )}
     </div>

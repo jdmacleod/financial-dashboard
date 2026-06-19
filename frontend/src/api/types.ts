@@ -181,6 +181,13 @@ export interface BudgetResponse {
 }
 
 export type ValuationSource = "manual" | "api_attom" | "api_estated"
+export type PropertyType =
+  | "primary_residence"
+  | "rental"
+  | "vacation"
+  | "commercial"
+  | "land"
+  | "other"
 
 export interface PropertyResponse {
   id: string
@@ -190,10 +197,67 @@ export interface PropertyResponse {
   purchase_date: string | null
   purchase_price: string | null
   linked_mortgage_account_id: string | null
+  property_type: PropertyType
   current_estimated_value: string | null
   current_value_as_of: string | null
   created_at: string
   updated_at: string
+}
+
+export interface PropertyEquityResponse {
+  property_value: string
+  valuation_date: string
+  valuation_source: string
+  mortgage_balance: string | null
+  mortgage_balance_as_of: string | null
+  mortgage_balance_visible: boolean
+  equity: string | null
+}
+
+export interface PensionAccountResponse {
+  id: string
+  account_id: string
+  member_id: string | null
+  plan_name: string | null
+  administrator: string | null
+  monthly_benefit_estimate: string | null
+  eligibility_age: number | null
+  eligibility_date: string | null
+  cola_adjustment_rate: string
+  is_vested: boolean
+  vesting_date: string | null
+  survivor_benefit_percent: string | null
+  notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface PensionAccountCreate {
+  member_id?: string | null
+  plan_name?: string | null
+  administrator?: string | null
+  monthly_benefit_estimate?: string | null
+  eligibility_age?: number | null
+  eligibility_date?: string | null
+  cola_adjustment_rate?: string
+  is_vested?: boolean
+  vesting_date?: string | null
+  survivor_benefit_percent?: string | null
+  notes?: string | null
+}
+
+export interface PensionAccountUpdate {
+  member_id?: string | null
+  plan_name?: string | null
+  administrator?: string | null
+  monthly_benefit_estimate?: string | null
+  eligibility_age?: number | null
+  eligibility_date?: string | null
+  cola_adjustment_rate?: string | null
+  is_vested?: boolean | null
+  vesting_date?: string | null
+  survivor_benefit_percent?: string | null
+  notes?: string | null
 }
 
 export interface ValuationResponse {
@@ -225,9 +289,18 @@ export interface NetWorthPoint {
   breakdown: NetWorthBreakdown
 }
 
+export interface PensionAnnotation {
+  account_id: string
+  nickname: string
+  monthly_benefit: string | null
+  eligibility_age: number | null
+  eligibility_date: string | null
+}
+
 export interface NetWorthReport {
   series: NetWorthPoint[]
   current: NetWorthPoint | null
+  pension_annotations: PensionAnnotation[]
 }
 
 export interface CashFlowPeriod {
@@ -376,6 +449,7 @@ export interface IncomeStream {
   is_pre_retirement: boolean
   notes: string | null
   real_estate_property_id: string | null
+  source_account_id: string | null
   auto_detected: boolean
   detected_at: string | null
 }

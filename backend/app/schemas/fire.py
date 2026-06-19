@@ -29,6 +29,7 @@ class IncomeStream(BaseModel):
     is_pre_retirement: bool = True
     notes: str | None = None
     real_estate_property_id: str | None = None
+    source_account_id: uuid.UUID | None = None
     auto_detected: bool = False
     detected_at: datetime | None = None
 

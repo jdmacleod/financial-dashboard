@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
@@ -10,6 +11,7 @@ from app.core.visibility import VisibilityContext
 from app.db.models.category import Category
 from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
+from app.db.models.pension import PensionAccount
 from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
@@ -250,3 +252,117 @@ async def test_detect_sparse_data_warning(
 
     assert any("months" in w.lower() for w in result.warnings)
     assert result.months_with_data == 2
+
+
+# --- Pension stream detection ---
+
+
+async def test_detect_pension_streams_vested(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx, account_type="pension", nickname="Pension")
+    pension = PensionAccount(
+        account_id=uuid.UUID(str(account.id)),
+        is_vested=True,
+        monthly_benefit_estimate=Decimal("2000.00"),
+        cola_adjustment_rate=Decimal("0.025"),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    db_session.add(pension)
+    await db_session.flush()
+
+    detector = FireInputDetector(db_session)
+    result = await detector.detect(ctx, trailing_months=12)
+
+    pension_streams = [s for s in result.income_streams if s.type == IncomeStreamType.pension]
+    assert len(pension_streams) == 1
+    assert pension_streams[0].amount_annual == Decimal("24000.00")
+    assert pension_streams[0].source_account_id is not None
+
+
+async def test_detect_pension_streams_skips_none_benefit(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx, account_type="pension", nickname="No Benefit")
+    pension = PensionAccount(
+        account_id=uuid.UUID(str(account.id)),
+        is_vested=True,
+        monthly_benefit_estimate=None,
+        cola_adjustment_rate=Decimal("0.02"),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    db_session.add(pension)
+    await db_session.flush()
+
+    detector = FireInputDetector(db_session)
+    result = await detector.detect(ctx, trailing_months=12)
+
+    pension_streams = [s for s in result.income_streams if s.type == IncomeStreamType.pension]
+    assert len(pension_streams) == 0
+
+
+async def test_detect_pension_start_year_from_eligibility_date(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx, account_type="pension", nickname="Date Pension")
+    pension = PensionAccount(
+        account_id=uuid.UUID(str(account.id)),
+        is_vested=True,
+        monthly_benefit_estimate=Decimal("1500.00"),
+        eligibility_date=date(2038, 6, 1),
+        cola_adjustment_rate=Decimal("0.02"),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    db_session.add(pension)
+    await db_session.flush()
+
+    detector = FireInputDetector(db_session)
+    result = await detector.detect(ctx, trailing_months=12)
+
+    pension_streams = [s for s in result.income_streams if s.type == IncomeStreamType.pension]
+    assert len(pension_streams) == 1
+    assert pension_streams[0].start_year == 2038
+
+
+async def test_detect_pension_start_year_from_eligibility_age(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx, account_type="pension", nickname="Age Pension")
+    pension = PensionAccount(
+        account_id=uuid.UUID(str(account.id)),
+        is_vested=True,
+        monthly_benefit_estimate=Decimal("1000.00"),
+        eligibility_age=67,
+        cola_adjustment_rate=Decimal("0.02"),
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    db_session.add(pension)
+    await db_session.flush()
+
+    detector = FireInputDetector(db_session)
+    result = await detector.detect(ctx, trailing_months=12)
+
+    pension_streams = [s for s in result.income_streams if s.type == IncomeStreamType.pension]
+    assert len(pension_streams) == 1
+    # start_year = current_year + max(0, 67 - 65) = current_year + 2
+    assert pension_streams[0].start_year == date.today().year + 2

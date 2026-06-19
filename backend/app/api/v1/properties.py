@@ -7,6 +7,7 @@ from app.core.visibility import VisibilityContext, get_visibility_ctx
 from app.db.base import get_session
 from app.schemas.real_estate import (
     PropertyCreate,
+    PropertyEquityResponse,
     PropertyResponse,
     PropertyUpdate,
     ValuationCreate,
@@ -15,6 +16,16 @@ from app.schemas.real_estate import (
 from app.services.real_estate import RealEstateService
 
 router = APIRouter()
+
+
+@router.get("/accounts/{account_id}/property", response_model=PropertyResponse)
+async def get_property_by_account(
+    account_id: uuid.UUID,
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> PropertyResponse:
+    svc = RealEstateService(session)
+    return await svc.get_by_account(ctx, account_id)
 
 
 @router.post("/properties", response_model=PropertyResponse, status_code=201)
@@ -50,6 +61,16 @@ async def update_property(
     property_ = await svc.update(ctx, property_id, data)
     await session.commit()
     return property_
+
+
+@router.get("/properties/{property_id}/equity", response_model=PropertyEquityResponse)
+async def get_property_equity(
+    property_id: uuid.UUID,
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> PropertyEquityResponse:
+    svc = RealEstateService(session)
+    return await svc.get_equity(ctx, property_id)
 
 
 @router.get("/properties/{property_id}/valuations", response_model=list[ValuationResponse])
