@@ -10,6 +10,7 @@ import { propertiesApi } from "@/api/properties"
 import { useAuth } from "@/hooks/useAuth"
 import type { AccountResponse, AccountType, PropertyType } from "@/api/types"
 
+// Full list used by AddAccountModal so users can create any account type here.
 const ASSET_TYPES: AccountType[] = [
   "checking",
   "savings",
@@ -23,6 +24,9 @@ const ASSET_TYPES: AccountType[] = [
   "real_estate",
   "other_asset",
 ]
+
+// Narrowed to transaction-based types only — valuation-based types appear in Assets page.
+const DISPLAY_ASSET_TYPES: AccountType[] = ["checking", "savings", "other_asset"]
 const LIABILITY_TYPES: AccountType[] = [
   "credit_card",
   "mortgage",
@@ -413,7 +417,7 @@ export default function Accounts() {
   })
   const [showAdd, setShowAdd] = useState(false)
 
-  const assets = accounts?.filter((a) => ASSET_TYPES.includes(a.account_type)) ?? []
+  const assets = accounts?.filter((a) => DISPLAY_ASSET_TYPES.includes(a.account_type)) ?? []
   const liabilities = accounts?.filter((a) => LIABILITY_TYPES.includes(a.account_type)) ?? []
 
   if (isLoading) return <div className="p-8 text-gray-500">Loading accounts…</div>

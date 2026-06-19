@@ -150,6 +150,7 @@ class ReportService:
         account: Account,
         as_of: date,
         property_values: dict[uuid.UUID, Decimal] | None = None,
+        pension_values: dict[uuid.UUID, Decimal] | None = None,
     ) -> Decimal:
         snap = await self._snapshot_balance_at(account.id, as_of)
         if snap is not None:
@@ -160,6 +161,13 @@ class ReportService:
             if property_values is not None:
                 return property_values.get(account.id, Decimal("0"))
             return await self._property_value_at(account.id, as_of)
+        if account.account_type == "pension":
+            if pension_values is not None:
+                return pension_values.get(account.id, Decimal("0"))
+            pension = await self.pension_repo.get_by_account_id(account.id)
+            if pension and pension.monthly_benefit_estimate:
+                return pension.monthly_benefit_estimate * 12 / Decimal("0.04")
+            return Decimal("0")
         return Decimal("0")
 
     async def _liability_value_at(self, account: Account, as_of: date) -> Decimal:
@@ -177,13 +185,14 @@ class ReportService:
         accounts: list[Account],
         as_of: date,
         property_values: dict[uuid.UUID, Decimal] | None = None,
+        pension_values: dict[uuid.UUID, Decimal] | None = None,
     ) -> NetWorthPoint:
         breakdown = {key: Decimal("0") for key in BREAKDOWN_KEYS}
         total_assets = Decimal("0")
         total_liabilities = Decimal("0")
         for account in accounts:
             if account.account_type in ASSET_TYPES:
-                value = await self._asset_value_at(account, as_of, property_values)
+                value = await self._asset_value_at(account, as_of, property_values, pension_values)
                 breakdown[ASSET_BUCKET[account.account_type]] += value
                 total_assets += value
             elif account.account_type in LIABILITY_TYPES:
@@ -200,7 +209,18 @@ class ReportService:
 
     async def current_net_worth(self, ctx: VisibilityContext, as_of: date) -> NetWorthPoint:
         accounts = [a for a in await self._visible_accounts(ctx) if a.include_in_net_worth]
-        return await self._net_worth_point(accounts, as_of)
+        pension_account_ids = [a.id for a in accounts if a.account_type == "pension"]
+        pensions = (
+            await self.pension_repo.get_by_account_ids(pension_account_ids)
+            if pension_account_ids
+            else []
+        )
+        pension_values = {
+            p.account_id: p.monthly_benefit_estimate * 12 / Decimal("0.04")
+            for p in pensions
+            if p.monthly_benefit_estimate
+        }
+        return await self._net_worth_point(accounts, as_of, pension_values=pension_values)
 
     async def net_worth(
         self,
@@ -224,6 +244,20 @@ class ReportService:
         props = await self.property_repo.list_for_accounts(re_account_ids) if re_account_ids else []
         account_to_prop_id = {p.account_id: p.id for p in props}
 
+        # Pre-fetch pension PV once — PensionAccount data is static (no per-date history).
+        # Avoids NxM queries (N pensions x M date points) for data that doesn't change.
+        pension_account_ids = [a.id for a in accounts if a.account_type == "pension"]
+        pensions = (
+            await self.pension_repo.get_by_account_ids(pension_account_ids)
+            if pension_account_ids
+            else []
+        )
+        pension_values = {
+            p.account_id: p.monthly_benefit_estimate * 12 / Decimal("0.04")
+            for p in pensions
+            if p.monthly_benefit_estimate
+        }
+
         series = []
         for as_of in month_ends:
             if account_to_prop_id:
@@ -236,7 +270,9 @@ class ReportService:
                 }
             else:
                 property_values = {}
-            series.append(await self._net_worth_point(accounts, as_of, property_values))
+            series.append(
+                await self._net_worth_point(accounts, as_of, property_values, pension_values)
+            )
         pension_annotations = await self._pension_annotations(ctx, accounts)
         return NetWorthReport(
             series=series,

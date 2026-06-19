@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -10,7 +12,9 @@ from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
 from app.db.models.user import User
 from app.schemas.account import AccessGrantCreate, AccountCreate, AccountUpdate
+from app.schemas.real_estate import PropertyCreate, ValuationCreate
 from app.services.account import AccountService
+from app.services.real_estate import RealEstateService
 
 
 def _ctx(household: Household, member: HouseholdMember, role: str, user: User) -> VisibilityContext:
@@ -206,3 +210,62 @@ async def test_create_and_revoke_grant_happy_path(
     await service.revoke_grant(ctx, account.id, grant.id)
     grants = await service.list_grants(ctx, account.id)
     assert all(g.id != grant.id for g in grants)
+
+
+# ---------------------------------------------------------------------------
+# B1 — list_accounts populates current_balance for real_estate (Phase 8)
+# ---------------------------------------------------------------------------
+
+
+async def test_list_accounts_real_estate_shows_valuation_balance(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """current_balance for a real_estate account reflects the latest PropertyValuation,
+    not a missing AccountSnapshot. Verifies the two-step batch pattern in list_accounts().
+    """
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    re_account = await service.create(
+        ctx, AccountCreate(account_type="real_estate", nickname="My Home")
+    )
+
+    re_svc = RealEstateService(db_session)
+    from datetime import date as _date
+
+    prop = await re_svc.create(ctx, PropertyCreate(account_id=re_account.id, address="1 Main St"))
+    await re_svc.add_valuation(
+        ctx,
+        prop.id,
+        ValuationCreate(valuation_date=_date.today(), estimated_value=Decimal("500000")),
+    )
+
+    accounts = await service.list_accounts(ctx)
+    re_response = next(a for a in accounts if a.id == re_account.id)
+
+    assert re_response.current_balance == Decimal("500000")
+    assert re_response.balance_as_of == _date.today()
+
+
+async def test_list_accounts_real_estate_no_valuation_shows_zero(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Real estate account with a property record but no valuation shows zero balance."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    re_account = await service.create(
+        ctx, AccountCreate(account_type="real_estate", nickname="Empty Lot")
+    )
+
+    re_svc = RealEstateService(db_session)
+    await re_svc.create(ctx, PropertyCreate(account_id=re_account.id, address="2 Main St"))
+
+    accounts = await service.list_accounts(ctx)
+    re_response = next(a for a in accounts if a.id == re_account.id)
+
+    assert re_response.current_balance == Decimal("0")

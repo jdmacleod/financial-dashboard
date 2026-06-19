@@ -170,6 +170,17 @@ export interface ApiError {
 
 export type BudgetPeriod = "monthly" | "annual"
 
+export interface SnapshotResponse {
+  id: string
+  account_id: string
+  snapshot_date: string
+  balance: string
+  contributed_ytd: string | null
+  employer_match_ytd: string | null
+  memo: string | null
+  source: string
+}
+
 export interface BudgetResponse {
   id: string
   household_id: string

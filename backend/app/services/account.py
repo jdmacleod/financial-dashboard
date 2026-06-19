@@ -13,6 +13,7 @@ from app.db.models.access_grant import AccountAccessGrant
 from app.db.models.account import Account
 from app.db.models.snapshot import AccountSnapshot
 from app.repositories.account import AccountRepository
+from app.repositories.real_estate import RealEstateRepository
 from app.schemas.account import AccessGrantCreate, AccountCreate, AccountResponse, AccountUpdate
 
 
@@ -48,6 +49,7 @@ class AccountService:
         self.session = session
         self.account_repo = AccountRepository(session)
         self.audit_repo = AuditRepository(session)
+        self.property_repo = RealEstateRepository(session)
 
     async def _latest_snapshot(self, account_id: uuid.UUID) -> AccountSnapshot | None:
         result = await self.session.execute(
@@ -60,16 +62,37 @@ class AccountService:
 
     async def list_accounts(self, ctx: VisibilityContext) -> list[AccountResponse]:
         accounts = await self.account_repo.get_visible(ctx, is_active=True)
+
+        # Pre-fetch real estate valuations in two steps (same pattern as report.py:221-236).
+        # batch_latest_valuations_as_of takes property_ids, NOT account_ids.
+        today = date.today()
+        re_account_ids = [a.id for a in accounts if a.account_type == "real_estate"]
+        props = await self.property_repo.list_for_accounts(re_account_ids) if re_account_ids else []
+        account_to_prop_id = {p.account_id: p.id for p in props}
+        if account_to_prop_id:
+            raw = await self.property_repo.batch_latest_valuations_as_of(
+                list(account_to_prop_id.values()), today
+            )
+            re_balances = {
+                acc_id: raw.get(prop_id, Decimal("0"))
+                for acc_id, prop_id in account_to_prop_id.items()
+            }
+        else:
+            re_balances = {}
+
         responses = []
         for account in accounts:
-            snap = await self._latest_snapshot(account.id)
-            responses.append(
-                _account_to_response(
-                    account,
-                    snap.balance if snap else None,
-                    snap.snapshot_date if snap else None,
+            if account.account_type == "real_estate" and account.id in re_balances:
+                responses.append(_account_to_response(account, re_balances[account.id], today))
+            else:
+                snap = await self._latest_snapshot(account.id)
+                responses.append(
+                    _account_to_response(
+                        account,
+                        snap.balance if snap else None,
+                        snap.snapshot_date if snap else None,
+                    )
                 )
-            )
         return responses
 
     async def get(self, ctx: VisibilityContext, account_id: uuid.UUID) -> AccountResponse:
