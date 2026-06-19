@@ -22,7 +22,7 @@ Click the **Customize →** link in the top-right of the dashboard, or go to **S
 
 ## Accounts
 
-The Accounts page focuses on **transaction accounts** — the accounts where money flows in and out day to day: checking, savings, credit cards, HSA, mortgages, and loans.
+The Accounts page focuses on **transaction accounts** — the accounts where money flows in and out day to day: checking, savings, credit cards, mortgages, and loans.
 
 Real estate, pension, and investment/retirement accounts appear on the **Assets** page instead. See [Assets](#assets).
 
@@ -40,16 +40,20 @@ Transaction account types (shown on the Accounts page):
 |---|---|
 | `checking` | Everyday transactional account |
 | `savings` | Interest-bearing savings |
-| `credit` | Credit card (balance is a liability) |
-| `hsa` | Health savings account |
+| `other_asset` | Any other liquid asset account |
+| `credit_card` | Credit card (balance is a liability) |
 | `mortgage` | Mortgage (balance is a liability) |
-| `loan` | Auto loan, student loan, personal loan |
+| `auto_loan` | Auto loan |
+| `personal_loan` | Personal loan |
+| `student_loan` | Student loan |
+| `other_liability` | Any other liability |
 
 Asset account types (shown on the Assets page):
 | Type | Description |
 |---|---|
-| `investment` | Brokerage, taxable investing |
-| `retirement` | 401k, 403b, IRA, Roth IRA |
+| `investment_brokerage` | Taxable brokerage account |
+| `retirement_401k` / `retirement_403b` / `retirement_ira` / `retirement_roth_ira` | Tax-advantaged retirement accounts |
+| `hsa` | Health savings account |
 | `pension` | Defined-benefit pension plan — see [Pension accounts](#pension-accounts) below |
 | `real_estate` | Real estate property — see [Real Estate](#real-estate) |
 
@@ -100,7 +104,7 @@ Shows each pension account with an estimated present value computed as:
 PV ≈ monthly_benefit_estimate × 12 ÷ 4%
 ```
 
-This is a simplified perpetuity estimate, labelled "~$X estimated PV (4% discount, based on current benefit estimate)" to signal the approximation. For a more scenario-aware projection, use the FIRE planner's income streams.
+This is a simplified perpetuity estimate, labelled "~est. PV (4% discount)" to signal the approximation. For a more scenario-aware projection, use the FIRE planner's income streams.
 
 **Investment / retirement section:**
 Shows investment and retirement accounts with their most recent balance snapshot. Click **Update value** to record a new balance as of any date — a form appears with a date picker and amount field. The new snapshot is saved immediately and the displayed balance updates.
