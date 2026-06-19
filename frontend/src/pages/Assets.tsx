@@ -129,10 +129,16 @@ function UpdateValueModal({ account, onClose }: { account: AccountResponse; onCl
 
 // Real Estate section
 function RealEstateCard({ account }: { account: AccountResponse }) {
-  const { data: property } = useQuery<PropertyResponse>({
+  const { data: property, isLoading: propertyLoading } = useQuery<PropertyResponse | null>({
     queryKey: ["property-by-account", account.id],
     queryFn: () => propertiesApi.getByAccountId(account.id),
   })
+
+  const subtitle = propertyLoading
+    ? "Loading…"
+    : property
+      ? `${PROPERTY_TYPE_LABELS[property.property_type] ?? property.property_type} · ${property.address}`
+      : "No property record"
 
   return (
     <Link
@@ -142,11 +148,7 @@ function RealEstateCard({ account }: { account: AccountResponse }) {
     >
       <div className="flex-1 min-w-0">
         <p className="font-medium text-gray-900 truncate">{account.nickname}</p>
-        <p className="text-sm text-gray-500">
-          {property
-            ? `${PROPERTY_TYPE_LABELS[property.property_type] ?? property.property_type} · ${property.address}`
-            : "Loading…"}
-        </p>
+        <p className="text-sm text-gray-500">{subtitle}</p>
       </div>
       <div className="text-right">
         <p className="font-medium text-gray-900">
