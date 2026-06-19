@@ -1139,11 +1139,14 @@ Creates a real estate property.
   "address": "123 Main St, Springfield, IL 62701",
   "purchase_date": "2020-06-01",
   "purchase_price": "285000.0000",
-  "current_value": "320000.0000"
+  "current_value": "320000.0000",
+  "property_type": "primary_residence"
 }
 ```
 
 The `address` field is stored encrypted.
+
+Valid `property_type` values: `primary_residence`, `rental`, `vacation`, `commercial`, `land`, `other`. Defaults to `primary_residence`.
 
 **Response:** `PropertyResponse` — `201 Created`
 
@@ -1153,7 +1156,13 @@ Returns a property.
 
 ### `PATCH /properties/{property_id}`
 
-Updates a property.
+Updates a property. All fields optional. Sending `property_type: null` is treated as no-change.
+
+### `GET /accounts/{account_id}/property`
+
+Returns the real estate property record linked to a `real_estate` account. Useful for navigating from account context to property detail.
+
+**Response:** `PropertyResponse` — `404` if the account has no linked property record.
 
 ### `GET /properties/{property_id}/valuations`
 
@@ -1172,6 +1181,68 @@ Adds a manual valuation.
   "source": "manual"
 }
 ```
+
+---
+
+## Pension Accounts
+
+### `GET /accounts/{account_id}/pension`
+
+Returns the pension detail record for a `pension` account. Returns `404` if no detail record has been created yet.
+
+**Response:**
+
+```json
+{
+  "id": "uuid",
+  "account_id": "uuid",
+  "member_id": "uuid",
+  "plan_name": "State Teachers Pension Fund",
+  "administrator": "Teachers Retirement System",
+  "monthly_benefit_estimate": "2800.0000",
+  "eligibility_age": 62,
+  "eligibility_date": null,
+  "cola_adjustment_rate": "0.0200",
+  "is_vested": true,
+  "vesting_date": "2018-06-01",
+  "survivor_benefit_percent": "0.5000",
+  "notes": null,
+  "created_at": "2025-01-15T10:00:00Z",
+  "updated_at": "2025-01-15T10:00:00Z"
+}
+```
+
+### `POST /accounts/{account_id}/pension`
+
+Creates the pension detail record. Only valid for accounts of type `pension`. Returns `409` if a record already exists.
+
+**Request body (all fields optional):**
+
+```json
+{
+  "member_id": "uuid",
+  "plan_name": "State Teachers Pension Fund",
+  "administrator": "Teachers Retirement System",
+  "monthly_benefit_estimate": "2800.0000",
+  "eligibility_age": 62,
+  "eligibility_date": null,
+  "cola_adjustment_rate": "0.0200",
+  "is_vested": true,
+  "vesting_date": "2018-06-01",
+  "survivor_benefit_percent": "0.5000",
+  "notes": null
+}
+```
+
+`plan_name`, `administrator`, and `notes` are stored AES-256-GCM encrypted. `cola_adjustment_rate` defaults to `0.02` (2%). `eligibility_age` range: 50–90.
+
+**Response:** `PensionAccountResponse` — `201 Created`
+
+### `PATCH /accounts/{account_id}/pension`
+
+Updates pension detail fields. All fields optional. Sending `is_vested: null` is treated as no-change.
+
+**Response:** `PensionAccountResponse`
 
 ---
 

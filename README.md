@@ -13,13 +13,13 @@ Self-hosted household financial tracking. Runs entirely on your own machine — 
 
 ## Features
 
-- **Accounts** — checking, savings, credit, investment, retirement, loans
+- **Accounts** — checking, savings, credit, investment, retirement, pension, loans
 - **Transactions** — manual entry, edit, and delete; CSV and OFX/QFX import; bulk categorize; duplicate detection
 - **Budgets** — monthly limits per category with dashboard alerts
-- **Reports** — net worth, cash flow, spending by category, budget vs actuals, property P&L
-- **FIRE planning** — retirement projections with multiple income streams and scenario modeling
+- **Reports** — net worth (with pension annotations), cash flow, spending by category, budget vs actuals, property P&L
+- **FIRE planning** — retirement projections with multiple income streams and scenario modeling; auto-detects vested pension income
 - **Debt payoff** — avalanche/snowball comparison with extra payment modeling
-- **Real estate** — manual or API-driven property valuations (ATTOM, Estated)
+- **Real estate** — property type selection (primary, rental, vacation, commercial, land); manual or API-driven valuations (ATTOM, Estated)
 - **Exports** — PDF and Excel reports with executor re-authentication gate
 - **Backups** — scheduled and manual database backups, AES-256-GCM encrypted
 - **Multi-member** — primary + partner + dependent roles with per-account access grants
