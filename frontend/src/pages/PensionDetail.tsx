@@ -60,6 +60,7 @@ export default function PensionDetail() {
     watch,
     formState: { errors, isSubmitting },
   } = useForm<PensionForm>({
+    // @ts-expect-error @hookform/resolvers@5 targets RHF v8; Resolver type is structurally compatible at runtime
     resolver: zodResolver(pensionSchema),
     defaultValues: pension
       ? {
