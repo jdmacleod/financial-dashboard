@@ -67,29 +67,36 @@ class RealEstateRepository:
     async def batch_latest_valuations_as_of(
         self, property_ids: list[uuid.UUID], as_of: date
     ) -> dict[uuid.UUID, Decimal]:
-        """Return {property_id: estimated_value} for the latest valuation ≤ as_of per property."""
+        """Return {property_id: estimated_value} for the latest valuation ≤ as_of per property.
+
+        Uses ROW_NUMBER() to guarantee exactly one row per property even when two
+        valuations share the same date (tie-broken by id DESC so the result is stable).
+        """
         if not property_ids:
             return {}
-        subq = (
+        ranked = (
             select(
                 PropertyValuation.real_estate_property_id,
-                func.max(PropertyValuation.valuation_date).label("max_date"),
+                PropertyValuation.estimated_value,
+                func.row_number()
+                .over(
+                    partition_by=PropertyValuation.real_estate_property_id,
+                    order_by=[
+                        PropertyValuation.valuation_date.desc(),
+                        PropertyValuation.id.desc(),
+                    ],
+                )
+                .label("rn"),
             )
             .where(
                 PropertyValuation.real_estate_property_id.in_(property_ids),
                 PropertyValuation.valuation_date <= as_of,
             )
-            .group_by(PropertyValuation.real_estate_property_id)
             .subquery()
         )
         result = await self.session.execute(
-            select(
-                PropertyValuation.real_estate_property_id,
-                PropertyValuation.estimated_value,
-            ).join(
-                subq,
-                (PropertyValuation.real_estate_property_id == subq.c.real_estate_property_id)
-                & (PropertyValuation.valuation_date == subq.c.max_date),
+            select(ranked.c.real_estate_property_id, ranked.c.estimated_value).where(
+                ranked.c.rn == 1
             )
         )
         return {row[0]: row[1] for row in result.all()}

@@ -357,13 +357,19 @@ export default function PropertyDetail() {
             <p className="text-sm text-gray-500 mt-0.5">
               {property.purchase_date && `Purchased ${formatDate(property.purchase_date)} · `}
               Paid {formatCurrency(property.purchase_price)}
-              {gainLoss !== null && gainLossPct !== null && (
+              {gainLoss !== null && (
                 <span
                   className={`ml-2 font-medium ${gainLoss >= 0 ? "text-emerald-600" : "text-red-600"}`}
                 >
                   {gainLoss >= 0 ? "+" : ""}
-                  {formatCurrency(String(Math.abs(gainLoss)))} ({gainLoss >= 0 ? "+" : ""}
-                  {gainLossPct.toFixed(1)}%)
+                  {formatCurrency(String(Math.abs(gainLoss)))}
+                  {gainLossPct !== null && (
+                    <>
+                      {" "}
+                      ({gainLoss >= 0 ? "+" : ""}
+                      {gainLossPct.toFixed(1)}%)
+                    </>
+                  )}
                 </span>
               )}
             </p>

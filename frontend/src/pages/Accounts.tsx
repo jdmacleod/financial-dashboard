@@ -66,18 +66,28 @@ const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
   other: "Other",
 }
 
-const createSchema = z.object({
-  account_type: z.string().min(1, "Required"),
-  nickname: z.string().min(1, "Required"),
-  institution_name: z.string().optional(),
-  account_number: z.string().optional(),
-  owner_member_id: z.string().optional(),
-  property_type: z.string().optional(),
-  address: z.string().optional(),
-  purchase_date: z.string().optional(),
-  purchase_price: z.string().optional(),
-  linked_mortgage_account_id: z.string().optional(),
-})
+const createSchema = z
+  .object({
+    account_type: z.string().min(1, "Required"),
+    nickname: z.string().min(1, "Required"),
+    institution_name: z.string().optional(),
+    account_number: z.string().optional(),
+    owner_member_id: z.string().optional(),
+    property_type: z.string().optional(),
+    address: z.string().optional(),
+    purchase_date: z.string().optional(),
+    purchase_price: z.string().optional(),
+    linked_mortgage_account_id: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.account_type === "real_estate" && !data.address?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Address is required for real estate accounts",
+        path: ["address"],
+      })
+    }
+  })
 type CreateForm = z.infer<typeof createSchema>
 
 function AddAccountModal({ onClose }: { onClose: () => void }) {
