@@ -18,6 +18,7 @@ from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
 from app.repositories.budget import BudgetRepository
+from app.repositories.pension import PensionRepository
 from app.repositories.real_estate import RealEstateRepository
 from app.schemas.report import (
     BudgetVsActualsItem,
@@ -34,6 +35,7 @@ from app.schemas.report import (
     NetWorthBreakdown,
     NetWorthPoint,
     NetWorthReport,
+    PensionAnnotation,
     PropertyExpenseItem,
     PropertyMonthlyPoint,
     PropertyPnLPeriod,
@@ -100,6 +102,7 @@ class ReportService:
         self.account_repo = AccountRepository(session)
         self.budget_repo = BudgetRepository(session)
         self.property_repo = RealEstateRepository(session)
+        self.pension_repo = PensionRepository(session)
 
     async def _visible_accounts(self, ctx: VisibilityContext) -> list[Account]:
         return await self.account_repo.get_visible(ctx, is_active=True)
@@ -195,7 +198,32 @@ class ReportService:
             month_ends = [to_date]
 
         series = [await self._net_worth_point(accounts, as_of) for as_of in month_ends]
-        return NetWorthReport(series=series, current=series[-1] if series else None)
+        pension_annotations = await self._pension_annotations(ctx, accounts)
+        return NetWorthReport(
+            series=series,
+            current=series[-1] if series else None,
+            pension_annotations=pension_annotations,
+        )
+
+    async def _pension_annotations(
+        self, ctx: VisibilityContext, accounts: list[Account]
+    ) -> list[PensionAnnotation]:
+        pension_account_ids = [a.id for a in accounts if a.account_type == "pension"]
+        if not pension_account_ids:
+            return []
+        pensions = await self.pension_repo.get_by_account_ids(pension_account_ids)
+        account_map = {a.id: a for a in accounts}
+        return [
+            PensionAnnotation(
+                account_id=p.account_id,
+                nickname=account_map[p.account_id].nickname,
+                monthly_benefit=p.monthly_benefit_estimate,
+                eligibility_age=p.eligibility_age,
+                eligibility_date=p.eligibility_date,
+            )
+            for p in pensions
+            if p.account_id in account_map
+        ]
 
     # --- Cash flow -------------------------------------------------------
 

@@ -7,6 +7,7 @@ from app.db.models.debt import Debt
 from app.db.models.household import Household
 from app.db.models.import_job import ImportJob
 from app.db.models.member import HouseholdMember
+from app.db.models.pension import PensionAccount
 from app.db.models.property_valuation import PropertyValuation
 from app.db.models.real_estate import RealEstateProperty
 from app.db.models.snapshot import AccountSnapshot
@@ -24,6 +25,7 @@ __all__ = [
     "Household",
     "HouseholdMember",
     "ImportJob",
+    "PensionAccount",
     "PropertyValuation",
     "RealEstateProperty",
     "Transaction",

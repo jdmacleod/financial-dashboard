@@ -1,10 +1,12 @@
 import { useState } from "react"
-import { useParams } from "@tanstack/react-router"
+import { useParams, Link } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Pencil, Trash2 } from "lucide-react"
 import { transactionsApi } from "@/api/transactions"
 import { categoriesApi } from "@/api/categories"
 import { accountsApi } from "@/api/accounts"
+import { propertiesApi } from "@/api/properties"
+import { pensionApi } from "@/api/pension"
 import { ImportModal } from "@/components/app/ImportModal"
 import { AddTransactionModal } from "@/components/app/AddTransactionModal"
 import { EditTransactionModal } from "@/components/app/EditTransactionModal"
@@ -180,6 +182,22 @@ export default function Transactions() {
   const totalPages = page_ ? Math.max(1, Math.ceil(page_.total / PAGE_SIZE)) : 1
   const accountType = account?.account_type
   const isInvestmentAccount = accountType ? INVESTMENT_ACCOUNT_TYPES.includes(accountType) : false
+  const isRealEstateAccount = accountType === "real_estate"
+  const isPensionAccount = accountType === "pension"
+
+  const { data: property } = useQuery({
+    queryKey: ["accounts", accountId, "property"],
+    queryFn: () => propertiesApi.getByAccountId(accountId),
+    enabled: isRealEstateAccount,
+    retry: false,
+  })
+
+  const { data: pension } = useQuery({
+    queryKey: ["accounts", accountId, "pension"],
+    queryFn: () => pensionApi.get(accountId),
+    enabled: isPensionAccount,
+    retry: false,
+  })
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -189,18 +207,40 @@ export default function Transactions() {
           <p className="text-sm text-gray-500">Transactions</p>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowAdd(true)}
-            className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors"
-          >
-            New entry
-          </button>
-          <button
-            onClick={() => setShowImport(true)}
-            className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
-          >
-            Import
-          </button>
+          {!isRealEstateAccount && !isPensionAccount && (
+            <button
+              onClick={() => setShowAdd(true)}
+              className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors"
+            >
+              New entry
+            </button>
+          )}
+          {!isPensionAccount && (
+            <button
+              onClick={() => setShowImport(true)}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+            >
+              Import
+            </button>
+          )}
+          {isRealEstateAccount && property && (
+            <Link
+              to="/properties/$propertyId"
+              params={{ propertyId: String(property.id) }}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+            >
+              Property details →
+            </Link>
+          )}
+          {isPensionAccount && (
+            <Link
+              to="/accounts/$accountId/pension"
+              params={{ accountId }}
+              className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+            >
+              Edit pension details →
+            </Link>
+          )}
         </div>
       </div>
 
@@ -257,6 +297,78 @@ export default function Transactions() {
           >
             Clear
           </button>
+        </div>
+      )}
+
+      {isPensionAccount && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6 mb-4">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Defined Benefit Summary</h2>
+          {pension ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Plan name</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {pension.plan_name ?? "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Monthly benefit</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {pension.monthly_benefit_estimate
+                    ? formatCurrency(pension.monthly_benefit_estimate) + " / mo"
+                    : "—"}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Eligibility</span>
+                <span className="text-sm font-medium text-gray-900">
+                  {pension.eligibility_age != null ? `Age ${pension.eligibility_age}` : ""}
+                  {pension.eligibility_age != null && pension.eligibility_date ? " · " : ""}
+                  {pension.eligibility_date ?? (pension.eligibility_age == null ? "—" : "")}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Vested</span>
+                <span
+                  className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                    pension.is_vested
+                      ? "bg-emerald-100 text-emerald-700"
+                      : "bg-amber-100 text-amber-700"
+                  }`}
+                >
+                  {pension.is_vested ? "Vested" : "Not vested"}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-4 text-gray-400">
+              <p className="text-sm mb-3">No pension details recorded yet.</p>
+              <Link
+                to="/accounts/$accountId/pension"
+                params={{ accountId }}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+              >
+                Add pension details →
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {isRealEstateAccount && (
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 flex items-center justify-between">
+          <p className="text-sm text-blue-800">
+            This is a real estate account. Transactions below reflect property-related expenses.
+          </p>
+          {property && (
+            <Link
+              to="/properties/$propertyId"
+              params={{ propertyId: String(property.id) }}
+              className="text-sm font-medium text-blue-700 hover:text-blue-900 whitespace-nowrap ml-4"
+            >
+              Track this property →
+            </Link>
+          )}
         </div>
       )}
 

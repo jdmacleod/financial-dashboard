@@ -15,6 +15,7 @@ from app.db.models.category import Category
 from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
+from app.repositories.pension import PensionRepository
 from app.schemas.fire import IncomeStream, IncomeStreamType
 
 _PORTFOLIO_ACCOUNT_TYPES = frozenset(
@@ -99,6 +100,7 @@ class FireInputDetector:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.account_repo = AccountRepository(session)
+        self.pension_repo = PensionRepository(session)
 
     async def _sum_by_category(
         self,
@@ -251,6 +253,48 @@ class FireInputDetector:
                 net_worth -= val
         return net_worth
 
+    async def _detect_pension_streams(
+        self, ctx: VisibilityContext, now: datetime
+    ) -> list[IncomeStream]:
+        """Build auto-detected income streams for each vested pension account."""
+        vested = await self.pension_repo.get_vested_by_household(ctx)
+        streams: list[IncomeStream] = []
+        current_year = date.today().year
+        for pension, member in vested:
+            if pension.monthly_benefit_estimate is None:
+                continue
+            annual = (pension.monthly_benefit_estimate * Decimal(12)).quantize(Decimal("0.01"))
+            label_parts = []
+            if member is not None and member.display_name:
+                label_parts.append(member.display_name)
+            label_parts.append("Pension")
+            label = " ".join(label_parts)
+            start_year = (
+                pension.eligibility_date.year
+                if pension.eligibility_date is not None
+                else (
+                    current_year + max(0, (pension.eligibility_age or 65) - 65)
+                    if pension.eligibility_age is not None
+                    else current_year
+                )
+            )
+            streams.append(
+                IncomeStream(
+                    id=str(uuid4()),
+                    label=label,
+                    type=IncomeStreamType.pension,
+                    amount_annual=annual,
+                    growth_rate_annual=pension.cola_adjustment_rate,
+                    start_year=start_year,
+                    end_year=None,
+                    is_pre_retirement=False,
+                    source_account_id=pension.account_id,
+                    auto_detected=True,
+                    detected_at=now,
+                )
+            )
+        return streams
+
     async def detect(
         self,
         ctx: VisibilityContext,
@@ -284,6 +328,9 @@ class FireInputDetector:
                     detected_at=now,
                 )
             )
+
+        pension_streams = await self._detect_pension_streams(ctx, now)
+        income_streams.extend(pension_streams)
 
         portfolio_value = await self._current_portfolio(ctx)
         expenses_annual = total_expenses * scale

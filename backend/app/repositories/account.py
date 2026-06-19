@@ -1,4 +1,6 @@
 import uuid
+from datetime import date
+from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException
@@ -9,6 +11,7 @@ from sqlalchemy.sql import or_
 from app.core.visibility import VisibilityContext
 from app.db.models.access_grant import AccountAccessGrant
 from app.db.models.account import Account
+from app.db.models.snapshot import AccountSnapshot
 
 
 class AccountRepository:
@@ -48,3 +51,16 @@ class AccountRepository:
         if not accounts:
             raise HTTPException(status_code=404, detail="Account not found")
         return accounts[0]
+
+    async def latest_snapshot(self, account_id: uuid.UUID) -> tuple[Decimal, date] | None:
+        """Return (balance, snapshot_date) for the most recent snapshot, or None."""
+        result = await self.session.execute(
+            select(AccountSnapshot.balance, AccountSnapshot.snapshot_date)
+            .where(AccountSnapshot.account_id == account_id)
+            .order_by(AccountSnapshot.snapshot_date.desc())
+            .limit(1)
+        )
+        row = result.one_or_none()
+        if row is None:
+            return None
+        return Decimal(str(row.balance)), row.snapshot_date

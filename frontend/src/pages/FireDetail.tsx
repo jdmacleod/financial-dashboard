@@ -99,6 +99,7 @@ function AddStreamModal({
       is_pre_retirement: data.is_pre_retirement,
       notes: null,
       real_estate_property_id: null,
+      source_account_id: null,
       auto_detected: false,
       detected_at: null,
     }

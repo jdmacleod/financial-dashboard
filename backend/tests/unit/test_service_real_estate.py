@@ -370,3 +370,174 @@ async def test_get_property_current_value_after_valuation(
     updated = await svc.get(ctx, prop.id)
     assert updated.current_estimated_value == Decimal("275000.00")
     assert updated.current_value_as_of == date(2025, 9, 1)
+
+
+async def test_get_equity_no_mortgage(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx, nickname="Equity House")
+
+    svc = RealEstateService(db_session)
+    prop = await svc.create(ctx, PropertyCreate(account_id=account.id, address="1 Equity Lane"))
+
+    await svc.add_valuation(
+        ctx,
+        prop.id,
+        ValuationCreate(valuation_date=date(2025, 1, 1), estimated_value=Decimal("500000.00")),
+    )
+    await db_session.flush()
+
+    equity = await svc.get_equity(ctx, prop.id)
+    assert equity.property_value == Decimal("500000.00")
+    assert equity.mortgage_balance is None
+    assert equity.equity == Decimal("500000.00")
+    assert equity.mortgage_balance_visible is True
+
+
+async def test_get_equity_no_valuation(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx, nickname="No Val House")
+
+    svc = RealEstateService(db_session)
+    prop = await svc.create(ctx, PropertyCreate(account_id=account.id, address="2 Empty Lane"))
+
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.get_equity(ctx, prop.id)
+    assert exc_info.value.status_code == 404
+
+
+async def test_get_by_account_returns_property(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx, nickname="Lookup House")
+
+    svc = RealEstateService(db_session)
+    await svc.create(ctx, PropertyCreate(account_id=account.id, address="99 Lookup Ave"))
+
+    result = await svc.get_by_account(ctx, account.id)
+    assert result.account_id == account.id
+    assert result.address == "99 Lookup Ave"
+
+
+async def test_get_by_account_no_property_returns_404(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx, nickname="Empty RE")
+
+    svc = RealEstateService(db_session)
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.get_by_account(ctx, account.id)
+    assert exc_info.value.status_code == 404
+
+
+async def test_get_equity_property_not_found(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    import uuid as _uuid
+
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    svc = RealEstateService(db_session)
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.get_equity(ctx, _uuid.uuid4())
+    assert exc_info.value.status_code == 404
+
+
+async def test_get_equity_mortgage_invisible(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+    make_member: Any,
+    make_user: Any,
+) -> None:
+    """Partner sees mortgage_balance_visible=False for a mortgage owned by primary only."""
+    primary_ctx = _ctx(household, primary_member, "primary", primary_user)
+
+    # Mortgage account owned by primary only (private)
+    mortgage_account = await _make_account(
+        db_session,
+        primary_ctx,
+        account_type="mortgage",
+        nickname="Primary Mortgage",
+        owner_member_id=primary_member.id,
+    )
+    # RE account jointly visible
+    re_account = await _make_account(db_session, primary_ctx, nickname="Our House")
+
+    svc = RealEstateService(db_session)
+    prop = await svc.create(
+        primary_ctx,
+        PropertyCreate(
+            account_id=re_account.id,
+            address="7 Private Ln",
+            linked_mortgage_account_id=mortgage_account.id,
+        ),
+    )
+    await svc.add_valuation(
+        primary_ctx,
+        prop.id,
+        ValuationCreate(valuation_date=date(2025, 1, 1), estimated_value=Decimal("400000.00")),
+    )
+    await db_session.flush()
+
+    partner_member = await make_member(role="partner", display_name="Partner")
+    partner_user = await make_user(partner_member, "partner@example.com")
+    partner_ctx = VisibilityContext(
+        user_id=partner_user.id,
+        member_id=partner_member.id,
+        role="partner",
+        household_id=household.id,
+    )
+
+    equity = await svc.get_equity(partner_ctx, prop.id)
+    assert equity.mortgage_balance_visible is False
+    assert equity.mortgage_balance is None
+    assert equity.equity is None
+
+
+async def test_update_property_uses_model_fields_set(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """PATCH semantics: only fields in model_fields_set are updated."""
+    from app.schemas.real_estate import PropertyCreate, PropertyUpdate
+
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx, nickname="Patch House")
+
+    svc = RealEstateService(db_session)
+    prop = await svc.create(
+        ctx,
+        PropertyCreate(
+            account_id=account.id,
+            address="123 Old St",
+            purchase_price=Decimal("300000.00"),
+        ),
+    )
+
+    # PATCH only address — purchase_price must remain unchanged
+    updated = await svc.update(ctx, prop.id, PropertyUpdate(address="456 New St"))
+    assert updated.address == "456 New St"
+    assert updated.purchase_price == Decimal("300000.00")

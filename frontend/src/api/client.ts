@@ -1,6 +1,7 @@
 const BASE = "/api/v1"
 
 let _accessToken: string | null = null
+let _refreshPromise: Promise<string> | null = null
 
 export function setAccessToken(token: string | null) {
   _accessToken = token
@@ -20,6 +21,35 @@ export class ApiError extends Error {
     this.status = status
     this.detail = detail
   }
+}
+
+// Calls POST /auth/refresh directly (not via request()) to avoid recursion.
+// Deduplicates concurrent refresh attempts so only one network call is made.
+async function refreshAccessToken(): Promise<string> {
+  if (_refreshPromise) return _refreshPromise
+  _refreshPromise = fetch(`${BASE}/auth/refresh`, {
+    method: "POST",
+    credentials: "include",
+  })
+    .then(async (res) => {
+      if (!res.ok) throw new ApiError(401, "refresh_failed")
+      const data = (await res.json()) as { access_token: string }
+      _accessToken = data.access_token
+      sessionStorage.setItem("access_token", data.access_token)
+      return data.access_token
+    })
+    .finally(() => {
+      _refreshPromise = null
+    })
+  return _refreshPromise
+}
+
+function expireSession(): never {
+  _accessToken = null
+  sessionStorage.removeItem("access_token")
+  window.location.href = "/login"
+  // Unreachable — satisfies TypeScript never return type
+  throw new ApiError(401, "Session expired")
 }
 
 async function request<T>(
@@ -44,6 +74,34 @@ async function request<T>(
   })
 
   if (res.status === 204) return undefined as T
+
+  // Silent token refresh on 401. Skip for /auth/* paths: login wrong-password,
+  // logout, and reauth failures are expected 401s that must not trigger a cycle.
+  if (res.status === 401 && !path.startsWith("/auth/")) {
+    let newToken: string
+    try {
+      newToken = await refreshAccessToken()
+    } catch {
+      expireSession()
+    }
+    const retryHeaders: Record<string, string> = {
+      ...headers,
+      Authorization: `Bearer ${newToken!}`,
+    }
+    const retry = await fetch(`${BASE}${path}`, {
+      method,
+      headers: retryHeaders,
+      credentials: "include",
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    })
+    if (retry.status === 204) return undefined as T
+    if (retry.status === 401) expireSession()
+    const retryData = await retry.json().catch(() => null)
+    if (!retry.ok) {
+      throw new ApiError(retry.status, retryData?.detail ?? retryData ?? retry.statusText)
+    }
+    return retryData as T
+  }
 
   const data = await res.json().catch(() => null)
   if (!res.ok) {
@@ -74,6 +132,28 @@ async function requestForm<T>(path: string, form: FormData): Promise<T> {
     credentials: "include",
     body: form,
   })
+
+  if (res.status === 401) {
+    let newToken: string
+    try {
+      newToken = await refreshAccessToken()
+    } catch {
+      expireSession()
+    }
+    const retryHeaders: Record<string, string> = { Authorization: `Bearer ${newToken!}` }
+    const retry = await fetch(`${BASE}${path}`, {
+      method: "POST",
+      headers: retryHeaders,
+      credentials: "include",
+      body: form,
+    })
+    if (retry.status === 401) expireSession()
+    const retryData = await retry.json().catch(() => null)
+    if (!retry.ok) {
+      throw new ApiError(retry.status, retryData?.detail ?? retryData ?? retry.statusText)
+    }
+    return retryData as T
+  }
 
   const data = await res.json().catch(() => null)
   if (!res.ok) {
