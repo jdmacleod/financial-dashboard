@@ -31,7 +31,7 @@ function renderWithClient(ui: React.ReactElement, client?: QueryClient) {
   return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>)
 }
 
-const primaryMember: MemberResponse = {
+const partnerMember: MemberResponse = {
   id: "member-2",
   household_id: "hh-1",
   display_name: "Sam Smith",
@@ -49,8 +49,8 @@ const primaryMember: MemberResponse = {
 describe("Members page — MemberSlideOver", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(membersApi.list).mockResolvedValue([primaryMember])
-    vi.mocked(membersApi.update).mockResolvedValue({ ...primaryMember })
+    vi.mocked(membersApi.list).mockResolvedValue([partnerMember])
+    vi.mocked(membersApi.update).mockResolvedValue({ ...partnerMember })
   })
 
   async function openSlideOver() {
@@ -122,8 +122,8 @@ describe("Members page — MemberSlideOver", () => {
 describe("Members page — AddMemberModal primary warning", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(membersApi.list).mockResolvedValue([primaryMember])
-    vi.mocked(membersApi.create).mockResolvedValue({ ...primaryMember, id: "member-3" })
+    vi.mocked(membersApi.list).mockResolvedValue([partnerMember])
+    vi.mocked(membersApi.create).mockResolvedValue({ ...partnerMember, id: "member-3" })
   })
 
   async function openAddModal() {

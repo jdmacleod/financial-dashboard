@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 import ReportNetWorth from "../ReportNetWorth"
@@ -94,8 +94,7 @@ describe("ReportNetWorth — breakdown panel", () => {
   it("does not render breakdown panel when current is null", async () => {
     vi.mocked(reportsApi.netWorth).mockResolvedValue(makeReport(null))
     renderPage()
-    await new Promise((r) => setTimeout(r, 100))
-    expect(screen.queryByText("Breakdown")).not.toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText("Breakdown")).not.toBeInTheDocument())
   })
 
   it("does not divide by zero when total_assets and total_liabilities are 0", async () => {
