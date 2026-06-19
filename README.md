@@ -13,7 +13,8 @@ Self-hosted household financial tracking. Runs entirely on your own machine — 
 
 ## Features
 
-- **Accounts** — checking, savings, credit, investment, retirement, pension, loans
+- **Accounts** — checking, savings, credit, HSA, mortgage, and loans (transaction accounts)
+- **Assets** — real estate (valuations), pensions (present-value estimate), and investment/retirement accounts (balance snapshots) on a dedicated page
 - **Transactions** — manual entry, edit, and delete; CSV and OFX/QFX import; bulk categorize; duplicate detection
 - **Budgets** — monthly limits per category with dashboard alerts
 - **Reports** — net worth (with pension annotations), cash flow, spending by category, budget vs actuals, property P&L

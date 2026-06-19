@@ -160,6 +160,7 @@ hearthledger/
 │       ├── hooks/
 │       ├── stores/               # Zustand stores (UI state only)
 │       └── lib/
+│           ├── accountLabels.ts  # display labels + grouping maps for account types
 │           ├── accountTypes.ts   # RETIREMENT_ACCOUNT_TYPES, INVESTMENT_ACCOUNT_TYPES
 │           ├── errorHandlers.ts  # shared API error extraction helpers
 │           ├── formatters.ts     # currency, date, number formatting

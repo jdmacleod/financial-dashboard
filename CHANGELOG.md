@@ -20,7 +20,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
-- **N+1 query eliminated in account list** — snapshot queries for non-real-estate accounts are now batched into a single `DISTINCT ON` query instead of one query per account.
+- **Account list loads faster** — snapshot queries for non-real-estate accounts are now batched into a single `DISTINCT ON` query instead of one query per account, eliminating the N+1 fan-out that slowed down the Accounts page for households with many accounts.
 
 ## [0.8.0.0] - 2026-06-19
 
