@@ -8,6 +8,8 @@ import { accountsApi } from "@/api/accounts"
 import { propertiesApi } from "@/api/properties"
 import { pensionApi } from "@/api/pension"
 import { snapshotsApi } from "@/api/snapshots"
+import { ACCOUNT_LABELS, PROPERTY_TYPE_LABELS } from "@/lib/accountLabels"
+import { formatCurrencyOrDash } from "@/lib/formatters"
 import type {
   AccountResponse,
   AccountType,
@@ -23,40 +25,6 @@ const INVESTMENT_TYPES: AccountType[] = [
   "retirement_roth_ira",
   "hsa",
 ]
-
-const ACCOUNT_LABELS: Record<AccountType, string> = {
-  checking: "Checking",
-  savings: "Savings",
-  credit_card: "Credit Card",
-  investment_brokerage: "Brokerage",
-  retirement_401k: "401(k)",
-  retirement_403b: "403(b)",
-  retirement_ira: "IRA",
-  retirement_roth_ira: "Roth IRA",
-  pension: "Pension",
-  hsa: "HSA",
-  real_estate: "Real Estate",
-  mortgage: "Mortgage",
-  auto_loan: "Auto Loan",
-  personal_loan: "Personal Loan",
-  student_loan: "Student Loan",
-  other_asset: "Other Asset",
-  other_liability: "Other Liability",
-}
-
-const PROPERTY_TYPE_LABELS: Record<string, string> = {
-  primary_residence: "Primary Residence",
-  rental: "Rental Property",
-  vacation: "Vacation Home",
-  commercial: "Commercial",
-  land: "Land",
-  other: "Other",
-}
-
-function formatCurrency(val: string | null): string {
-  if (val === null) return "—"
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(val))
-}
 
 function pensionPV(monthlyBenefit: string | null): string {
   if (!monthlyBenefit) return "—"
@@ -183,8 +151,8 @@ function RealEstateCard({ account }: { account: AccountResponse }) {
       <div className="text-right">
         <p className="font-medium text-gray-900">
           {property
-            ? formatCurrency(property.current_estimated_value)
-            : formatCurrency(account.current_balance)}
+            ? formatCurrencyOrDash(property.current_estimated_value)
+            : formatCurrencyOrDash(account.current_balance)}
         </p>
         {property?.current_value_as_of && (
           <p className="text-xs text-gray-400">as of {property.current_value_as_of}</p>
@@ -296,7 +264,7 @@ function InvestmentRow({
         </p>
       </Link>
       <div className="text-right mr-4">
-        <p className="font-medium text-gray-900">{formatCurrency(account.current_balance)}</p>
+        <p className="font-medium text-gray-900">{formatCurrencyOrDash(account.current_balance)}</p>
         {account.balance_as_of && (
           <p className="text-xs text-gray-400">as of {account.balance_as_of}</p>
         )}

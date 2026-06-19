@@ -162,6 +162,7 @@ describe("UpdateValueModal — decimal validation", () => {
       employer_match_ytd: null,
       memo: null,
       source: "manual",
+      created_at: "2026-06-19T00:00:00Z",
     })
 
     renderAssets()

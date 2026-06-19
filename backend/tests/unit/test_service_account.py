@@ -1,4 +1,4 @@
-from datetime import UTC
+from datetime import UTC, date, datetime
 from decimal import Decimal
 
 import pytest
@@ -11,6 +11,7 @@ from app.core.visibility import VisibilityContext
 from app.db.models.audit_log import AuditLog
 from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
+from app.db.models.snapshot import AccountSnapshot
 from app.db.models.user import User
 from app.schemas.account import AccessGrantCreate, AccountCreate, AccountUpdate
 from app.schemas.real_estate import PropertyCreate, ValuationCreate
@@ -234,20 +235,18 @@ async def test_list_accounts_real_estate_shows_valuation_balance(
     )
 
     re_svc = RealEstateService(db_session)
-    from datetime import date as _date
-
     prop = await re_svc.create(ctx, PropertyCreate(account_id=re_account.id, address="1 Main St"))
     await re_svc.add_valuation(
         ctx,
         prop.id,
-        ValuationCreate(valuation_date=_date.today(), estimated_value=Decimal("500000")),
+        ValuationCreate(valuation_date=date.today(), estimated_value=Decimal("500000")),
     )
 
     accounts = await service.list_accounts(ctx)
     re_response = next(a for a in accounts if a.id == re_account.id)
 
     assert re_response.current_balance == Decimal("500000")
-    assert re_response.balance_as_of == _date.today()
+    assert re_response.balance_as_of == date.today()
 
 
 async def test_list_accounts_real_estate_no_valuation_shows_zero(
@@ -302,20 +301,15 @@ async def test_list_accounts_non_re_account_still_uses_snapshot(
     """Non-RE accounts still get their balance from the AccountSnapshot path
     after the B1 RE batch refactor — regression guard.
     """
-    from datetime import date as _date
-    from datetime import datetime
-
     ctx = _ctx(household, primary_member, "primary", primary_user)
     service = AccountService(db_session)
     checking = await service.create(
         ctx, AccountCreate(account_type="checking", nickname="Chase Checking")
     )
 
-    from app.db.models.snapshot import AccountSnapshot
-
     snap = AccountSnapshot(
         account_id=checking.id,
-        snapshot_date=_date(2025, 6, 30),
+        snapshot_date=date(2025, 6, 30),
         balance=Decimal("7500"),
         source="manual",
         created_at=datetime.now(UTC),

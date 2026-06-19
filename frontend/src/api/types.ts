@@ -179,6 +179,7 @@ export interface SnapshotResponse {
   employer_match_ytd: string | null
   memo: string | null
   source: string
+  created_at: string
 }
 
 export interface BudgetResponse {

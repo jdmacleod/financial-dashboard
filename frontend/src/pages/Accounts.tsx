@@ -8,6 +8,8 @@ import { accountsApi } from "@/api/accounts"
 import { membersApi } from "@/api/members"
 import { propertiesApi } from "@/api/properties"
 import { useAuth } from "@/hooks/useAuth"
+import { ACCOUNT_LABELS, PROPERTY_TYPE_LABELS } from "@/lib/accountLabels"
+import { formatCurrencyOrDash } from "@/lib/formatters"
 import type { AccountResponse, AccountType, PropertyType } from "@/api/types"
 
 // Full list used by AddAccountModal so users can create any account type here.
@@ -35,40 +37,6 @@ const LIABILITY_TYPES: AccountType[] = [
   "student_loan",
   "other_liability",
 ]
-
-const ACCOUNT_LABELS: Record<AccountType, string> = {
-  checking: "Checking",
-  savings: "Savings",
-  credit_card: "Credit Card",
-  investment_brokerage: "Brokerage",
-  retirement_401k: "401(k)",
-  retirement_403b: "403(b)",
-  retirement_ira: "IRA",
-  retirement_roth_ira: "Roth IRA",
-  pension: "Pension",
-  hsa: "HSA",
-  real_estate: "Real Estate",
-  mortgage: "Mortgage",
-  auto_loan: "Auto Loan",
-  personal_loan: "Personal Loan",
-  student_loan: "Student Loan",
-  other_asset: "Other Asset",
-  other_liability: "Other Liability",
-}
-
-function formatBalance(val: string | null): string {
-  if (val === null) return "—"
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(Number(val))
-}
-
-const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
-  primary_residence: "Primary Residence",
-  rental: "Rental Property",
-  vacation: "Vacation Home",
-  commercial: "Commercial",
-  land: "Land",
-  other: "Other",
-}
 
 const createSchema = z
   .object({
@@ -396,7 +364,7 @@ function AccountGroup({ title, accounts }: { title: string; accounts: AccountRes
               </p>
             </div>
             <div className="text-right">
-              <p className="font-medium text-gray-900">{formatBalance(a.current_balance)}</p>
+              <p className="font-medium text-gray-900">{formatCurrencyOrDash(a.current_balance)}</p>
               {a.balance_as_of && <p className="text-xs text-gray-400">{a.balance_as_of}</p>}
             </div>
           </Link>

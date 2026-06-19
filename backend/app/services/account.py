@@ -60,6 +60,20 @@ class AccountService:
         )
         return result.scalar_one_or_none()
 
+    async def _batch_latest_snapshots(
+        self, account_ids: list[uuid.UUID]
+    ) -> dict[uuid.UUID, AccountSnapshot]:
+        """Fetch the most-recent snapshot for each account in one query (DISTINCT ON)."""
+        if not account_ids:
+            return {}
+        result = await self.session.execute(
+            select(AccountSnapshot)
+            .where(AccountSnapshot.account_id.in_(account_ids))
+            .distinct(AccountSnapshot.account_id)
+            .order_by(AccountSnapshot.account_id, AccountSnapshot.snapshot_date.desc())
+        )
+        return {snap.account_id: snap for snap in result.scalars().all()}
+
     async def list_accounts(self, ctx: VisibilityContext) -> list[AccountResponse]:
         accounts = await self.account_repo.get_visible(ctx, is_active=True)
 
@@ -80,12 +94,16 @@ class AccountService:
         else:
             re_balances = {}
 
+        # Batch-fetch latest snapshot for all non-RE accounts in one query.
+        non_re_ids = [a.id for a in accounts if a.account_type != "real_estate"]
+        snap_map = await self._batch_latest_snapshots(non_re_ids)
+
         responses = []
         for account in accounts:
             if account.account_type == "real_estate" and account.id in re_balances:
                 responses.append(_account_to_response(account, re_balances[account.id], today))
             else:
-                snap = await self._latest_snapshot(account.id)
+                snap = snap_map.get(account.id)
                 responses.append(
                     _account_to_response(
                         account,

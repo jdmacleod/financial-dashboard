@@ -46,6 +46,8 @@ from app.schemas.report import (
 
 Interval = Literal["monthly", "quarterly", "annual"]
 
+PENSION_DISCOUNT_RATE = Decimal("0.04")
+
 ASSET_BUCKET = {
     "checking": "checking_savings",
     "savings": "checking_savings",
@@ -166,7 +168,7 @@ class ReportService:
                 return pension_values.get(account.id, Decimal("0"))
             pension = await self.pension_repo.get_by_account_id(account.id)
             if pension and pension.monthly_benefit_estimate:
-                return pension.monthly_benefit_estimate * 12 / Decimal("0.04")
+                return pension.monthly_benefit_estimate * 12 / PENSION_DISCOUNT_RATE
             return Decimal("0")
         return Decimal("0")
 
@@ -216,7 +218,7 @@ class ReportService:
             else []
         )
         pension_values = {
-            p.account_id: p.monthly_benefit_estimate * 12 / Decimal("0.04")
+            p.account_id: p.monthly_benefit_estimate * 12 / PENSION_DISCOUNT_RATE
             for p in pensions
             if p.monthly_benefit_estimate
         }
@@ -253,7 +255,7 @@ class ReportService:
             else []
         )
         pension_values = {
-            p.account_id: p.monthly_benefit_estimate * 12 / Decimal("0.04")
+            p.account_id: p.monthly_benefit_estimate * 12 / PENSION_DISCOUNT_RATE
             for p in pensions
             if p.monthly_benefit_estimate
         }
