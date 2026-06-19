@@ -200,6 +200,8 @@ export interface PropertyResponse {
   property_type: PropertyType
   current_estimated_value: string | null
   current_value_as_of: string | null
+  gain_loss: string | null
+  gain_loss_pct: string | null
   created_at: string
   updated_at: string
 }

@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
+import type { NetWorthBreakdown } from "@/api/types"
 import {
   AreaChart,
   Area,
@@ -19,6 +20,20 @@ type Interval = "monthly" | "quarterly" | "annual"
 type Preset = "1y" | "2y" | "5y"
 
 const PENSION_PV_DISCOUNT_RATE = 0.04
+
+const ASSET_BUCKETS: { key: keyof NetWorthBreakdown; label: string }[] = [
+  { key: "checking_savings", label: "Cash & Savings" },
+  { key: "investment", label: "Investments" },
+  { key: "retirement", label: "Retirement" },
+  { key: "real_estate", label: "Real Estate" },
+  { key: "hsa", label: "HSA" },
+  { key: "other_assets", label: "Other Assets" },
+]
+
+const LIABILITY_BUCKETS: { key: keyof NetWorthBreakdown; label: string }[] = [
+  { key: "mortgage", label: "Mortgage" },
+  { key: "other_liabilities", label: "Other Liabilities" },
+]
 
 const PRESETS: { label: string; key: Preset }[] = [
   { label: "1 Year", key: "1y" },
@@ -192,6 +207,66 @@ export default function ReportNetWorth() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {data?.current && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Breakdown</h2>
+          <div className="grid grid-cols-2 gap-x-8 gap-y-1">
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                Assets
+              </p>
+              <div className="space-y-2.5">
+                {ASSET_BUCKETS.map(({ key, label }) => {
+                  const amount = Number(data.current!.breakdown[key])
+                  const total = Number(data.current!.total_assets)
+                  const pct = total > 0 ? (amount / total) * 100 : 0
+                  return (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 w-28 shrink-0">{label}</span>
+                      <div className="flex-1 bg-gray-100 rounded-full h-1.5 min-w-0">
+                        <div
+                          className="bg-emerald-500 h-1.5 rounded-full"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-gray-900 w-20 text-right shrink-0">
+                        {formatCurrency(String(amount))}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+                Liabilities
+              </p>
+              <div className="space-y-2.5">
+                {LIABILITY_BUCKETS.map(({ key, label }) => {
+                  const amount = Math.abs(Number(data.current!.breakdown[key]))
+                  const total = Number(data.current!.total_liabilities)
+                  const pct = total > 0 ? (amount / total) * 100 : 0
+                  return (
+                    <div key={key} className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 w-28 shrink-0">{label}</span>
+                      <div className="flex-1 bg-gray-100 rounded-full h-1.5 min-w-0">
+                        <div
+                          className="bg-red-400 h-1.5 rounded-full"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-medium text-gray-900 w-20 text-right shrink-0">
+                        {formatCurrency(String(amount))}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

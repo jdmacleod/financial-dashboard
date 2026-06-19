@@ -1,6 +1,9 @@
 import { useState } from "react"
 import { useParams } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import {
   LineChart,
   Line,
@@ -12,14 +15,188 @@ import {
   Bar,
   CartesianGrid,
 } from "recharts"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
+import { accountsApi } from "@/api/accounts"
 import { propertiesApi } from "@/api/properties"
 import { reportsApi } from "@/api/reports"
-import { formatCurrency } from "@/lib/formatters"
+import type { PropertyResponse, PropertyType } from "@/api/types"
+import { formatCurrency, formatDate } from "@/lib/formatters"
 import { lastNMonthsRange } from "@/lib/dateRange"
 import { HistoryPanel } from "@/components/app/HistoryPanel"
+
+const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
+  primary_residence: "Primary Residence",
+  rental: "Rental Property",
+  vacation: "Vacation Home",
+  commercial: "Commercial",
+  land: "Land",
+  other: "Other",
+}
+
+const PROPERTY_TYPE_COLORS: Record<PropertyType, string> = {
+  primary_residence: "bg-indigo-100 text-indigo-700",
+  rental: "bg-emerald-100 text-emerald-700",
+  vacation: "bg-sky-100 text-sky-700",
+  commercial: "bg-amber-100 text-amber-700",
+  land: "bg-stone-100 text-stone-700",
+  other: "bg-gray-100 text-gray-600",
+}
+
+const editPropertySchema = z.object({
+  address: z.string().min(1, "Address is required"),
+  property_type: z.enum(["primary_residence", "rental", "vacation", "commercial", "land", "other"]),
+  purchase_date: z.string().optional(),
+  purchase_price: z.string().optional(),
+  linked_mortgage_account_id: z.string().optional(),
+})
+type EditPropertyForm = z.infer<typeof editPropertySchema>
+
+function EditPropertyModal({
+  property,
+  onClose,
+}: {
+  property: PropertyResponse
+  onClose: () => void
+}) {
+  const queryClient = useQueryClient()
+  const [error, setError] = useState<string | null>(null)
+
+  const { data: allAccounts } = useQuery({
+    queryKey: ["accounts"],
+    queryFn: accountsApi.list,
+  })
+  const mortgageAccounts =
+    allAccounts?.filter((a) => a.account_type === "mortgage" && a.is_active) ?? []
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<EditPropertyForm>({
+    resolver: zodResolver(editPropertySchema),
+    defaultValues: {
+      address: property.address,
+      property_type: property.property_type,
+      purchase_date: property.purchase_date ?? "",
+      purchase_price: property.purchase_price ?? "",
+      linked_mortgage_account_id: property.linked_mortgage_account_id ?? "",
+    },
+  })
+
+  const update = useMutation({
+    mutationFn: (data: EditPropertyForm) =>
+      propertiesApi.update(property.id, {
+        address: data.address,
+        property_type: data.property_type as PropertyType,
+        purchase_date: data.purchase_date || null,
+        purchase_price: data.purchase_price || null,
+        linked_mortgage_account_id: data.linked_mortgage_account_id || null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["property", property.id] })
+      queryClient.invalidateQueries({ queryKey: ["property-equity", property.id] })
+      onClose()
+    },
+    onError: () => setError("Failed to save property details."),
+  })
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold">Edit property details</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            ✕
+          </button>
+        </div>
+        <form onSubmit={handleSubmit((d) => update.mutate(d))} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+            <input
+              {...register("address")}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+            {errors.address && (
+              <p className="mt-1 text-xs text-red-600">{errors.address.message}</p>
+            )}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Property type</label>
+            <select
+              {...register("property_type")}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            >
+              {(Object.entries(PROPERTY_TYPE_LABELS) as [PropertyType, string][]).map(
+                ([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Purchase date</label>
+              <input
+                type="date"
+                {...register("purchase_date")}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Purchase price</label>
+              <input
+                {...register("purchase_price")}
+                placeholder="e.g. 350000.00"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Linked mortgage account
+            </label>
+            <select
+              {...register("linked_mortgage_account_id")}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="">None</option>
+              {mortgageAccounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.nickname}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-400">
+              Links this property to a mortgage for equity calculation.
+            </p>
+          </div>
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+          <div className="flex gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
+            >
+              {isSubmitting ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
 
 type Tab = "valuations" | "equity" | "pnl" | "history"
 
@@ -110,6 +287,7 @@ export default function PropertyDetail() {
   const { propertyId } = useParams({ strict: false }) as { propertyId: string }
   const [tab, setTab] = useState<Tab>("valuations")
   const [showAddValuation, setShowAddValuation] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
 
   const range = lastNMonthsRange(12)
 
@@ -144,6 +322,9 @@ export default function PropertyDetail() {
   if (propLoading) return <div className="p-8 text-gray-500">Loading…</div>
   if (!property) return <div className="p-8 text-red-600">Property not found.</div>
 
+  const gainLoss = property.gain_loss !== null ? Number(property.gain_loss) : null
+  const gainLossPct = property.gain_loss_pct !== null ? Number(property.gain_loss_pct) : null
+
   const valuationChartData = valuations
     ?.slice()
     .sort((a, b) => a.valuation_date.localeCompare(b.valuation_date))
@@ -151,19 +332,55 @@ export default function PropertyDetail() {
 
   return (
     <div className="p-8 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">{property.nickname}</h1>
-        <p className="text-sm text-gray-500">{property.address}</p>
-        {property.current_estimated_value && (
-          <p className="text-lg font-medium text-indigo-600 mt-1">
-            {formatCurrency(property.current_estimated_value)}
-            {property.current_value_as_of && (
-              <span className="text-sm text-gray-400 font-normal ml-2">
-                as of {property.current_value_as_of}
-              </span>
-            )}
-          </p>
-        )}
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl font-semibold">{property.nickname}</h1>
+            <span
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${PROPERTY_TYPE_COLORS[property.property_type as PropertyType]}`}
+            >
+              {PROPERTY_TYPE_LABELS[property.property_type as PropertyType]}
+            </span>
+          </div>
+          <p className="text-sm text-gray-500 mt-0.5">{property.address}</p>
+          {property.current_estimated_value && (
+            <p className="text-lg font-medium text-indigo-600 mt-1">
+              {formatCurrency(property.current_estimated_value)}
+              {property.current_value_as_of && (
+                <span className="text-sm text-gray-400 font-normal ml-2">
+                  as of {property.current_value_as_of}
+                </span>
+              )}
+            </p>
+          )}
+          {property.purchase_price && (
+            <p className="text-sm text-gray-500 mt-0.5">
+              {property.purchase_date && `Purchased ${formatDate(property.purchase_date)} · `}
+              Paid {formatCurrency(property.purchase_price)}
+              {gainLoss !== null && (
+                <span
+                  className={`ml-2 font-medium ${gainLoss >= 0 ? "text-emerald-600" : "text-red-600"}`}
+                >
+                  {gainLoss >= 0 ? "+" : ""}
+                  {formatCurrency(String(Math.abs(gainLoss)))}
+                  {gainLossPct !== null && (
+                    <>
+                      {" "}
+                      ({gainLoss >= 0 ? "+" : ""}
+                      {gainLossPct.toFixed(1)}%)
+                    </>
+                  )}
+                </span>
+              )}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={() => setShowEdit(true)}
+          className="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Edit details
+        </button>
       </div>
 
       <div className="flex gap-1 border-b border-gray-200">
@@ -449,6 +666,7 @@ export default function PropertyDetail() {
       {showAddValuation && (
         <AddValuationModal propertyId={propertyId} onClose={() => setShowAddValuation(false)} />
       )}
+      {showEdit && <EditPropertyModal property={property} onClose={() => setShowEdit(false)} />}
     </div>
   )
 }

@@ -1,9 +1,9 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, model_validator
 
 ValuationSource = Literal["manual", "api_attom", "api_estated"]
 PropertyTypeLiteral = Literal[
@@ -39,8 +39,22 @@ class PropertyResponse(BaseModel):
     property_type: str
     current_estimated_value: Decimal | None
     current_value_as_of: date | None
+    gain_loss: Decimal | None = None
+    gain_loss_pct: Decimal | None = None
     created_at: datetime
     updated_at: datetime
+
+    @model_validator(mode="after")
+    def compute_gain_loss(self) -> Self:
+        if self.purchase_price is not None and self.current_estimated_value is not None:
+            self.gain_loss = self.current_estimated_value - self.purchase_price
+            if self.purchase_price != 0:
+                self.gain_loss_pct = (
+                    (self.current_estimated_value - self.purchase_price)
+                    / self.purchase_price
+                    * Decimal("100")
+                )
+        return self
 
 
 class PropertyEquityResponse(BaseModel):
