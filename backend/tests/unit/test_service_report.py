@@ -337,6 +337,24 @@ async def test_real_estate_zero_when_no_valuation(
     assert report.series[0].breakdown.real_estate == Decimal("0")
 
 
+async def test_real_estate_account_without_property_record_returns_zero(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, primary_user)
+    # Create a real_estate account but deliberately skip RealEstateService.create
+    # so no PropertyRecord exists — simulates data-integrity gap.
+    await _make_account(db_session, ctx, "real_estate", "Orphan RE")
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 1, 31))
+
+    assert report.series[0].total_assets == Decimal("0")
+    assert report.series[0].breakdown.real_estate == Decimal("0")
+
+
 async def test_real_estate_as_of_date_filters_future_valuations(
     db_session: AsyncSession,
     household: Household,
