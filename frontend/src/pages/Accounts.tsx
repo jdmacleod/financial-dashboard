@@ -73,6 +73,10 @@ const createSchema = z.object({
   account_number: z.string().optional(),
   owner_member_id: z.string().optional(),
   property_type: z.string().optional(),
+  address: z.string().optional(),
+  purchase_date: z.string().optional(),
+  purchase_price: z.string().optional(),
+  linked_mortgage_account_id: z.string().optional(),
 })
 type CreateForm = z.infer<typeof createSchema>
 
@@ -81,10 +85,16 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
   const isPrimary = useAuth((s) => s.role === "primary")
   const memberId = useAuth((s) => s.memberId)
   const { data: allMembers } = useQuery({ queryKey: ["members"], queryFn: membersApi.list })
+  const { data: existingAccounts } = useQuery({
+    queryKey: ["accounts"],
+    queryFn: accountsApi.list,
+  })
   // Partners may only own accounts jointly or as themselves — same rule
   // AccountService.create enforces server-side; this just keeps the UI from
   // offering choices the API will reject with 403.
   const members = isPrimary ? allMembers : allMembers?.filter((m) => m.id === memberId)
+  const mortgageAccounts =
+    existingAccounts?.filter((a) => a.account_type === "mortgage" && a.is_active) ?? []
   const [modalStep, setModalStep] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
@@ -110,8 +120,11 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
       if (data.account_type === "real_estate") {
         await propertiesApi.create({
           account_id: account.id,
-          address: "",
+          address: data.address || "",
           property_type: (data.property_type || "primary_residence") as PropertyType,
+          purchase_date: data.purchase_date || null,
+          purchase_price: data.purchase_price || null,
+          linked_mortgage_account_id: data.linked_mortgage_account_id || null,
         })
       }
       return account
@@ -198,24 +211,77 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
                 )}
               </div>
               {selectedType === "real_estate" && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Property type
-                  </label>
-                  <select
-                    {...register("property_type")}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    defaultValue="primary_residence"
-                  >
-                    {(Object.entries(PROPERTY_TYPE_LABELS) as [PropertyType, string][]).map(
-                      ([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </div>
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Property type
+                    </label>
+                    <select
+                      {...register("property_type")}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      defaultValue="primary_residence"
+                    >
+                      {(Object.entries(PROPERTY_TYPE_LABELS) as [PropertyType, string][]).map(
+                        ([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Address <span className="text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <input
+                      {...register("address")}
+                      placeholder="e.g. 123 Main St"
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Purchase date
+                      </label>
+                      <input
+                        type="date"
+                        {...register("purchase_date")}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Purchase price
+                      </label>
+                      <input
+                        {...register("purchase_price")}
+                        placeholder="e.g. 350000.00"
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+                  {mortgageAccounts.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Linked mortgage{" "}
+                        <span className="text-gray-400 font-normal">(optional)</span>
+                      </label>
+                      <select
+                        {...register("linked_mortgage_account_id")}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      >
+                        <option value="">None</option>
+                        {mortgageAccounts.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.nickname}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </>
               )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
