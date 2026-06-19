@@ -241,9 +241,7 @@ function AddAccountModal({ onClose }: { onClose: () => void }) {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Address <span className="text-gray-400 font-normal">(optional)</span>
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
                     <input
                       {...register("address")}
                       placeholder="e.g. 123 Main St"
