@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { ApiError } from "@/api/client"
 import { membersApi } from "@/api/members"
 import { useAuth } from "@/hooks/useAuth"
 import type { MemberResponse } from "@/api/types"
@@ -21,17 +22,42 @@ const ROLE_COLORS: Record<string, string> = {
 
 function MemberSlideOver({ member, onClose }: { member: MemberResponse; onClose: () => void }) {
   const queryClient = useQueryClient()
+  const viewerIsPrimary = useAuth((s) => s.role === "primary")
   const [displayName, setDisplayName] = useState(member.display_name)
+  const [role, setRole] = useState<"primary" | "partner" | "dependent">(member.role)
+  const [confirmPromotion, setConfirmPromotion] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const hasChanges = displayName !== member.display_name || role !== member.role
+
   const update = useMutation({
-    mutationFn: (name: string) => membersApi.update(member.id, { display_name: name }),
+    mutationFn: () => {
+      const changes: { display_name?: string; role?: "primary" | "partner" | "dependent" } = {}
+      if (displayName !== member.display_name) changes.display_name = displayName
+      if (role !== member.role) changes.role = role
+      return membersApi.update(member.id, changes)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["members"] })
       onClose()
     },
-    onError: () => setError("Failed to update member."),
+    onError: (err: unknown) => {
+      setConfirmPromotion(false)
+      if (err instanceof ApiError && err.status === 409) {
+        setError("Cannot change role — at least one primary member must remain.")
+      } else {
+        setError("Failed to update member.")
+      }
+    },
   })
+
+  function handleSave() {
+    if (role === "primary" && role !== member.role && !confirmPromotion) {
+      setConfirmPromotion(true)
+      return
+    }
+    update.mutate()
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -55,13 +81,43 @@ function MemberSlideOver({ member, onClose }: { member: MemberResponse; onClose:
 
         <div>
           <span className="block text-sm font-medium text-gray-700 mb-1">Role</span>
-          <span
-            className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[member.role]}`}
-          >
-            {ROLE_LABELS[member.role]}
-          </span>
-          <p className="mt-1 text-xs text-gray-400">Role changes are not supported in this view.</p>
+          {viewerIsPrimary ? (
+            <select
+              value={role}
+              onChange={(e) => {
+                setRole(e.target.value as typeof role)
+                setConfirmPromotion(false)
+                setError(null)
+              }}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="primary">Primary</option>
+              <option value="partner">Partner</option>
+              <option value="dependent">Dependent</option>
+            </select>
+          ) : (
+            <>
+              <span
+                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLORS[member.role]}`}
+              >
+                {ROLE_LABELS[member.role]}
+              </span>
+              <p className="mt-1 text-xs text-gray-400">
+                Contact a primary member to change roles.
+              </p>
+            </>
+          )}
         </div>
+
+        {confirmPromotion && (
+          <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+            <p className="font-medium mb-1">Grant primary access?</p>
+            <p className="text-xs">
+              {member.display_name} will gain full admin access — backups, exports, and member
+              management. Click Save to confirm.
+            </p>
+          </div>
+        )}
 
         {error && (
           <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
@@ -77,11 +133,11 @@ function MemberSlideOver({ member, onClose }: { member: MemberResponse; onClose:
             Cancel
           </button>
           <button
-            onClick={() => update.mutate(displayName)}
-            disabled={update.isPending || displayName === member.display_name}
+            onClick={handleSave}
+            disabled={update.isPending || !hasChanges}
             className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
           >
-            {update.isPending ? "Saving…" : "Save"}
+            {update.isPending ? "Saving…" : confirmPromotion ? "Confirm & Save" : "Save"}
           </button>
         </div>
       </div>
@@ -91,7 +147,7 @@ function MemberSlideOver({ member, onClose }: { member: MemberResponse; onClose:
 
 const createSchema = z.object({
   display_name: z.string().min(1, "Required"),
-  role: z.enum(["partner", "dependent"]),
+  role: z.enum(["primary", "partner", "dependent"]),
   date_of_birth: z.string().optional(),
 })
 type CreateForm = z.infer<typeof createSchema>
@@ -103,11 +159,14 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<CreateForm>({
     resolver: zodResolver(createSchema),
     defaultValues: { role: "partner" },
   })
+
+  const selectedRole = watch("role")
 
   const create = useMutation({
     mutationFn: (data: CreateForm) =>
@@ -154,7 +213,13 @@ function AddMemberModal({ onClose }: { onClose: () => void }) {
             >
               <option value="partner">Partner</option>
               <option value="dependent">Dependent</option>
+              <option value="primary">Primary</option>
             </select>
+            {selectedRole === "primary" && (
+              <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Primary members have full admin access — backups, exports, and member management.
+              </p>
+            )}
           </div>
 
           <div>
