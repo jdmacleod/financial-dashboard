@@ -488,6 +488,24 @@ async def test_net_worth_time_series_pension_pv(
     assert report.series[1].total_assets == expected_pv
 
 
+async def test_net_worth_pension_annotations_populated(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """pension_annotations on NetWorthReport lists pension account details for FIRE display."""
+    ctx = _ctx(household, primary_member, primary_user)
+    await _make_pension_account(db_session, ctx, Decimal("2500.00"))
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 1, 31))
+
+    assert len(report.pension_annotations) == 1
+    ann = report.pension_annotations[0]
+    assert ann.monthly_benefit == Decimal("2500.00")
+
+
 # ---------------------------------------------------------------------------
 # Cash flow tests
 # ---------------------------------------------------------------------------

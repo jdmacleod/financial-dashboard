@@ -181,4 +181,68 @@ describe("UpdateValueModal — decimal validation", () => {
       )
     })
   })
+
+  it("shows error message when snapshotsApi.create fails", async () => {
+    mockList.mockResolvedValue([
+      makeAccount({ id: "acc-401k", nickname: "Company 401k", account_type: "retirement_401k" }),
+    ])
+    mockCreate.mockRejectedValue(new Error("Network error"))
+
+    renderAssets()
+
+    await waitFor(() => screen.getByText("Company 401k"))
+    fireEvent.click(screen.getByRole("button", { name: /update value/i }))
+    await waitFor(() => screen.getByPlaceholderText(/e\.g\. 12500/i))
+
+    fireEvent.change(screen.getByPlaceholderText(/e\.g\. 12500/i), {
+      target: { value: "50000" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: /save/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Failed to save value/i)).toBeInTheDocument()
+    })
+  })
+})
+
+describe("Assets page — Pension section", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("renders pension account in the Pension section", async () => {
+    mockList.mockResolvedValue([
+      makeAccount({ id: "acc-pension", nickname: "State Pension", account_type: "pension" }),
+    ])
+
+    const { pensionApi: mockPension } = await import("@/api/pension")
+    ;(mockPension.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+      id: "p-1",
+      account_id: "acc-pension",
+      member_id: null,
+      plan_name: "State Teachers Retirement",
+      administrator: null,
+      monthly_benefit_estimate: "3000.00",
+      eligibility_age: 62,
+      eligibility_date: null,
+      cola_adjustment_rate: "0",
+      is_vested: true,
+      vesting_date: null,
+      survivor_benefit_percent: null,
+      notes: null,
+      created_at: "2026-01-01T00:00:00Z",
+      updated_at: "2026-01-01T00:00:00Z",
+    })
+
+    renderAssets()
+
+    await waitFor(() => {
+      expect(screen.getByText("State Pension")).toBeInTheDocument()
+    })
+
+    // Pension section heading
+    expect(screen.getByText(/Pensions/i)).toBeInTheDocument()
+    // No "Update value" button — pensions are not investment rows
+    expect(screen.queryByRole("button", { name: /update value/i })).not.toBeInTheDocument()
+  })
 })

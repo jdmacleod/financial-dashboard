@@ -1,3 +1,4 @@
+from datetime import UTC
 from decimal import Decimal
 
 import pytest
@@ -269,3 +270,60 @@ async def test_list_accounts_real_estate_no_valuation_shows_zero(
     re_response = next(a for a in accounts if a.id == re_account.id)
 
     assert re_response.current_balance == Decimal("0")
+
+
+async def test_list_accounts_real_estate_orphan_no_property_returns_none(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """RE account with no property record (data gap) falls through to the snapshot
+    path and returns None balance — no KeyError, no crash.
+    """
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    re_account = await service.create(
+        ctx, AccountCreate(account_type="real_estate", nickname="Orphan RE")
+    )
+
+    accounts = await service.list_accounts(ctx)
+    re_response = next(a for a in accounts if a.id == re_account.id)
+
+    assert re_response.current_balance is None
+
+
+async def test_list_accounts_non_re_account_still_uses_snapshot(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Non-RE accounts still get their balance from the AccountSnapshot path
+    after the B1 RE batch refactor — regression guard.
+    """
+    from datetime import date as _date
+    from datetime import datetime
+
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    checking = await service.create(
+        ctx, AccountCreate(account_type="checking", nickname="Chase Checking")
+    )
+
+    from app.db.models.snapshot import AccountSnapshot
+
+    snap = AccountSnapshot(
+        account_id=checking.id,
+        snapshot_date=_date(2025, 6, 30),
+        balance=Decimal("7500"),
+        source="manual",
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(snap)
+    await db_session.flush()
+
+    accounts = await service.list_accounts(ctx)
+    checking_response = next(a for a in accounts if a.id == checking.id)
+
+    assert checking_response.current_balance == Decimal("7500")
