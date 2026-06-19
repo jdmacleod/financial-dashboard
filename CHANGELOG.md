@@ -3,6 +3,42 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.8.0.0] - 2026-06-19
+
+### Added
+
+- **Net worth breakdown panel** — stacked area sub-chart below the net worth trend on
+  the Reports page showing how checking/savings, investment, retirement, real estate,
+  HSA, and liabilities compose your net worth over the same period.
+- **Property edit modal** — edit address, property type, purchase date, purchase price,
+  and linked mortgage directly from the Property Detail page without navigating away.
+- **Property gain/loss header** — Property Detail page now shows absolute gain/loss and
+  percentage return (e.g. "+$80,000 · +26.7%") computed server-side with full Decimal
+  precision. Absolute gain still shows for properties with a $0 purchase price (inherited,
+  gifted) even when percentage is undefined.
+- **Member role management** — primary members can promote or demote household members
+  via a two-step confirmation flow; promoting to primary shows a confirmation banner
+  before the mutation fires to prevent accidental promotions.
+- **Property type in account creation** — choose Primary Residence, Rental, Vacation,
+  Commercial, Land, or Other when adding a Real Estate account; address is now required
+  at creation time to match the edit modal's validation.
+
+### Fixed
+
+- **Real estate values in net worth** — property estimated values now flow into the net
+  worth calculation correctly; previously they were always counted as $0.
+- **Deterministic property valuations** — the batch valuation query now uses
+  `ROW_NUMBER()` partitioned by property instead of a max-date JOIN, preventing
+  non-deterministic net worth figures when two valuations share the same date.
+
+### Changed
+
+- Net worth report time-series now batches real estate property valuations per time
+  point (one query per month-end instead of two queries per property per month-end),
+  eliminating the N×2 query fan-out for households with multiple properties.
+
+---
+
 ## [0.7.0.0] - 2026-06-18
 
 ### Added
