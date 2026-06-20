@@ -5,6 +5,7 @@ export const RETIREMENT_ACCOUNT_TYPES: AccountType[] = [
   "retirement_403b",
   "retirement_ira",
   "retirement_roth_ira",
+  "hsa",
 ]
 
 export const BROKERAGE_ACCOUNT_TYPES: AccountType[] = ["investment_brokerage"]
