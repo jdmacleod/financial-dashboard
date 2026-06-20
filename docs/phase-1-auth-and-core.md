@@ -6,6 +6,12 @@ infrastructure. Every subsequent phase depends on these foundations.
 
 ---
 
+## Status
+
+**Complete** — v0.1.0.0 — 2026-06-18
+
+---
+
 ## Deliverables
 
 - [ ] Login / logout / token refresh endpoints

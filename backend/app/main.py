@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.router import router
 from app.core.config import settings
 
-app = FastAPI(title="HearthLedger API", version="0.1.0")
+app = FastAPI(title="HearthLedger API", version="0.9.0.1")
 
 app.add_middleware(
     CORSMiddleware,

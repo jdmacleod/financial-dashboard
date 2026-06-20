@@ -6,6 +6,12 @@ snowball), and the FIRE and debt analysis UI pages.
 
 ---
 
+## Status
+
+**Complete** — v0.4.0.0 — 2026-06-18
+
+---
+
 ## Deliverables
 
 - [ ] `FireInputDetector` service (auto-detects income streams from transactions)

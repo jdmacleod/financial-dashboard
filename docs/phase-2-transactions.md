@@ -5,6 +5,12 @@ with duplicate detection, and import job tracking.
 
 ---
 
+## Status
+
+**Complete** — v0.2.0.0 — 2026-06-18
+
+---
+
 ## Deliverables
 
 - [ ] Transaction CRUD endpoints
