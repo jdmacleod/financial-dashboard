@@ -129,10 +129,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div
       style={{
-        fontSize: "11px",
-        letterSpacing: "0.1em",
-        textTransform: "uppercase",
-        color: "var(--faint)",
+        fontSize: "13px",
+        fontWeight: 600,
+        color: "var(--text3)",
         marginBottom: "14px",
       }}
     >
@@ -142,12 +141,18 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 const DONUT_COLORS: Record<string, string> = {
-  Banking: "var(--up)",
-  Investments: "var(--color-blue, #6c97c4)",
-  Retirement: "var(--color-gold, #d9b96a)",
-  "Real estate": "var(--color-bronze, #a9743f)",
-  HSA: "#46d39a",
-  Other: "var(--muted)",
+  Banking: "#46d39a",
+  Investments: "#6c97c4",
+  Retirement: "#46b888",
+  "Real estate": "#d9b96a",
+  HSA: "#9fb3a8",
+  Other: "#6f897c",
+}
+
+function compactCurrency(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}k`
+  return `$${n.toFixed(0)}`
 }
 
 // ── Main component ────────────────────────────────────────────────────────────
@@ -258,6 +263,18 @@ export default function Dashboard() {
       .slice(0, 5)
   }, [accounts])
 
+  const donutTotal = useMemo(() => donutData.reduce((s, d) => s + d.value, 0), [donutData])
+
+  // Net worth trend range change (for sub-label)
+  const nwRangeChange = useMemo(() => {
+    if (nwChartData.length < 2) return null
+    const start = nwChartData[0].value
+    const end = nwChartData[nwChartData.length - 1].value
+    const change = end - start
+    const pct = start !== 0 ? (change / Math.abs(start)) * 100 : 0
+    return { change, pct }
+  }, [nwChartData])
+
   // Liabilities from nwReport breakdown
   const liabBreakdown = useMemo(() => {
     const b = nwReport?.current?.breakdown
@@ -346,9 +363,30 @@ export default function Dashboard() {
       )}
 
       {/* Net worth trend + asset donut */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 220px", gap: "12px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "12px" }}>
         <SectionCard>
-          <SectionLabel>Net worth trend</SectionLabel>
+          {/* Custom header with range sub-label matching design */}
+          <div style={{ marginBottom: "14px" }}>
+            <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text3)" }}>
+              Net worth trend
+            </div>
+            {nwRangeChange && (
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: nwRangeChange.change >= 0 ? "var(--up)" : "var(--liab)",
+                  marginTop: "2px",
+                }}
+              >
+                {nwRangeChange.change >= 0 ? "+" : ""}
+                {formatCurrency(String(Math.abs(nwRangeChange.change)))}
+                {" · "}
+                {nwRangeChange.change >= 0 ? "+" : ""}
+                {nwRangeChange.pct.toFixed(1)}%{" "}
+                {range === "1y" ? "trailing year" : range === "ytd" ? "YTD" : "all time"}
+              </div>
+            )}
+          </div>
           {nwChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
               <AreaChart data={nwChartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
@@ -430,54 +468,88 @@ export default function Dashboard() {
           )}
         </SectionCard>
 
-        <SectionCard style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <SectionLabel>Allocation</SectionLabel>
+        <SectionCard>
+          <SectionLabel>Asset allocation</SectionLabel>
           {donutData.length > 0 ? (
-            <>
-              <PieChart width={138} height={138}>
-                <Pie
-                  data={donutData}
-                  cx={69}
-                  cy={69}
-                  innerRadius={54}
-                  outerRadius={69}
-                  paddingAngle={2}
-                  dataKey="value"
-                  strokeWidth={0}
-                >
-                  {donutData.map((entry) => (
-                    <Cell key={entry.name} fill={DONUT_COLORS[entry.name] ?? "var(--muted)"} />
-                  ))}
-                </Pie>
-              </PieChart>
-              <div
-                style={{
-                  marginTop: "10px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "4px",
-                  width: "100%",
-                }}
-              >
-                {donutData.map((d) => (
-                  <div
-                    key={d.name}
-                    style={{ display: "flex", alignItems: "center", gap: "7px", fontSize: "11px" }}
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              {/* Donut with center text overlay — extra 7px margin prevents arc clipping */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <PieChart width={152} height={152}>
+                  <Pie
+                    data={donutData}
+                    cx={76}
+                    cy={76}
+                    innerRadius={54}
+                    outerRadius={69}
+                    paddingAngle={2}
+                    dataKey="value"
+                    strokeWidth={0}
                   >
-                    <span
+                    {donutData.map((entry) => (
+                      <Cell key={entry.name} fill={DONUT_COLORS[entry.name] ?? "#6f897c"} />
+                    ))}
+                  </Pie>
+                </PieChart>
+                {donutTotal > 0 && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "76px",
+                      left: "76px",
+                      transform: "translate(-50%, -50%)",
+                      textAlign: "center",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <div
                       style={{
-                        width: "8px",
-                        height: "8px",
-                        borderRadius: "50%",
-                        background: DONUT_COLORS[d.name] ?? "var(--muted)",
-                        flexShrink: 0,
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        color: "var(--text)",
+                        lineHeight: 1.1,
+                        fontVariantNumeric: "tabular-nums",
                       }}
-                    />
-                    <span style={{ color: "var(--text3)", flex: 1 }}>{d.name}</span>
+                    >
+                      {compactCurrency(donutTotal)}
+                    </div>
+                    <div style={{ fontSize: "9px", color: "var(--muted)", marginTop: "2px" }}>
+                      assets
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
-            </>
+              {/* Legend with percentages */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                {donutData.map((d) => {
+                  const pct = donutTotal > 0 ? Math.round((d.value / donutTotal) * 100) : 0
+                  return (
+                    <div key={d.name} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          borderRadius: "50%",
+                          background: DONUT_COLORS[d.name] ?? "#6f897c",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span style={{ flex: 1, fontSize: "11px", color: "var(--text3)" }}>
+                        {d.name}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          color: "var(--muted)",
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {pct}%
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
           ) : (
             <div
               style={{
