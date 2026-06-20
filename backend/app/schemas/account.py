@@ -60,6 +60,7 @@ class AccountResponse(BaseModel):
     is_active: bool
     current_balance: Decimal | None
     balance_as_of: date | None
+    notes: str | None
     created_at: datetime
     updated_at: datetime
 
