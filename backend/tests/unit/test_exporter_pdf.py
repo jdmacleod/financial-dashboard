@@ -325,3 +325,140 @@ async def test_generate_pdf_makedirs_creates_output_dir(
         await pdf_exporter.generate(job, db_session, nested_dir)
 
     assert os.path.isdir(nested_dir)
+
+
+# ---------------------------------------------------------------------------
+# Tests for changes introduced in fix: pdf export net worth mismatch
+# (household name, transaction-based balance routing, page footer CSS)
+# ---------------------------------------------------------------------------
+
+
+async def test_pdf_header_shows_household_name(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+    tmp_path: Any,
+) -> None:
+    """The report <h1> contains the household name, not a hard-coded fallback."""
+    job = _make_job(household, primary_user, primary_member)
+    db_session.add(job)
+    await db_session.flush()
+
+    captured: list[str] = []
+
+    def _cap(html_str: str, path: str) -> None:
+        captured.append(html_str)
+
+    with patch.object(pdf_exporter, "_write_pdf_sync", side_effect=_cap):
+        await pdf_exporter.generate(job, db_session, str(tmp_path))
+
+    assert f"<h1>{household.name}</h1>" in captured[0]
+
+
+async def test_pdf_page_footer_css_present(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+    tmp_path: Any,
+) -> None:
+    """WeasyPrint paged-media footer CSS block is present in every generated PDF."""
+    job = _make_job(household, primary_user, primary_member)
+    db_session.add(job)
+    await db_session.flush()
+
+    captured: list[str] = []
+
+    def _cap(html_str: str, path: str) -> None:
+        captured.append(html_str)
+
+    with patch.object(pdf_exporter, "_write_pdf_sync", side_effect=_cap):
+        await pdf_exporter.generate(job, db_session, str(tmp_path))
+
+    html = captured[0]
+    assert "@bottom-center" in html
+    assert "counter(page)" in html
+    assert "counter(pages)" in html
+    assert "HearthLedger v" in html
+
+
+async def test_pdf_executor_checking_balance_from_transaction_sum(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+    tmp_path: Any,
+) -> None:
+    """Checking accounts with no AccountSnapshot show SUM(transaction.amount) in the
+    executor Account Directory, not $0.00 (the old snapshot-only bug)."""
+    checking = await _seed_account(db_session, household, "checking", "Main Checking")
+    for amount in [Decimal("3000"), Decimal("1500"), Decimal("-200")]:
+        await _seed_transaction(db_session, checking, amount, date(2024, 6, 1))
+
+    job = _make_job(household, primary_user, primary_member, export_type="pdf_executor")
+    db_session.add(job)
+    await db_session.flush()
+
+    captured: list[str] = []
+
+    def _cap(html_str: str, path: str) -> None:
+        captured.append(html_str)
+
+    with patch.object(pdf_exporter, "_write_pdf_sync", side_effect=_cap):
+        await pdf_exporter.generate(job, db_session, str(tmp_path))
+
+    assert "$4,300.00" in captured[0]
+
+
+async def test_pdf_net_worth_respects_include_in_net_worth_flag(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+    tmp_path: Any,
+) -> None:
+    """Accounts with include_in_net_worth=False are excluded from the net worth totals
+    in the PDF. Verifies that the ReportService path (not the old manual sum) is used."""
+    brokerage = await _seed_account(db_session, household, "investment_brokerage", "Included")
+    await _seed_snapshot(db_session, brokerage, Decimal("100000"), date.today())
+
+    excluded = Account(
+        household_id=household.id,
+        account_type="investment_brokerage",
+        nickname="Excluded",
+        include_in_net_worth=False,
+        is_active=True,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    db_session.add(excluded)
+    await db_session.flush()
+    db_session.add(
+        AccountSnapshot(
+            account_id=excluded.id,
+            snapshot_date=date.today(),
+            balance=Decimal("500000"),
+            source="manual",
+            created_at=datetime.now(UTC),
+        )
+    )
+    await db_session.flush()
+
+    job = _make_job(household, primary_user, primary_member)
+    db_session.add(job)
+    await db_session.flush()
+
+    captured: list[str] = []
+
+    def _cap(html_str: str, path: str) -> None:
+        captured.append(html_str)
+
+    with patch.object(pdf_exporter, "_write_pdf_sync", side_effect=_cap):
+        await pdf_exporter.generate(job, db_session, str(tmp_path))
+
+    html = captured[0]
+    # Net worth kv-item for Total Assets should show only the included $100k
+    assert '<div class="label">Total Assets</div><div class="value">$100,000.00</div>' in html
+    # The combined total ($600k) must never appear in the net worth summary
+    assert "$600,000.00" not in html

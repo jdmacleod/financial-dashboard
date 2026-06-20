@@ -3,6 +3,25 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.0.0] - 2026-06-19
+
+### Added
+
+- **Assets page** — new dedicated page for valuation-based accounts (Real Estate, Pensions, Investments) accessible from the main nav. Each section shows balances from the appropriate source: property valuations for real estate, estimated present value for pensions, and manual snapshot balances for investment accounts.
+- **Update value modal** — investment and HSA accounts now have an "Update value" button that creates a balance snapshot for any date, keeping your net worth current without transaction import.
+- **Pension present value display** — the Assets page computes and displays an estimated present value for each pension using a simplified perpetuity formula (monthly benefit × 12 / 4% discount rate), so pensions contribute meaningfully to your asset picture.
+- **Household name as dashboard title** — the Dashboard page heading now shows your household name instead of the generic "Dashboard" label.
+
+### Changed
+
+- **Accounts page now focuses on transaction accounts** — checking, savings, and other liquid assets only. Real estate, pension, and investment accounts moved to the new Assets page, reducing clutter for households with many account types.
+- **Net worth now includes pension present value** — the FIRE and net worth time-series calculations account for pension PV, giving a more complete picture of total household wealth.
+- **Real estate balances in account list come from property valuations** — `GET /accounts` now reads real estate balances from the latest property valuation batch rather than the snapshot table, keeping the account list accurate without manual updates.
+
+### Fixed
+
+- **Account list loads faster** — snapshot queries for non-real-estate accounts are now batched into a single `DISTINCT ON` query instead of one query per account, eliminating the N+1 fan-out that slowed down the Accounts page for households with many accounts.
+
 ## [0.8.0.0] - 2026-06-19
 
 ### Added

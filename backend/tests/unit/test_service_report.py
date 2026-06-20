@@ -18,8 +18,10 @@ from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.schemas.account import AccountCreate
+from app.schemas.pension import PensionAccountCreate
 from app.schemas.real_estate import PropertyCreate, ValuationCreate
 from app.services.account import AccountService
+from app.services.pension import PensionService
 from app.services.real_estate import RealEstateService
 from app.services.report import ReportService
 
@@ -383,6 +385,125 @@ async def test_real_estate_as_of_date_filters_future_valuations(
     report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 1, 31))
 
     assert report.series[0].breakdown.real_estate == Decimal("300000")
+
+
+# ---------------------------------------------------------------------------
+# Pension PV tests (B2 — Phase 8)
+# ---------------------------------------------------------------------------
+
+PENSION_DISCOUNT = Decimal("0.04")
+
+
+async def _make_pension_account(
+    db_session: AsyncSession, ctx: VisibilityContext, monthly_benefit: Decimal | None
+) -> Any:
+    account_svc = AccountService(db_session)
+    account = await account_svc.create(
+        ctx, AccountCreate(account_type="pension", nickname="State Pension")
+    )
+    pension_svc = PensionService(db_session)
+    await pension_svc.create(
+        ctx,
+        account.id,
+        PensionAccountCreate(
+            plan_name="State Retirement System",
+            monthly_benefit_estimate=monthly_benefit,
+            is_vested=True,
+        ),
+    )
+    return account
+
+
+async def test_asset_value_at_pension_uses_pv(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, primary_user)
+    await _make_pension_account(db_session, ctx, Decimal("3000.00"))
+
+    svc = ReportService(db_session)
+    point = await svc.current_net_worth(ctx, date(2025, 6, 30))
+
+    expected_pv = Decimal("3000.00") * 12 / PENSION_DISCOUNT
+    assert point.total_assets == expected_pv
+    assert point.breakdown.retirement == expected_pv
+
+
+async def test_asset_value_at_pension_no_estimate_returns_zero(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, primary_user)
+    await _make_pension_account(db_session, ctx, None)
+
+    svc = ReportService(db_session)
+    point = await svc.current_net_worth(ctx, date(2025, 6, 30))
+
+    assert point.total_assets == Decimal("0")
+    assert point.breakdown.retirement == Decimal("0")
+
+
+async def test_current_net_worth_includes_pension_pv(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, primary_user)
+    checking = await _make_account(db_session, ctx, "checking", "Checking")
+    await _add_snapshot(db_session, checking.id, date(2025, 6, 30), Decimal("10000"))
+    await _make_pension_account(db_session, ctx, Decimal("2000.00"))
+
+    svc = ReportService(db_session)
+    point = await svc.current_net_worth(ctx, date(2025, 6, 30))
+
+    pension_pv = Decimal("2000.00") * 12 / PENSION_DISCOUNT
+    assert point.total_assets == Decimal("10000") + pension_pv
+    assert point.breakdown.checking_savings == Decimal("10000")
+    assert point.breakdown.retirement == pension_pv
+
+
+async def test_net_worth_time_series_pension_pv(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, primary_user)
+    await _make_pension_account(db_session, ctx, Decimal("1500.00"))
+
+    svc = ReportService(db_session)
+    # Two monthly points — pension PV should appear in both
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 2, 28))
+
+    expected_pv = Decimal("1500.00") * 12 / PENSION_DISCOUNT
+    assert len(report.series) == 2
+    assert report.series[0].breakdown.retirement == expected_pv
+    assert report.series[1].breakdown.retirement == expected_pv
+    assert report.series[0].total_assets == expected_pv
+    assert report.series[1].total_assets == expected_pv
+
+
+async def test_net_worth_pension_annotations_populated(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """pension_annotations on NetWorthReport lists pension account details for FIRE display."""
+    ctx = _ctx(household, primary_member, primary_user)
+    await _make_pension_account(db_session, ctx, Decimal("2500.00"))
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 1, 31))
+
+    assert len(report.pension_annotations) == 1
+    ann = report.pension_annotations[0]
+    assert ann.monthly_benefit == Decimal("2500.00")
 
 
 # ---------------------------------------------------------------------------

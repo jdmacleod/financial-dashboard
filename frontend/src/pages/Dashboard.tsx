@@ -15,6 +15,7 @@ import {
 import { reportsApi } from "@/api/reports"
 import { membersApi } from "@/api/members"
 import { useAuth } from "@/hooks/useAuth"
+import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { formatCurrency } from "@/lib/formatters"
 import { lastNMonthsRange } from "@/lib/dateRange"
 
@@ -73,6 +74,7 @@ function MetricCard({
 
 export default function Dashboard() {
   const widgets = useWidgetConfig()
+  const { householdName } = useCurrentUser()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard"],
@@ -115,7 +117,9 @@ export default function Dashboard() {
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
+          {householdName ?? "Dashboard"}
+        </h1>
         <Link
           to="/settings/dashboard"
           className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"

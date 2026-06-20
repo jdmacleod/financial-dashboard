@@ -4,6 +4,11 @@ export function formatCurrency(value: string | number): string {
   )
 }
 
+export function formatCurrencyOrDash(value: string | null): string {
+  if (value === null) return "—"
+  return formatCurrency(value)
+}
+
 // Append a fixed midday time so `new Date()` parses the date-only string in
 // local time instead of UTC, which would otherwise roll back a day in any
 // timezone west of UTC.

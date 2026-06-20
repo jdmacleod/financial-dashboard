@@ -47,6 +47,7 @@ export function AppLayout() {
           </Link>
           <NavLink to="/">Dashboard</NavLink>
           <NavLink to="/accounts">Accounts</NavLink>
+          <NavLink to="/assets">Assets</NavLink>
           <NavLink to="/budgets">Budgets</NavLink>
 
           {/* Reports dropdown */}

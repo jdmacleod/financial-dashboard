@@ -6,7 +6,7 @@ This guide covers every feature in HearthLedger. If you haven't installed it yet
 
 ## Dashboard
 
-The dashboard shows a real-time summary of your household finances.
+The dashboard shows a real-time summary of your household finances. The page heading displays your household name (e.g. "Smith Family") instead of a generic title.
 
 **Widgets:**
 
@@ -22,7 +22,9 @@ Click the **Customize →** link in the top-right of the dashboard, or go to **S
 
 ## Accounts
 
-Accounts represent financial accounts: checking, savings, credit cards, investment accounts, retirement accounts, and loans.
+The Accounts page focuses on **transaction accounts** — the accounts where money flows in and out day to day: checking, savings, credit cards, mortgages, and loans.
+
+Real estate, pension, and investment/retirement accounts appear on the **Assets** page instead. See [Assets](#assets).
 
 **Creating an account:**
 
@@ -31,25 +33,35 @@ Accounts represent financial accounts: checking, savings, credit cards, investme
 3. Set the name, type, institution, and optionally the account number.
 4. Click **Save**.
 
-Account types:
+> **Note:** If you create a real estate, pension, or investment account from the Accounts page, it will not appear in the Accounts list — check the Assets page. This will be improved in a future release.
+
+Transaction account types (shown on the Accounts page):
 | Type | Description |
 |---|---|
 | `checking` | Everyday transactional account |
 | `savings` | Interest-bearing savings |
-| `credit` | Credit card (balance is a liability) |
-| `investment` | Brokerage, taxable investing |
-| `retirement` | 401k, 403b, IRA, Roth IRA |
-| `pension` | Defined-benefit pension plan — see [Pension accounts](#pension-accounts) below |
-| `hsa` | Health savings account |
-| `real_estate` | Real estate property — see [Real Estate](#real-estate) |
+| `other_asset` | Any other liquid asset account |
+| `credit_card` | Credit card (balance is a liability) |
 | `mortgage` | Mortgage (balance is a liability) |
-| `loan` | Auto loan, student loan, personal loan |
+| `auto_loan` | Auto loan |
+| `personal_loan` | Personal loan |
+| `student_loan` | Student loan |
+| `other_liability` | Any other liability |
+
+Asset account types (shown on the Assets page):
+| Type | Description |
+|---|---|
+| `investment_brokerage` | Taxable brokerage account |
+| `retirement_401k` / `retirement_403b` / `retirement_ira` / `retirement_roth_ira` | Tax-advantaged retirement accounts |
+| `hsa` | Health savings account |
+| `pension` | Defined-benefit pension plan — see [Pension accounts](#pension-accounts) below |
+| `real_estate` | Real estate property — see [Real Estate](#real-estate) |
 
 **Access grants (partner visibility):**
 By default, partner members can only see accounts they own. The primary member can grant read access to an account: go to the account detail page and click **Manage access** to add or remove grants.
 
 **Balances for investment/retirement accounts:**
-Rather than individual holdings, HearthLedger uses balance snapshots. Go to the account's **Snapshots** tab and record a balance as of a date. The net worth calculation uses the most recent snapshot.
+Rather than individual holdings, HearthLedger uses balance snapshots. On the Assets page, click **Update value** on an investment or HSA account to record a balance as of any date. The net worth calculation uses the most recent snapshot.
 
 **Deactivating an account:**
 Click the **…** menu on an account and choose **Deactivate**. Deactivated accounts are hidden from lists but historical data is preserved.
@@ -75,6 +87,27 @@ When you create an account of type `pension`, a **Pension details** card appears
 The account's transaction list shows a **Defined-benefit summary card** above the transactions, with plan name, monthly benefit, eligibility info, and vested status. If no detail record exists yet, a prompt to "Add pension details →" is shown.
 
 The FIRE detector automatically creates a `pension` income stream for each vested pension with a non-zero monthly benefit estimate. See [Auto-detect income streams](#auto-detect-income-streams).
+
+---
+
+## Assets
+
+The Assets page collects all valuation-based accounts in one place: real estate properties, pension plans, and investment/retirement accounts.
+
+**Real estate section:**
+Shows each property with its balance drawn from the latest property valuation (not from the snapshot table). This keeps the balance current whenever your valuation provider refreshes.
+
+**Pension section:**
+Shows each pension account with an estimated present value computed as:
+
+```
+PV ≈ monthly_benefit_estimate × 12 ÷ 4%
+```
+
+This is a simplified perpetuity estimate, labelled "~est. PV (4% discount)" to signal the approximation. For a more scenario-aware projection, use the FIRE planner's income streams.
+
+**Investment / retirement section:**
+Shows investment and retirement accounts with their most recent balance snapshot. Click **Update value** to record a new balance as of any date — a form appears with a date picker and amount field. The new snapshot is saved immediately and the displayed balance updates.
 
 ---
 

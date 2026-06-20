@@ -1,4 +1,4 @@
-import { api } from "./client"
+import { ApiError, api } from "./client"
 import type {
   PropertyEquityResponse,
   PropertyResponse,
@@ -10,8 +10,14 @@ import type {
 export const propertiesApi = {
   get: (id: string) => api.get<PropertyResponse>(`/properties/${id}`),
 
-  getByAccountId: (accountId: string) =>
-    api.get<PropertyResponse>(`/accounts/${accountId}/property`),
+  getByAccountId: async (accountId: string): Promise<PropertyResponse | null> => {
+    try {
+      return await api.get<PropertyResponse>(`/accounts/${accountId}/property`)
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 404) return null
+      throw err
+    }
+  },
 
   create: (data: {
     account_id: string

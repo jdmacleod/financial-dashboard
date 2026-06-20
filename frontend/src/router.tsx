@@ -32,6 +32,7 @@ import SettingsBackups from "@/pages/SettingsBackups"
 import SettingsImports from "@/pages/SettingsImports"
 import SettingsDashboard from "@/pages/SettingsDashboard"
 import SettingsAppearance from "@/pages/SettingsAppearance"
+import Assets from "@/pages/Assets"
 
 // Root layout — checks auth + setup state
 const rootRoute = createRootRoute({
@@ -197,6 +198,12 @@ const settingsAppearanceRoute = createRoute({
   component: SettingsAppearance,
 })
 
+const assetsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/assets",
+  component: Assets,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
@@ -222,6 +229,7 @@ const routeTree = rootRoute.addChildren([
     settingsImportsRoute,
     settingsDashboardRoute,
     settingsAppearanceRoute,
+    assetsRoute,
   ]),
 ])
 

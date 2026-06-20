@@ -1,3 +1,6 @@
+from datetime import UTC, date, datetime
+from decimal import Decimal
+
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -8,9 +11,13 @@ from app.core.visibility import VisibilityContext
 from app.db.models.audit_log import AuditLog
 from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
+from app.db.models.snapshot import AccountSnapshot
+from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.schemas.account import AccessGrantCreate, AccountCreate, AccountUpdate
+from app.schemas.real_estate import PropertyCreate, ValuationCreate
 from app.services.account import AccountService
+from app.services.real_estate import RealEstateService
 
 
 def _ctx(household: Household, member: HouseholdMember, role: str, user: User) -> VisibilityContext:
@@ -206,3 +213,167 @@ async def test_create_and_revoke_grant_happy_path(
     await service.revoke_grant(ctx, account.id, grant.id)
     grants = await service.list_grants(ctx, account.id)
     assert all(g.id != grant.id for g in grants)
+
+
+# ---------------------------------------------------------------------------
+# B1 — list_accounts populates current_balance for real_estate (Phase 8)
+# ---------------------------------------------------------------------------
+
+
+async def test_list_accounts_real_estate_shows_valuation_balance(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """current_balance for a real_estate account reflects the latest PropertyValuation,
+    not a missing AccountSnapshot. Verifies the two-step batch pattern in list_accounts().
+    """
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    re_account = await service.create(
+        ctx, AccountCreate(account_type="real_estate", nickname="My Home")
+    )
+
+    re_svc = RealEstateService(db_session)
+    prop = await re_svc.create(ctx, PropertyCreate(account_id=re_account.id, address="1 Main St"))
+    await re_svc.add_valuation(
+        ctx,
+        prop.id,
+        ValuationCreate(valuation_date=date.today(), estimated_value=Decimal("500000")),
+    )
+
+    accounts = await service.list_accounts(ctx)
+    re_response = next(a for a in accounts if a.id == re_account.id)
+
+    assert re_response.current_balance == Decimal("500000")
+    assert re_response.balance_as_of == date.today()
+
+
+async def test_list_accounts_real_estate_no_valuation_shows_zero(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Real estate account with a property record but no valuation shows zero balance."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    re_account = await service.create(
+        ctx, AccountCreate(account_type="real_estate", nickname="Empty Lot")
+    )
+
+    re_svc = RealEstateService(db_session)
+    await re_svc.create(ctx, PropertyCreate(account_id=re_account.id, address="2 Main St"))
+
+    accounts = await service.list_accounts(ctx)
+    re_response = next(a for a in accounts if a.id == re_account.id)
+
+    assert re_response.current_balance == Decimal("0")
+
+
+async def test_list_accounts_real_estate_orphan_no_property_returns_none(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """RE account with no property record (data gap) falls through to the snapshot
+    path and returns None balance — no KeyError, no crash.
+    """
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    re_account = await service.create(
+        ctx, AccountCreate(account_type="real_estate", nickname="Orphan RE")
+    )
+
+    accounts = await service.list_accounts(ctx)
+    re_response = next(a for a in accounts if a.id == re_account.id)
+
+    assert re_response.current_balance is None
+
+
+async def test_list_accounts_transaction_account_uses_transaction_sum(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Transaction-based accounts (checking, savings, credit_card, etc.) derive
+    current_balance from SUM(transaction.amount), not from AccountSnapshot.
+    """
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    checking = await service.create(
+        ctx, AccountCreate(account_type="checking", nickname="Chase Checking")
+    )
+
+    now = datetime.now(UTC)
+    for amount in [Decimal("3000"), Decimal("1500"), Decimal("-200")]:
+        db_session.add(
+            Transaction(
+                account_id=checking.id,
+                transaction_date=date(2025, 6, 1),
+                amount=amount,
+                tags=[],
+                source="manual",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+    await db_session.flush()
+
+    accounts = await service.list_accounts(ctx)
+    checking_response = next(a for a in accounts if a.id == checking.id)
+
+    assert checking_response.current_balance == Decimal("4300")
+    assert checking_response.balance_as_of is None
+
+
+async def test_list_accounts_transaction_account_no_transactions_returns_none(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A transaction-based account with no transactions returns None balance (not zero)."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    checking = await service.create(
+        ctx, AccountCreate(account_type="checking", nickname="Empty Checking")
+    )
+
+    accounts = await service.list_accounts(ctx)
+    checking_response = next(a for a in accounts if a.id == checking.id)
+
+    assert checking_response.current_balance is None
+
+
+async def test_list_accounts_investment_account_still_uses_snapshot(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Valuation-based accounts (investments, pension) still use AccountSnapshot."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    brokerage = await service.create(
+        ctx, AccountCreate(account_type="investment_brokerage", nickname="Fidelity")
+    )
+
+    snap = AccountSnapshot(
+        account_id=brokerage.id,
+        snapshot_date=date(2025, 6, 30),
+        balance=Decimal("95000"),
+        source="manual",
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(snap)
+    await db_session.flush()
+
+    accounts = await service.list_accounts(ctx)
+    brokerage_response = next(a for a in accounts if a.id == brokerage.id)
+
+    assert brokerage_response.current_balance == Decimal("95000")
+    assert brokerage_response.balance_as_of == date(2025, 6, 30)

@@ -16,10 +16,36 @@ from app.db.models.category import Category
 from app.db.models.debt import Debt
 from app.db.models.export_job import ExportJob
 from app.db.models.fire import FireScenario
+from app.db.models.household import Household
 from app.db.models.real_estate import RealEstateProperty
 from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
+from app.repositories.real_estate import RealEstateRepository
+from app.services.report import ReportService
+
+try:
+    from importlib.metadata import version as _pkg_version
+
+    _APP_VERSION = _pkg_version("hearthledger-backend")
+except Exception:
+    _APP_VERSION = "0.7.0"
+
+# Account types whose display balance comes from SUM(transaction.amount) when
+# no AccountSnapshot exists (matches the routing in account.py).
+_TXN_DISPLAY_TYPES: frozenset[str] = frozenset(
+    {
+        "checking",
+        "savings",
+        "credit_card",
+        "mortgage",
+        "auto_loan",
+        "personal_loan",
+        "student_loan",
+        "other_asset",
+        "other_liability",
+    }
+)
 
 
 def _fmt_usd(amount: Decimal) -> str:
@@ -156,12 +182,23 @@ async def _fetch_spending_by_category(
     return sorted(items, key=lambda x: x[1], reverse=True)
 
 
-def _html_header(title: str, generated_at: str) -> str:
+def _html_header(title: str, generated_at: str, household_name: str = "HearthLedger") -> str:
     return f"""<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
 <style>
+  @page {{
+    @bottom-center {{
+      content: "Page " counter(page) " of " counter(pages) " — HearthLedger v{_APP_VERSION}";
+      font-size: 9px;
+      color: #999;
+      border-top: 1px solid #e0e0e0;
+      padding-top: 4px;
+      width: 100%;
+      text-align: center;
+    }}
+  }}
   body {{ font-family: Arial, sans-serif; font-size: 12px; color: #1a1a1a; margin: 40px; }}
   h1 {{ font-size: 24px; color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 8px; }}
   h2 {{ font-size: 16px; color: #1e3a5f; margin-top: 28px;
@@ -173,6 +210,7 @@ def _html_header(title: str, generated_at: str) -> str:
   tr:nth-child(even) {{ background: #f7f9fc; }}
   .cover {{ margin-bottom: 40px; }}
   .cover p {{ color: #555; margin: 4px 0; }}
+  .cover .report-type {{ font-size: 14px; color: #666; font-weight: normal; margin: 6px 0 2px 0; }}
   .kv {{ display: flex; gap: 40px; margin: 16px 0; }}
   .kv-item {{ background: #f0f4f9; padding: 12px 20px; border-radius: 6px; }}
   .kv-item .label {{ font-size: 10px; color: #666; text-transform: uppercase; }}
@@ -185,7 +223,8 @@ def _html_header(title: str, generated_at: str) -> str:
 </head>
 <body>
 <div class="cover">
-  <h1>HearthLedger — {title}</h1>
+  <h1>{household_name}</h1>
+  <p class="report-type">HearthLedger — {title}</p>
   <p>Generated: {generated_at}</p>
 </div>
 """
@@ -226,38 +265,62 @@ async def generate(job: ExportJob, session: AsyncSession, output_dir: str) -> st
     account_ids = [a.id for a in accounts]
     cat_map = await _fetch_categories(session, job.household_id)
 
-    # Compute balances
-    today = date.today()
-    account_balances: dict[uuid.UUID, Decimal] = {}
-    for acct in accounts:
-        bal = await _latest_balance(session, acct.id, today)
-        account_balances[acct.id] = bal if bal is not None else Decimal("0")
+    # Household name for report header
+    _hh_row = await session.execute(select(Household).where(Household.id == job.household_id))
+    _hh = _hh_row.scalar_one_or_none()
+    household_name = _hh.name if _hh else "HearthLedger"
 
-    _liability_types = {
-        "mortgage",
-        "credit_card",
-        "auto_loan",
-        "personal_loan",
-        "student_loan",
-        "other_liability",
+    today = date.today()
+
+    # Per-account display balances: snapshot-first, then transaction SUM, then RE valuation.
+    # This matches the routing in AccountService.list_accounts().
+    _snap_result = await session.execute(
+        select(AccountSnapshot)
+        .where(AccountSnapshot.account_id.in_(account_ids))
+        .distinct(AccountSnapshot.account_id)
+        .order_by(AccountSnapshot.account_id, AccountSnapshot.snapshot_date.desc())
+    )
+    account_balances: dict[uuid.UUID, Decimal] = {
+        s.account_id: s.balance for s in _snap_result.scalars().all()
     }
-    total_assets = sum(
-        (
-            v
-            for a, v in zip(accounts, account_balances.values(), strict=False)
-            if a.account_type not in _liability_types
-        ),
-        Decimal("0"),
-    )
-    total_liabilities = sum(
-        (
-            v
-            for a, v in zip(accounts, account_balances.values(), strict=False)
-            if a.account_type in _liability_types
-        ),
-        Decimal("0"),
-    )
-    net_worth = total_assets - total_liabilities
+
+    _needs_txn = [
+        a.id
+        for a in accounts
+        if a.account_type in _TXN_DISPLAY_TYPES and a.id not in account_balances
+    ]
+    if _needs_txn:
+        _txn_sums = await session.execute(
+            select(Transaction.account_id, func.sum(Transaction.amount).label("total"))
+            .where(Transaction.account_id.in_(_needs_txn))
+            .group_by(Transaction.account_id)
+        )
+        for _row in _txn_sums.all():
+            account_balances[_row.account_id] = Decimal(str(_row.total))
+
+    _re_no_snap = [
+        a.id for a in accounts if a.account_type == "real_estate" and a.id not in account_balances
+    ]
+    if _re_no_snap:
+        _re_repo = RealEstateRepository(session)
+        _re_props = await _re_repo.list_for_accounts(_re_no_snap)
+        if _re_props:
+            _acc_to_prop = {p.account_id: p.id for p in _re_props}
+            _val_map = await _re_repo.batch_latest_valuations_as_of(
+                [p.id for p in _re_props], today
+            )
+            for _acc_id, _prop_id in _acc_to_prop.items():
+                account_balances[_acc_id] = _val_map.get(_prop_id, Decimal("0"))
+
+    for _acc in accounts:
+        account_balances.setdefault(_acc.id, Decimal("0"))
+
+    # Net worth from ReportService — identical to the dashboard (respects
+    # include_in_net_worth and pension present-value discount).
+    _nw_point = await ReportService(session).current_net_worth(ctx, today)
+    total_assets = _nw_point.total_assets
+    total_liabilities = _nw_point.total_liabilities
+    net_worth = _nw_point.net_worth
 
     # Spending by category
     spending = await _fetch_spending_by_category(session, account_ids, cat_map, from_date, to_date)
@@ -278,7 +341,7 @@ async def generate(job: ExportJob, session: AsyncSession, output_dir: str) -> st
     )
 
     # Build HTML
-    html_parts: list[str] = [_html_header(title, generated_at_str)]
+    html_parts: list[str] = [_html_header(title, generated_at_str, household_name)]
 
     # --- Net worth snapshot ---
     html_parts.append("<h2>Net Worth Snapshot</h2>")
@@ -428,7 +491,7 @@ async def generate(job: ExportJob, session: AsyncSession, output_dir: str) -> st
         html_parts.append("<h2>Audit Summary</h2>")
         html_parts.append(f"""
 <p>This executor report was generated on {generated_at_str} and contains full account details
-for household {job.household_id}.</p>
+for {household_name}.</p>
 <p>Report covers transactions from {_fmt_date(from_date)} through {_fmt_date(to_date)}.</p>
 <p>Total transactions in period: {len(transactions)}</p>
 """)
