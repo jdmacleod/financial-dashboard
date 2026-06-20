@@ -1,380 +1,227 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Link } from "@tanstack/react-router"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
+import { useQuery, useQueries } from "@tanstack/react-query"
 import { accountsApi } from "@/api/accounts"
 import { propertiesApi } from "@/api/properties"
-import { pensionApi } from "@/api/pension"
-import { snapshotsApi } from "@/api/snapshots"
-import { ACCOUNT_LABELS, PROPERTY_TYPE_LABELS } from "@/lib/accountLabels"
-import { formatCurrencyOrDash } from "@/lib/formatters"
+import { PROPERTY_TYPE_LABELS } from "@/lib/accountLabels"
+import { formatCurrency } from "@/lib/formatters"
 import { useAuth } from "@/hooks/useAuth"
 import AddAccountModal from "@/components/app/AddAccountModal"
 import ArchiveAccountModal from "@/components/app/ArchiveAccountModal"
-import type {
-  AccountResponse,
-  AccountType,
-  PensionAccountResponse,
-  PropertyResponse,
-} from "@/api/types"
+import type { AccountResponse, AccountType } from "@/api/types"
 
-const INVESTMENT_TYPES: AccountType[] = [
-  "investment_brokerage",
-  "retirement_401k",
-  "retirement_403b",
-  "retirement_ira",
-  "retirement_roth_ira",
-  "hsa",
-]
+const BRONZE = "#a9743f"
+const ASSETS_PAGE_TYPES: AccountType[] = ["real_estate"]
 
-// Types shown in the Add Asset modal — valuation-based only.
-const ASSETS_PAGE_TYPES: AccountType[] = ["real_estate", "pension", ...INVESTMENT_TYPES]
-
-function pensionPV(monthlyBenefit: string | null): string {
-  if (!monthlyBenefit) return "—"
-  const pv = (Number(monthlyBenefit) * 12) / 0.04
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(pv)
+// Compute YoY delta from a list of valuations (sorted or unsorted)
+function yoyDelta(
+  valuations: { valuation_date: string; estimated_value: string }[],
+): { pct: number; isPositive: boolean } | null {
+  if (valuations.length < 2) return null
+  const sorted = [...valuations].sort((a, b) => b.valuation_date.localeCompare(a.valuation_date))
+  const latest = Number(sorted[0].estimated_value)
+  const oneYearAgo = new Date()
+  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+  // Find the valuation closest to 1 year ago
+  const pastValuation =
+    sorted.find((v) => new Date(v.valuation_date) <= oneYearAgo) ?? sorted[sorted.length - 1]
+  const past = Number(pastValuation.estimated_value)
+  if (past === 0) return null
+  const pct = ((latest - past) / Math.abs(past)) * 100
+  return { pct, isPositive: pct >= 0 }
 }
 
-// Three-dot menu button — appears on hover
-function OptionsMenu({ onArchive }: { onArchive: () => void }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="relative">
-      <button
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          setOpen((o) => !o)
-        }}
-        aria-label="Account options"
-        className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
-      >
-        ···
-      </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-7 z-50 w-44 bg-white rounded-lg border border-gray-200 shadow-lg py-1">
-            <button
-              onClick={() => {
-                setOpen(false)
-                onArchive()
-              }}
-              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-            >
-              Archive account
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
+// ── Property card ─────────────────────────────────────────────────────────────
 
-// UpdateValueModal — creates a snapshot for an investment account
-const updateValueSchema = z.object({
-  balance: z.string().regex(/^\d+(\.\d{1,4})?$/, "Enter a valid amount (up to 4 decimal places)"),
-  snapshot_date: z.string().min(1, "Date required"),
-})
-type UpdateValueForm = z.infer<typeof updateValueSchema>
-
-function UpdateValueModal({ account, onClose }: { account: AccountResponse; onClose: () => void }) {
-  const queryClient = useQueryClient()
-  const [error, setError] = useState<string | null>(null)
-  const today = new Date().toISOString().slice(0, 10)
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<UpdateValueForm>({
-    resolver: zodResolver(updateValueSchema),
-    defaultValues: { snapshot_date: today },
-  })
-
-  const submit = useMutation({
-    mutationFn: (data: UpdateValueForm) =>
-      snapshotsApi.create(account.id, {
-        balance: data.balance,
-        snapshot_date: data.snapshot_date,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["accounts"] })
-      queryClient.invalidateQueries({ queryKey: ["reports", "net-worth"] })
-      onClose()
-    },
-    onError: () => setError("Failed to save value. Please try again."),
-  })
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Update value</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            ✕
-          </button>
-        </div>
-        <p className="text-sm text-gray-500 mb-4">{account.nickname}</p>
-        <form onSubmit={handleSubmit((d) => submit.mutate(d))} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Balance ($)</label>
-            <input
-              {...register("balance")}
-              placeholder="e.g. 12500.00"
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            {errors.balance && (
-              <p className="mt-1 text-xs text-red-600">{errors.balance.message}</p>
-            )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">As of date</label>
-            <input
-              type="date"
-              {...register("snapshot_date")}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            {errors.snapshot_date && (
-              <p className="mt-1 text-xs text-red-600">{errors.snapshot_date.message}</p>
-            )}
-          </div>
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submit.isPending}
-              className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-            >
-              {submit.isPending ? "Saving…" : "Save"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-// Real Estate section
-function RealEstateCard({ account }: { account: AccountResponse }) {
+function PropertyCard({ account }: { account: AccountResponse }) {
   const isPrimary = useAuth((s) => s.role === "primary")
   const [archiving, setArchiving] = useState(false)
-  const { data: property, isLoading: propertyLoading } = useQuery<PropertyResponse | null>({
+
+  const { data: property } = useQuery({
     queryKey: ["property-by-account", account.id],
     queryFn: () => propertiesApi.getByAccountId(account.id),
+    staleTime: 60_000,
   })
 
-  const subtitle = propertyLoading
-    ? "Loading…"
-    : property
-      ? `${PROPERTY_TYPE_LABELS[property.property_type] ?? property.property_type} · ${property.address}`
-      : "No property record"
+  const { data: equity } = useQuery({
+    queryKey: ["property-equity", property?.id],
+    queryFn: () => propertiesApi.getEquity(property!.id),
+    enabled: !!property?.id,
+    staleTime: 60_000,
+  })
+
+  const { data: valuations } = useQuery({
+    queryKey: ["property-valuations", property?.id],
+    queryFn: () => propertiesApi.listValuations(property!.id),
+    enabled: !!property?.id,
+    staleTime: 60_000,
+  })
+
+  const delta = useMemo(() => yoyDelta(valuations ?? []), [valuations])
+
+  const propertyValue = property?.current_estimated_value
+    ? Number(property.current_estimated_value)
+    : null
+  const mortgageBalance = equity?.mortgage_balance ? Number(equity.mortgage_balance) : null
+  const equityValue = equity?.equity ? Number(equity.equity) : null
+
+  // Equity bar: proportion of property value that is equity
+  const equityPct =
+    propertyValue && propertyValue > 0 && equityValue !== null
+      ? Math.max(0, Math.min(100, (equityValue / propertyValue) * 100))
+      : null
+
+  const propertyType = property?.property_type
+    ? (PROPERTY_TYPE_LABELS[property.property_type] ?? property.property_type)
+    : null
 
   return (
     <>
-      <div className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors group">
-        <Link
-          to="/properties/$propertyId"
-          params={{ propertyId: property?.id ?? "" }}
-          className={`flex flex-1 min-w-0 items-center gap-4 ${!property ? "pointer-events-none" : ""}`}
-        >
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-gray-900 truncate">{account.nickname}</p>
-            <p className="text-sm text-gray-500">{subtitle}</p>
-          </div>
-          <div className="text-right">
-            <p className="font-medium text-gray-900">
-              {property
-                ? formatCurrencyOrDash(property.current_estimated_value)
-                : formatCurrencyOrDash(account.current_balance)}
-            </p>
-            {property?.current_value_as_of && (
-              <p className="text-xs text-gray-400">as of {property.current_value_as_of}</p>
-            )}
-          </div>
-        </Link>
-        {isPrimary && <OptionsMenu onArchive={() => setArchiving(true)} />}
-      </div>
-      {archiving && <ArchiveAccountModal account={account} onClose={() => setArchiving(false)} />}
-    </>
-  )
-}
-
-function RealEstateSection({ accounts }: { accounts: AccountResponse[] }) {
-  return (
-    <div className="mb-8">
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-        Real Estate
-      </h2>
-      {accounts.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-8 text-center text-gray-400">
-          <p className="text-sm mb-1">No properties yet</p>
-          <p className="text-xs">Add a real estate account to get started.</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-          {accounts.map((a) => (
-            <RealEstateCard key={a.id} account={a} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Pension section
-function PensionCard({ account }: { account: AccountResponse }) {
-  const isPrimary = useAuth((s) => s.role === "primary")
-  const [archiving, setArchiving] = useState(false)
-  const { data: pension } = useQuery<PensionAccountResponse>({
-    queryKey: ["pension-by-account", account.id],
-    queryFn: () => pensionApi.get(account.id),
-  })
-
-  return (
-    <>
-      <div className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors group">
-        <Link
-          to="/accounts/$accountId/pension"
-          params={{ accountId: account.id }}
-          className="flex flex-1 min-w-0 items-center gap-4"
-        >
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-gray-900 truncate">{account.nickname}</p>
-            <p className="text-sm text-gray-500">
-              {pension?.plan_name ?? "Pension"}
-              {pension && (
-                <span
-                  className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${pension.is_vested ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}
-                >
-                  {pension.is_vested ? "Vested" : "Unvested"}
-                </span>
+      <div
+        style={{
+          background: "var(--card)",
+          border: "1px solid var(--bd)",
+          borderRadius: "14px",
+          overflow: "hidden",
+        }}
+      >
+        {/* Card header */}
+        <div style={{ padding: "18px 20px 14px" }}>
+          <div
+            style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}
+          >
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: "var(--text2)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {account.nickname}
+              </div>
+              {property && (
+                <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>
+                  {[propertyType, property.address].filter(Boolean).join(" · ")}
+                </div>
               )}
-            </p>
+              {property?.purchase_date && (
+                <div style={{ fontSize: "10px", color: "var(--faint)", marginTop: "2px" }}>
+                  Purchased {new Date(property.purchase_date).getFullYear()}
+                  {property.purchase_price ? ` · ${formatCurrency(property.purchase_price)}` : ""}
+                </div>
+              )}
+            </div>
+            <div style={{ textAlign: "right", flexShrink: 0, marginLeft: "12px" }}>
+              <div style={{ fontSize: "20px", fontWeight: 700, color: "var(--text)" }}>
+                {propertyValue !== null ? formatCurrency(String(propertyValue)) : "—"}
+              </div>
+              {delta !== null && (
+                <div
+                  style={{
+                    fontSize: "11px",
+                    color: delta.isPositive ? "var(--up)" : "var(--liab)",
+                    marginTop: "2px",
+                  }}
+                >
+                  {delta.isPositive ? "+" : ""}
+                  {delta.pct.toFixed(1)}% YoY
+                </div>
+              )}
+            </div>
           </div>
-          <div className="text-right">
-            <p className="font-medium text-gray-900">
-              {pensionPV(pension?.monthly_benefit_estimate ?? null)}
-            </p>
-            <p className="text-xs text-gray-400">~est. PV (4% discount)</p>
+        </div>
+
+        {/* Equity bar */}
+        {equityPct !== null && (
+          <div style={{ padding: "0 20px 14px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "5px" }}>
+              <span style={{ fontSize: "10px", color: "var(--muted)" }}>Equity</span>
+              <span style={{ fontSize: "10px", color: "var(--muted)" }}>
+                {equityValue !== null ? formatCurrency(String(equityValue)) : "—"}
+                {mortgageBalance !== null && (
+                  <span style={{ color: "var(--faint)" }}>
+                    {" "}
+                    / {formatCurrency(String(mortgageBalance))} mortgage
+                  </span>
+                )}
+              </span>
+            </div>
+            {/* Bar track */}
+            <div
+              style={{
+                height: "6px",
+                borderRadius: "3px",
+                background: "var(--track)",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  height: "100%",
+                  width: `${equityPct}%`,
+                  background: BRONZE,
+                  borderRadius: "3px",
+                  transition: "width 0.4s ease",
+                }}
+                aria-label={`${equityPct.toFixed(0)}% equity`}
+              />
+            </div>
           </div>
-        </Link>
-        {isPrimary && <OptionsMenu onArchive={() => setArchiving(true)} />}
-      </div>
-      {archiving && <ArchiveAccountModal account={account} onClose={() => setArchiving(false)} />}
-    </>
-  )
-}
+        )}
 
-function PensionSection({ accounts }: { accounts: AccountResponse[] }) {
-  return (
-    <div className="mb-8">
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Pensions</h2>
-      {accounts.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-8 text-center text-gray-400">
-          <p className="text-sm mb-1">No pension accounts yet</p>
-          <p className="text-xs">Add a pension account to get started.</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-          {accounts.map((a) => (
-            <PensionCard key={a.id} account={a} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-// Investments section
-function InvestmentRow({
-  account,
-  onUpdateValue,
-}: {
-  account: AccountResponse
-  onUpdateValue: (a: AccountResponse) => void
-}) {
-  const isPrimary = useAuth((s) => s.role === "primary")
-  const [archiving, setArchiving] = useState(false)
-
-  return (
-    <>
-      <div className="flex items-center gap-2 px-4 py-3 group">
-        <Link
-          to="/accounts/$accountId/transactions"
-          params={{ accountId: account.id }}
-          className="flex-1 min-w-0 hover:text-indigo-600 transition-colors"
+        {/* Footer */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "10px 20px",
+            borderTop: "1px solid var(--bd)",
+          }}
         >
-          <p className="font-medium text-gray-900 truncate">{account.nickname}</p>
-          <p className="text-sm text-gray-500">
-            {account.institution_name ?? ACCOUNT_LABELS[account.account_type]}
-            {account.account_number_last4 && ` •••• ${account.account_number_last4}`}
-          </p>
-        </Link>
-        <div className="text-right mr-2">
-          <p className="font-medium text-gray-900">
-            {formatCurrencyOrDash(account.current_balance)}
-          </p>
-          {account.balance_as_of && (
-            <p className="text-xs text-gray-400">as of {account.balance_as_of}</p>
+          {property ? (
+            <Link
+              to="/properties/$propertyId"
+              params={{ propertyId: property.id }}
+              style={{ fontSize: "12px", color: "var(--muted)", textDecoration: "none" }}
+            >
+              View property →
+            </Link>
+          ) : (
+            <span style={{ fontSize: "11px", color: "var(--faint)", fontStyle: "italic" }}>
+              No property record
+            </span>
+          )}
+          {isPrimary && (
+            <button
+              onClick={() => setArchiving(true)}
+              style={{
+                fontSize: "11px",
+                color: "var(--liab)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Archive
+            </button>
           )}
         </div>
-        <button
-          onClick={() => onUpdateValue(account)}
-          className="text-xs rounded-lg border border-gray-300 px-3 py-1.5 text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors whitespace-nowrap"
-        >
-          Update value
-        </button>
-        {isPrimary && <OptionsMenu onArchive={() => setArchiving(true)} />}
       </div>
+
       {archiving && <ArchiveAccountModal account={account} onClose={() => setArchiving(false)} />}
     </>
   )
 }
 
-function InvestmentsSection({
-  accounts,
-  onUpdateValue,
-}: {
-  accounts: AccountResponse[]
-  onUpdateValue: (a: AccountResponse) => void
-}) {
-  return (
-    <div className="mb-8">
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-        Investments
-      </h2>
-      {accounts.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 px-4 py-8 text-center text-gray-400">
-          <p className="text-sm mb-1">No investment accounts yet</p>
-          <p className="text-xs">Add a brokerage, 401(k), IRA, or HSA account to get started.</p>
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
-          {accounts.map((a) => (
-            <InvestmentRow key={a.id} account={a} onUpdateValue={onUpdateValue} />
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Assets() {
+  const isPrimary = useAuth((s) => s.role === "primary")
   const {
     data: accounts,
     isLoading,
@@ -382,37 +229,162 @@ export default function Assets() {
   } = useQuery({
     queryKey: ["accounts"],
     queryFn: accountsApi.list,
+    staleTime: 60_000,
   })
-
-  const [updateTarget, setUpdateTarget] = useState<AccountResponse | null>(null)
   const [showAdd, setShowAdd] = useState(false)
 
-  const realEstate = accounts?.filter((a) => a.account_type === "real_estate") ?? []
-  const pensions = accounts?.filter((a) => a.account_type === "pension") ?? []
-  const investments = accounts?.filter((a) => INVESTMENT_TYPES.includes(a.account_type)) ?? []
+  // Stage 1: prefetch property records for all real-estate accounts
+  const prefetchedPropertyQueries = useQueries({
+    queries: (accounts ?? [])
+      .filter((a) => a.account_type === "real_estate")
+      .map((account) => ({
+        queryKey: ["property-by-account", account.id],
+        queryFn: () => propertiesApi.getByAccountId(account.id),
+        staleTime: 60_000,
+      })),
+  })
 
-  if (isLoading) return <div className="p-8 text-gray-500">Loading assets…</div>
-  if (error) return <div className="p-8 text-red-600">Failed to load assets.</div>
+  // Stage 2: prefetch equity + valuations for every resolved property
+  const prefetchedPropertyIds = prefetchedPropertyQueries.flatMap((q) =>
+    q.data?.id ? [q.data.id] : [],
+  )
+  useQueries({
+    queries: prefetchedPropertyIds.flatMap((propertyId) => [
+      {
+        queryKey: ["property-equity", propertyId],
+        queryFn: () => propertiesApi.getEquity(propertyId),
+        staleTime: 60_000,
+      },
+      {
+        queryKey: ["property-valuations", propertyId],
+        queryFn: () => propertiesApi.listValuations(propertyId),
+        staleTime: 60_000,
+      },
+    ]),
+  })
+
+  const realEstateAccounts = useMemo(
+    () => (accounts ?? []).filter((a) => a.account_type === "real_estate"),
+    [accounts],
+  )
+
+  const totalValue = useMemo(
+    () => realEstateAccounts.reduce((s, a) => s + Number(a.current_balance ?? 0), 0),
+    [realEstateAccounts],
+  )
+
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "200px",
+          color: "var(--muted)",
+        }}
+      >
+        Loading…
+      </div>
+    )
+  }
+  if (error) {
+    return <div style={{ padding: "32px", color: "var(--liab)" }}>Failed to load assets.</div>
+  }
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-semibold">Assets</h1>
-        <button
-          onClick={() => setShowAdd(true)}
-          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
-        >
-          Add asset
-        </button>
+    <div style={{ maxWidth: "900px", margin: "0 auto" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          marginBottom: "20px",
+        }}
+      >
+        <h1 style={{ fontSize: "22px", fontWeight: 700, color: "var(--text)", margin: 0 }}>
+          Real estate
+        </h1>
+        {isPrimary && (
+          <button
+            onClick={() => setShowAdd(true)}
+            style={{
+              padding: "7px 16px",
+              borderRadius: "9px",
+              background: "var(--toggle-on-bg)",
+              color: "var(--toggle-on-text)",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "13px",
+              fontWeight: 500,
+            }}
+          >
+            + Add property
+          </button>
+        )}
       </div>
 
-      <RealEstateSection accounts={realEstate} />
-      <PensionSection accounts={pensions} />
-      <InvestmentsSection accounts={investments} onUpdateValue={setUpdateTarget} />
-
-      {updateTarget && (
-        <UpdateValueModal account={updateTarget} onClose={() => setUpdateTarget(null)} />
+      {/* KPI summary */}
+      {realEstateAccounts.length > 0 && (
+        <div
+          style={{
+            background: "var(--grad)",
+            border: "1px solid var(--accent-bd)",
+            borderRadius: "14px",
+            padding: "16px 20px",
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            gap: "20px",
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontSize: "10px",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--label)",
+                marginBottom: "4px",
+              }}
+            >
+              Total property value
+            </div>
+            <div style={{ fontSize: "26px", fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>
+              {formatCurrency(String(totalValue))}
+            </div>
+          </div>
+          <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: BRONZE }} />
+          <div style={{ fontSize: "12px", color: "var(--label)" }}>
+            {realEstateAccounts.length} propert{realEstateAccounts.length !== 1 ? "ies" : "y"}
+          </div>
+        </div>
       )}
+
+      {/* Property cards */}
+      {realEstateAccounts.length === 0 ? (
+        <div
+          style={{
+            background: "var(--card)",
+            border: "1px solid var(--bd)",
+            borderRadius: "14px",
+            padding: "48px 20px",
+            textAlign: "center",
+            color: "var(--muted)",
+            fontSize: "13px",
+          }}
+        >
+          No properties yet. Add a real estate account to get started.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          {realEstateAccounts.map((a) => (
+            <PropertyCard key={a.id} account={a} />
+          ))}
+        </div>
+      )}
+
       {showAdd && (
         <AddAccountModal
           allowedTypes={ASSETS_PAGE_TYPES}

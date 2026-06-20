@@ -47,51 +47,184 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-        <h1 className="text-2xl font-semibold tracking-tight mb-1">HearthLedger</h1>
-        <p className="text-sm text-gray-500 mb-6">Sign in to your household</p>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "var(--bg)",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: "360px",
+          background: "var(--card)",
+          border: "1px solid var(--bd)",
+          borderRadius: "18px",
+          padding: "36px 32px",
+        }}
+      >
+        {/* Wordmark */}
+        <div style={{ marginBottom: "24px" }}>
+          <h1
+            style={{
+              fontSize: "20px",
+              fontWeight: 700,
+              color: "var(--text)",
+              margin: 0,
+              letterSpacing: "-0.01em",
+            }}
+          >
+            HearthLedger
+          </h1>
+          <p style={{ fontSize: "13px", color: "var(--muted)", marginTop: "4px" }}>
+            Sign in to your household
+          </p>
+        </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+        >
+          {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <label
+              style={{
+                display: "block",
+                fontSize: "12px",
+                fontWeight: 500,
+                color: "var(--text3)",
+                marginBottom: "6px",
+                letterSpacing: "0.01em",
+              }}
+            >
+              Email
+            </label>
             <input
               type="email"
               autoComplete="email"
               {...register("email")}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              style={{
+                width: "100%",
+                borderRadius: "9px",
+                border: "1px solid var(--bd2)",
+                background: "var(--bg)",
+                color: "var(--text)",
+                padding: "9px 12px",
+                fontSize: "14px",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = "var(--toggle-on-bg)"
+                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(70,184,136,0.14)"
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "var(--bd2)"
+                e.currentTarget.style.boxShadow = "none"
+              }}
             />
-            {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email.message}</p>}
+            {errors.email && (
+              <p style={{ marginTop: "4px", fontSize: "11px", color: "var(--liab)" }}>
+                {errors.email.message}
+              </p>
+            )}
           </div>
 
+          {/* Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label
+              style={{
+                display: "block",
+                fontSize: "12px",
+                fontWeight: 500,
+                color: "var(--text3)",
+                marginBottom: "6px",
+                letterSpacing: "0.01em",
+              }}
+            >
+              Password
+            </label>
             <input
               type="password"
               autoComplete="current-password"
               {...register("password")}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              style={{
+                width: "100%",
+                borderRadius: "9px",
+                border: "1px solid var(--bd2)",
+                background: "var(--bg)",
+                color: "var(--text)",
+                padding: "9px 12px",
+                fontSize: "14px",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = "var(--toggle-on-bg)"
+                e.currentTarget.style.boxShadow = "0 0 0 3px rgba(70,184,136,0.14)"
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = "var(--bd2)"
+                e.currentTarget.style.boxShadow = "none"
+              }}
             />
             {errors.password && (
-              <p className="mt-1 text-xs text-red-600">{errors.password.message}</p>
+              <p style={{ marginTop: "4px", fontSize: "11px", color: "var(--liab)" }}>
+                {errors.password.message}
+              </p>
             )}
           </div>
 
+          {/* Server errors */}
           {serverError && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <div
+              style={{
+                fontSize: "13px",
+                color: "var(--liab)",
+                background: "rgba(224,180,138,0.10)",
+                border: "1px solid rgba(224,180,138,0.25)",
+                borderRadius: "9px",
+                padding: "10px 12px",
+              }}
+            >
               {serverError}
-            </p>
+            </div>
           )}
           {lockoutMsg && (
-            <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+            <div
+              style={{
+                fontSize: "13px",
+                color: "var(--gold, #d9b96a)",
+                background: "rgba(217,185,106,0.10)",
+                border: "1px solid rgba(217,185,106,0.25)",
+                borderRadius: "9px",
+                padding: "10px 12px",
+              }}
+            >
               {lockoutMsg}
-            </p>
+            </div>
           )}
 
+          {/* Submit */}
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60 transition-colors"
+            style={{
+              width: "100%",
+              borderRadius: "9px",
+              background: "var(--toggle-on-bg)",
+              color: "var(--toggle-on-text)",
+              border: "none",
+              padding: "10px 16px",
+              fontSize: "14px",
+              fontWeight: 600,
+              cursor: isSubmitting ? "not-allowed" : "pointer",
+              opacity: isSubmitting ? 0.65 : 1,
+              transition: "opacity 0.15s",
+            }}
           >
             {isSubmitting ? "Signing in…" : "Sign in"}
           </button>

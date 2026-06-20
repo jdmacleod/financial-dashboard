@@ -44,6 +44,7 @@ def _account_to_response(
     institution_name = _decrypt_opt(account.institution_name_enc)
     account_number = _decrypt_opt(account.account_number_enc)
     last4 = account_number[-4:] if account_number and len(account_number) >= 4 else account_number
+    notes = _decrypt_opt(account.notes_enc)
 
     return AccountResponse(
         id=account.id,
@@ -56,6 +57,7 @@ def _account_to_response(
         is_active=account.is_active,
         current_balance=balance,
         balance_as_of=balance_date,
+        notes=notes,
         created_at=account.created_at,
         updated_at=account.updated_at,
     )

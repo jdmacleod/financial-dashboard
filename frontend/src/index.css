@@ -1,7 +1,113 @@
 @import "tailwindcss";
 
-/* Enable class-based dark mode for Tailwind v4 */
-@variant dark (&:where(.dark, .dark *));
+/* data-theme attribute dark mode for Tailwind v4 */
+@variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ── Design tokens ──────────────────────────────────────────────── */
+@theme {
+  /* dark defaults */
+  --color-bg: #0a1712;
+  --color-sidebar: #07120d;
+  --color-card: #0f211a;
+  --color-text: #f1f5f1;
+  --color-text2: #e7ece7;
+  --color-text3: #dfe7e1;
+  --color-text-soft: #cdd4cb;
+  --color-strong: #f3eede;
+  --color-muted: #9fb3a8;
+  --color-label: #7fa392;
+  --color-faint: #6f897c;
+  --color-axis: #5d7068;
+  --color-up: #46d39a;
+  --color-liab: #e0b48a;
+  --color-green: #46b888;
+  --color-gold: #d9b96a;
+  --color-bronze: #a9743f;
+  --color-blue: #6c97c4;
+}
+
+:root {
+  /* dark theme */
+  --bg: #0a1712;
+  --sidebar: #07120d;
+  --card: #0f211a;
+  --bd: rgba(255, 255, 255, 0.06);
+  --bd2: rgba(255, 255, 255, 0.1);
+  --track: rgba(255, 255, 255, 0.07);
+  --grid: rgba(255, 255, 255, 0.06);
+  --text: #f1f5f1;
+  --text2: #e7ece7;
+  --text3: #dfe7e1;
+  --text-soft: #cdd4cb;
+  --strong: #f3eede;
+  --muted: #9fb3a8;
+  --label: #7fa392;
+  --faint: #6f897c;
+  --axis: #5d7068;
+  --up: #46d39a;
+  --liab: #e0b48a;
+  --grad: linear-gradient(150deg, #123227, #0d2018);
+  --grad160: linear-gradient(160deg, #123227, #0d2018);
+  --accent-bd: rgba(70, 184, 136, 0.28);
+  --pgrad: linear-gradient(160deg, #15324a, #0e2333);
+  --ptext: #f3f6fb;
+  --pmuted: #9fb3c9;
+  --plabel: #8bb0d6;
+  --pbd: rgba(108, 151, 196, 0.28);
+  --photo: repeating-linear-gradient(
+    135deg,
+    #16332760,
+    #16332760 10px,
+    #10271d60 10px,
+    #10271d60 20px
+  );
+  --nav-text: #7b958a;
+  --nav-active-text: #eafff5;
+  --nav-active-bg: rgba(70, 184, 136, 0.14);
+  --toggle-on-bg: #46b888;
+  --toggle-on-text: #07120d;
+  --toggle-off-bg: rgba(255, 255, 255, 0.06);
+  --toggle-off-text: #9fb3a8;
+  --row-active: rgba(70, 184, 136, 0.12);
+}
+
+:root[data-theme="light"] {
+  --bg: #eceee7;
+  --sidebar: #e6eae1;
+  --card: #ffffff;
+  --bd: rgba(20, 40, 30, 0.1);
+  --bd2: rgba(20, 40, 30, 0.16);
+  --track: rgba(20, 40, 30, 0.08);
+  --grid: rgba(20, 40, 30, 0.09);
+  --text: #16271e;
+  --text2: #23362c;
+  --text3: #2b3f34;
+  --text-soft: #3a4d42;
+  --strong: #10201a;
+  --muted: #5f7268;
+  --label: #5c7567;
+  --faint: #7d8c83;
+  --axis: #94a39a;
+  --up: #1c8a54;
+  --liab: #b06a32;
+  --grad: linear-gradient(150deg, #e8f1ec, #f7faf5);
+  --grad160: linear-gradient(160deg, #e8f1ec, #f7faf5);
+  --accent-bd: rgba(47, 143, 99, 0.32);
+  --pgrad: linear-gradient(160deg, #e9eef6, #f4f7fb);
+  --ptext: #18324a;
+  --pmuted: #51698a;
+  --plabel: #3f6695;
+  --pbd: rgba(79, 110, 158, 0.3);
+  --photo: repeating-linear-gradient(135deg, #e2e8df, #e2e8df 10px, #eef1ea 10px, #eef1ea 20px);
+  --nav-text: #5f7268;
+  --nav-active-text: #10271d;
+  --nav-active-bg: rgba(47, 143, 99, 0.15);
+  --toggle-on-bg: #2f9266;
+  --toggle-on-text: #ffffff;
+  --toggle-off-bg: rgba(20, 40, 30, 0.07);
+  --toggle-off-text: #5f7268;
+  --row-active: rgba(47, 143, 99, 0.13);
+}
 
 @layer base {
   *,
@@ -10,9 +116,16 @@
     box-sizing: border-box;
   }
 
+  html {
+    background: var(--bg);
+    color: var(--text3);
+  }
+
   body {
     margin: 0;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    font-family: "Archivo", sans-serif;
+    font-variant-numeric: tabular-nums;
   }
 }

@@ -3,6 +3,35 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.1.0] - 2026-06-20
+
+### Added
+
+- **Phase 9 wealth dashboard — full UI redesign** across seven screens:
+  - **Overview tab** — rebuilt with a 4-KPI row (net worth, assets, liabilities, cash-flow MTD), a range-controlled net-worth trend chart (YTD / 1Y / All), an allocation donut, top-spending categories, and a budget alerts row.
+  - **Accounts tab** — split-panel ledger with category groups (Assets / Liabilities) in the left pane and an account detail panel on the right; Edit button opens a modal for nickname, institution, notes.
+  - **Investments tab** — brokerage accounts with per-account balance history line charts and snapshot-based balance display.
+  - **Retirement tab** — tax-treatment groupings (Tax-deferred / Tax-free / Guaranteed) with KPI row showing total, tax-deferred, and tax-free subtotals.
+  - **Real estate tab** — property cards with equity bar, YoY delta, and latest valuation date.
+  - **Cash flow tab** — 4-KPI row (income, expenses, net, savings rate), 12-month bar chart, and spending breakdown by category.
+  - **Sidebar shell** — persistent navigation with SVG icons, design tokens, and dark/light/system mode toggle.
+- **EditAccountModal** — inline edit for account nickname, institution name, and notes (encrypted at rest); accessible keyboard-trap modal with overlay-click and Escape dismissal.
+- **Design tokens** — complete migration to CSS custom-property design system (`--bg`, `--card`, `--bd`, `--text`, `--text2`, `--muted`, `--up`, `--liab`, etc.) across all pages.
+- **Notes field exposed on AccountResponse** — `notes` is now decrypted and returned in GET /accounts so the dashboard can display and edit account notes without a separate call.
+
+### Changed
+
+- **Overview widget order** — Liabilities card now appears before the Largest Holdings card, matching the net-worth calculation flow (assets − liabilities = net worth).
+- **Snapshot prefetch** — Retirement, Investments, and Assets pages prefetch all visible account snapshots in a single `useQueries` batch on mount, eliminating the N+1 waterfall where each row fired a sequential request.
+- **Range toggle routing** — replaced `window.history.replaceState + synthetic PopStateEvent` with `useNavigate()` from TanStack Router; `range` is now a validated search param on the layout route so all child routes inherit it.
+
+### Fixed
+
+- **compactCurrency negative values** — the dashboard KPI compact formatter now correctly renders negative values (e.g., `−$12k`) by prepending the sign and using `Math.abs`.
+- **Retirement prefetch scope** — snapshot prefetch in the Retirement page was accidentally fetching all accounts; it now filters to retirement account types only.
+- **notes max-length validation** — `AccountCreate.notes` and `AccountUpdate.notes` now enforce `max_length=2000` via Pydantic `Field`, preventing unbounded input at the API boundary.
+- **Range param allowlist** — the range URL param is now validated against `["ytd", "1y", "all"]` before use; invalid values silently fall back to `"ytd"`.
+
 ## [0.9.0.1] - 2026-06-19
 
 ### Fixed

@@ -33,6 +33,8 @@ import SettingsImports from "@/pages/SettingsImports"
 import SettingsDashboard from "@/pages/SettingsDashboard"
 import SettingsAppearance from "@/pages/SettingsAppearance"
 import Assets from "@/pages/Assets"
+import Investments from "@/pages/Investments"
+import Retirement from "@/pages/Retirement"
 
 // Root layout — checks auth + setup state
 const rootRoute = createRootRoute({
@@ -52,10 +54,17 @@ const setupRoute = createRoute({
   component: Setup,
 })
 
+type Range = "ytd" | "1y" | "all"
+const VALID_RANGES: Range[] = ["ytd", "1y", "all"]
+
 // Protected layout — redirects to /login if no token, /setup if not configured
 const appLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "app",
+  validateSearch: (search: Record<string, unknown>): { range?: Range } => {
+    const raw = search.range as string | undefined
+    return raw && VALID_RANGES.includes(raw as Range) ? { range: raw as Range } : {}
+  },
   beforeLoad: async () => {
     const stored = sessionStorage.getItem("access_token")
     if (!stored) {
@@ -204,6 +213,18 @@ const assetsRoute = createRoute({
   component: Assets,
 })
 
+const reportsInvestmentsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/reports/investments",
+  component: Investments,
+})
+
+const reportsRetirementRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/reports/retirement",
+  component: Retirement,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
@@ -230,6 +251,8 @@ const routeTree = rootRoute.addChildren([
     settingsDashboardRoute,
     settingsAppearanceRoute,
     assetsRoute,
+    reportsInvestmentsRoute,
+    reportsRetirementRoute,
   ]),
 ])
 

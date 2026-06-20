@@ -70,6 +70,22 @@ approximation to the user.
 
 ---
 
+### Investment positions table (deferred from Wealth Dashboard redesign Phase 4)
+
+**What:** The Investments tab (`/reports/investments`) currently shows only account-level balances for `investment_brokerage` accounts. Add support for: (1) manual entry of individual holdings (ticker, shares, cost basis), (2) a Holdings mix by asset class breakdown, (3) optional brokerage sync for auto-populating positions.
+
+**Why:** The high-fidelity design's "Top positions" table (VTI 42 shares, NVDA 12 shares) and "Holdings mix" donut require per-security data that doesn't exist in the backend yet. HearthLedger is a balance tracker, not a brokerage integration — showing position-level data is a meaningful upgrade to investment insight.
+
+**Pros:** Closes the gap between HearthLedger and tools like Monarch Money for investment tracking. Manual entry works offline with no API keys required. Brokerage sync could auto-update positions if a provider is added.
+
+**Cons:** Requires a new `investment_positions` DB table, migration, CRUD API endpoints, and UI in the Investments tab. Brokerage sync would additionally require an external API integration. Significant scope increase.
+
+**Context:** Explicitly deferred as design decision D2 during the office-hours session (2026-06-19). The Investments tab was intentionally scoped to account-level data for the Phase 4 initial implementation. The TODO comment in `Investments.tsx` marks where this UI would go.
+
+**Depends on:** Wealth Dashboard Phase 4 complete. New `investment_positions` DB schema design (separate planning session needed).
+
+---
+
 ## Completed
 
 ### Fix RealEstateService.update() nullable pattern

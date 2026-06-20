@@ -1,8 +1,9 @@
+import { useMemo } from "react"
 import { Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -10,268 +11,706 @@ import {
   PieChart,
   Pie,
   Cell,
-  Legend,
+  BarChart,
+  Bar,
+  CartesianGrid,
 } from "recharts"
+import { useRouterState } from "@tanstack/react-router"
 import { reportsApi } from "@/api/reports"
-import { membersApi } from "@/api/members"
-import { useAuth } from "@/hooks/useAuth"
+import { accountsApi } from "@/api/accounts"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
-import { formatCurrency } from "@/lib/formatters"
-import { lastNMonthsRange } from "@/lib/dateRange"
+import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
+import { toIso } from "@/lib/dateRange"
+import { startOfYear, subYears, subDays } from "date-fns"
 
-const CHART_COLORS = [
-  "#6366f1",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#14b8a6",
-]
+type Range = "ytd" | "1y" | "all"
 
-interface WidgetConfig {
-  id: string
-  visible: boolean
-  order: number
+function useRange(): Range {
+  const search = useRouterState({ select: (s) => s.location.search })
+  return (new URLSearchParams(search).get("range") as Range) ?? "ytd"
 }
 
-const DEFAULT_WIDGET_ORDER = ["metric_cards", "budget_alerts", "net_worth_chart", "spending_chart"]
-
-function useWidgetConfig(): WidgetConfig[] {
-  const memberId = useAuth((s) => s.memberId)
-  const { data: member } = useQuery({
-    queryKey: ["members", memberId],
-    queryFn: () => membersApi.get(memberId!),
-    enabled: Boolean(memberId),
-  })
-  const saved = (member?.settings?.dashboard_widgets ?? []) as WidgetConfig[]
-  if (saved.length === 0) {
-    return DEFAULT_WIDGET_ORDER.map((id, order) => ({ id, visible: true, order }))
+function rangeToDateParams(
+  range: Range,
+  householdCreatedAt: string | null,
+): { from: string; to: string } {
+  const today = new Date()
+  const to = toIso(today)
+  if (range === "1y") return { from: toIso(subDays(today, 365)), to }
+  if (range === "all") {
+    const from = householdCreatedAt ? householdCreatedAt.slice(0, 10) : toIso(subYears(today, 10))
+    return { from, to }
   }
-  return [...saved].sort((a, b) => a.order - b.order)
+  // ytd
+  return { from: toIso(startOfYear(today)), to }
 }
 
-function MetricCard({
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function KpiCard({
   label,
   value,
   sub,
-  color = "text-gray-900 dark:text-gray-100",
+  accent,
 }: {
   label: string
   value: string
   sub?: string
-  color?: string
+  accent?: boolean
 }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{label}</p>
-      <p className={`text-2xl font-semibold ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{sub}</p>}
+    <div
+      style={{
+        background: accent ? "var(--grad)" : "var(--card)",
+        border: `1px solid ${accent ? "var(--accent-bd)" : "var(--bd)"}`,
+        borderRadius: "14px",
+        padding: "18px 20px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "11px",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: accent ? "var(--label)" : "var(--faint)",
+          marginBottom: "6px",
+        }}
+      >
+        {label}
+      </div>
+      <div
+        style={{
+          fontSize: accent ? "26px" : "22px",
+          fontWeight: 700,
+          color: accent ? "var(--text)" : "var(--text2)",
+          lineHeight: 1.1,
+        }}
+      >
+        {value}
+      </div>
+      {sub && (
+        <div
+          style={{
+            fontSize: "11px",
+            color: accent ? "var(--label)" : "var(--muted)",
+            marginTop: "5px",
+          }}
+        >
+          {sub}
+        </div>
+      )}
     </div>
   )
 }
 
-export default function Dashboard() {
-  const widgets = useWidgetConfig()
-  const { householdName } = useCurrentUser()
+function SectionCard({
+  children,
+  style,
+}: {
+  children: React.ReactNode
+  style?: React.CSSProperties
+}) {
+  return (
+    <div
+      style={{
+        background: "var(--card)",
+        border: "1px solid var(--bd)",
+        borderRadius: "14px",
+        padding: "18px 20px",
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
 
-  const { data, isLoading, error } = useQuery({
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div
+      style={{
+        fontSize: "13px",
+        fontWeight: 600,
+        color: "var(--text3)",
+        marginBottom: "14px",
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
+const DONUT_COLORS: Record<string, string> = {
+  Banking: "#46d39a",
+  Investments: "#6c97c4",
+  Retirement: "#46b888",
+  "Real estate": "#d9b96a",
+  HSA: "#9fb3a8",
+  Other: "#6f897c",
+}
+
+function compactCurrency(n: number): string {
+  const sign = n < 0 ? "-" : ""
+  const abs = Math.abs(n)
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(2)}M`
+  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(0)}k`
+  return `${sign}$${abs.toFixed(0)}`
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+
+export default function Dashboard() {
+  const range = useRange()
+  const { householdName, isLoading: userLoading } = useCurrentUser()
+
+  // We read household created_at separately for "all" range
+  const { data: household } = useQuery({
+    queryKey: ["household"],
+    queryFn: async () => {
+      const { householdApi } = await import("@/api/household")
+      return householdApi.get()
+    },
+    staleTime: 5 * 60_000,
+  })
+
+  const dateParams = rangeToDateParams(range, household?.created_at ?? null)
+
+  const { data: dash, isLoading: dashLoading } = useQuery({
     queryKey: ["dashboard"],
     queryFn: reportsApi.dashboard,
+    staleTime: 30_000,
   })
 
-  const range = lastNMonthsRange(12)
   const { data: nwReport } = useQuery({
-    queryKey: ["reports", "net-worth", range],
-    queryFn: () => reportsApi.netWorth(range.from, range.to, "monthly"),
+    queryKey: ["reports", "net-worth", range, dateParams.from, dateParams.to],
+    queryFn: () => reportsApi.netWorth(dateParams.from, dateParams.to, "monthly"),
+    staleTime: 30_000,
   })
 
-  if (isLoading)
-    return <div className="p-8 text-gray-500 dark:text-gray-400">Loading dashboard…</div>
-  if (error || !data)
-    return <div className="p-8 text-red-600 dark:text-red-400">Failed to load dashboard.</div>
+  const { data: cashFlowReport } = useQuery({
+    queryKey: ["reports", "cash-flow", range, dateParams.from, dateParams.to],
+    queryFn: () => reportsApi.cashFlow(dateParams.from, dateParams.to, "month"),
+    staleTime: 30_000,
+  })
 
-  const nwChange = Number(data.net_worth.change_30d)
-  const nwColor =
-    nwChange >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"
-  const savingsRate =
-    Number(data.cash_flow_mtd.income) > 0
-      ? ((Number(data.cash_flow_mtd.net) / Number(data.cash_flow_mtd.income)) * 100).toFixed(1)
-      : null
+  const { data: accounts } = useQuery({
+    queryKey: ["accounts"],
+    queryFn: accountsApi.list,
+    staleTime: 60_000,
+  })
 
-  const nwChartData = nwReport?.series.map((p) => ({
-    date: p.date.slice(0, 7),
-    "Net Worth": Number(p.net_worth),
-    Assets: Number(p.total_assets),
-    Liabilities: -Number(p.total_liabilities),
-  }))
+  // Liquid = sum of checking + savings balances
+  const liquid = useMemo(() => {
+    if (!accounts) return null
+    const sum = accounts
+      .filter((a) => a.account_type === "checking" || a.account_type === "savings")
+      .reduce((acc, a) => acc + Number(a.current_balance ?? 0), 0)
+    return sum
+  }, [accounts])
 
-  const pieData = data.top_spending_categories.map((c) => ({
-    name: c.name,
-    value: Math.abs(Number(c.amount)),
-  }))
+  // Net worth trend chart data
+  const nwChartData = useMemo(
+    () =>
+      nwReport?.series.map((p) => ({
+        date: p.date.slice(0, 7),
+        value: Number(p.net_worth),
+        assets: Number(p.total_assets),
+      })) ?? [],
+    [nwReport],
+  )
 
-  const sections = widgets.filter((w) => w.visible).map((w) => w.id)
+  // Asset allocation donut from current breakdown
+  const donutData = useMemo(() => {
+    const b = nwReport?.current?.breakdown
+    if (!b) return []
+    const raw = [
+      { name: "Banking", value: Number(b.checking_savings) },
+      { name: "Investments", value: Number(b.investment) },
+      { name: "Retirement", value: Number(b.retirement) },
+      { name: "Real estate", value: Number(b.real_estate) },
+      { name: "HSA", value: Number(b.hsa) },
+      { name: "Other", value: Number(b.other_assets) },
+    ]
+    return raw.filter((d) => d.value > 0)
+  }, [nwReport])
+
+  // Cash flow bar chart (income vs expenses per period)
+  const cfChartData = useMemo(
+    () =>
+      cashFlowReport?.series.map((p) => ({
+        period: p.period.slice(0, 7),
+        Income: Number(p.income),
+        Expenses: Number(p.expenses),
+      })) ?? [],
+    [cashFlowReport],
+  )
+
+  // Top 5 accounts by balance (assets only)
+  const topHoldings = useMemo(() => {
+    if (!accounts) return []
+    return [...accounts]
+      .filter(
+        (a) =>
+          a.current_balance !== null &&
+          ![
+            "credit_card",
+            "mortgage",
+            "auto_loan",
+            "personal_loan",
+            "student_loan",
+            "other_liability",
+          ].includes(a.account_type),
+      )
+      .sort((a, b) => Number(b.current_balance) - Number(a.current_balance))
+      .slice(0, 5)
+  }, [accounts])
+
+  const donutTotal = useMemo(() => donutData.reduce((s, d) => s + d.value, 0), [donutData])
+
+  // Net worth trend range change (for sub-label)
+  const nwRangeChange = useMemo(() => {
+    if (nwChartData.length < 2) return null
+    const start = nwChartData[0].value
+    const end = nwChartData[nwChartData.length - 1].value
+    const change = end - start
+    const pct = start !== 0 ? (change / Math.abs(start)) * 100 : 0
+    return { change, pct }
+  }, [nwChartData])
+
+  // Liabilities from nwReport breakdown
+  const liabBreakdown = useMemo(() => {
+    const b = nwReport?.current?.breakdown
+    if (!b) return []
+    return [
+      { name: "Mortgage", value: Number(b.mortgage) },
+      { name: "Other", value: Number(b.other_liabilities) },
+    ].filter((d) => d.value > 0)
+  }, [nwReport])
+
+  const isLoading = dashLoading || userLoading
+  if (isLoading && !dash) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "200px",
+          color: "var(--muted)",
+        }}
+      >
+        Loading…
+      </div>
+    )
+  }
+
+  const nwChange = Number(dash?.net_worth.change_30d ?? 0)
+  const nwChangePct = dash?.net_worth.change_30d_pct
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-          {householdName ?? "Dashboard"}
-        </h1>
-        <Link
-          to="/settings/dashboard"
-          className="text-xs text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-        >
-          Customize →
-        </Link>
-      </div>
+    <div
+      style={{
+        maxWidth: "1100px",
+        margin: "0 auto",
+        display: "flex",
+        flexDirection: "column",
+        gap: "20px",
+      }}
+    >
+      {/* Page heading */}
+      <h1
+        role="heading"
+        aria-level={1}
+        style={{ fontSize: "22px", fontWeight: 700, color: "var(--text)", margin: 0 }}
+      >
+        {householdName ?? "Dashboard"}
+      </h1>
 
-      {sections.includes("metric_cards") && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <MetricCard
+      {/* KPI row */}
+      {dash && (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(5, 1fr)",
+            gap: "12px",
+          }}
+        >
+          <KpiCard
             label="Net Worth"
-            value={formatCurrency(data.net_worth.current)}
+            value={formatCurrency(dash.net_worth.current)}
             sub={
-              data.net_worth.change_30d_pct != null
-                ? `${nwChange >= 0 ? "+" : ""}${data.net_worth.change_30d_pct.toFixed(1)}% vs 30d ago`
+              nwChangePct != null
+                ? `${nwChange >= 0 ? "+" : ""}${nwChangePct.toFixed(1)}% vs 30d ago`
                 : undefined
             }
-            color={nwColor}
+            accent
           />
-          <MetricCard
-            label="MTD Income"
-            value={formatCurrency(data.cash_flow_mtd.income)}
-            color="text-emerald-600 dark:text-emerald-400"
+          <KpiCard label="Assets" value={formatCurrency(dash.accounts_summary.total_assets)} />
+          <KpiCard
+            label="Liabilities"
+            value={formatCurrency(dash.accounts_summary.total_liabilities)}
+            sub="total owed"
           />
-          <MetricCard
-            label="MTD Expenses"
-            value={formatCurrency(data.cash_flow_mtd.expenses)}
-            color="text-red-600 dark:text-red-400"
+          <KpiCard
+            label="Liquid"
+            value={liquid !== null ? formatCurrency(String(liquid)) : "—"}
+            sub="checking + savings"
           />
-          <MetricCard
-            label="Savings Rate"
-            value={savingsRate != null ? `${savingsRate}%` : "—"}
+          <KpiCard
+            label="Saved / mo"
+            value={formatCurrency(dash.cash_flow_mtd.net)}
             sub="month to date"
           />
         </div>
       )}
 
-      {sections.includes("budget_alerts") && data.budget_alerts.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
-            Budget Alerts
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {data.budget_alerts.map((a) => (
-              <Link
-                key={a.category}
-                to="/budgets"
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-                  a.used_pct >= 100 ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"
-                }`}
+      {/* Net worth trend + asset donut */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: "12px" }}>
+        <SectionCard>
+          {/* Custom header with range sub-label matching design */}
+          <div style={{ marginBottom: "14px" }}>
+            <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--text3)" }}>
+              Net worth trend
+            </div>
+            {nwRangeChange && (
+              <div
+                style={{
+                  fontSize: "11px",
+                  color: nwRangeChange.change >= 0 ? "var(--up)" : "var(--liab)",
+                  marginTop: "2px",
+                }}
               >
-                {a.category}
-                <span className="font-semibold">{a.used_pct.toFixed(0)}%</span>
-              </Link>
-            ))}
+                {nwRangeChange.change >= 0 ? "+" : ""}
+                {formatCurrency(String(Math.abs(nwRangeChange.change)))}
+                {" · "}
+                {nwRangeChange.change >= 0 ? "+" : ""}
+                {nwRangeChange.pct.toFixed(1)}%{" "}
+                {range === "1y" ? "trailing year" : range === "ytd" ? "YTD" : "all time"}
+              </div>
+            )}
           </div>
-        </div>
-      )}
-
-      {(sections.includes("net_worth_chart") || sections.includes("spending_chart")) && (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {sections.includes("net_worth_chart") && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Net Worth (12 months)
-                </h2>
-                <Link
-                  to="/reports/net-worth"
-                  className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
-                >
-                  Full report →
-                </Link>
-              </div>
-              {nwChartData && nwChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <LineChart data={nwChartData}>
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis
-                      tick={{ fontSize: 11 }}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v: number) =>
-                        v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
-                      }
-                    />
-                    <Tooltip formatter={(v) => formatCurrency(v as number)} />
-                    <Line
-                      type="monotone"
-                      dataKey="Net Worth"
-                      stroke="#6366f1"
-                      strokeWidth={2}
-                      dot={false}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">
-                  No data yet.
-                </p>
-              )}
+          {nwChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <AreaChart data={nwChartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="nwGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#46b888" stopOpacity={0.18} />
+                    <stop offset="95%" stopColor="#46b888" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <XAxis
+                  dataKey="date"
+                  tick={{ fontSize: 10, fill: "var(--axis)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: string) => {
+                    const [, m] = v.split("-")
+                    return [
+                      "Jan",
+                      "Feb",
+                      "Mar",
+                      "Apr",
+                      "May",
+                      "Jun",
+                      "Jul",
+                      "Aug",
+                      "Sep",
+                      "Oct",
+                      "Nov",
+                      "Dec",
+                    ][parseInt(m) - 1]
+                  }}
+                />
+                <YAxis
+                  tick={{ fontSize: 10, fill: "var(--axis)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={52}
+                  tickFormatter={(v: number) =>
+                    v >= 1_000_000
+                      ? `$${(v / 1_000_000).toFixed(1)}M`
+                      : v >= 1000
+                        ? `$${(v / 1000).toFixed(0)}k`
+                        : `$${v}`
+                  }
+                />
+                <Tooltip
+                  formatter={(v) => [formatCurrency(String(v ?? 0)), "Net Worth"]}
+                  labelStyle={{ color: "var(--text3)", fontSize: 11 }}
+                  contentStyle={{
+                    background: "var(--card)",
+                    border: "1px solid var(--bd2)",
+                    borderRadius: "10px",
+                    fontSize: 12,
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#46b888"
+                  strokeWidth={2}
+                  fill="url(#nwGrad)"
+                  dot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div
+              style={{
+                height: "180px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--muted)",
+                fontSize: "13px",
+              }}
+            >
+              No data for this range
             </div>
           )}
+        </SectionCard>
 
-          {sections.includes("spending_chart") && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                  Spending This Month
-                </h2>
-                <Link
-                  to="/reports/spending"
-                  className="text-xs text-indigo-600 hover:underline dark:text-indigo-400"
-                >
-                  Full report →
-                </Link>
-              </div>
-              {pieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="value"
+        <SectionCard>
+          <SectionLabel>Asset allocation</SectionLabel>
+          {donutData.length > 0 ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              {/* Donut with center text overlay — extra 7px margin prevents arc clipping */}
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <PieChart width={152} height={152}>
+                  <Pie
+                    data={donutData}
+                    cx={76}
+                    cy={76}
+                    innerRadius={54}
+                    outerRadius={69}
+                    paddingAngle={2}
+                    dataKey="value"
+                    strokeWidth={0}
+                  >
+                    {donutData.map((entry) => (
+                      <Cell key={entry.name} fill={DONUT_COLORS[entry.name] ?? "#6f897c"} />
+                    ))}
+                  </Pie>
+                </PieChart>
+                {donutTotal > 0 && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "76px",
+                      left: "76px",
+                      transform: "translate(-50%, -50%)",
+                      textAlign: "center",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        fontWeight: 700,
+                        color: "var(--text)",
+                        lineHeight: 1.1,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
                     >
-                      {pieData.map((_, i) => (
-                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v) => formatCurrency(v as number)} />
-                    <Legend iconType="circle" iconSize={8} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-sm text-gray-400 dark:text-gray-500 py-8 text-center">
-                  No spending data yet.
-                </p>
-              )}
+                      {compactCurrency(donutTotal)}
+                    </div>
+                    <div style={{ fontSize: "9px", color: "var(--muted)", marginTop: "2px" }}>
+                      assets
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* Legend with percentages */}
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+                {donutData.map((d) => {
+                  const pct = donutTotal > 0 ? Math.round((d.value / donutTotal) * 100) : 0
+                  return (
+                    <div key={d.name} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span
+                        style={{
+                          width: "8px",
+                          height: "8px",
+                          borderRadius: "50%",
+                          background: DONUT_COLORS[d.name] ?? "#6f897c",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <span style={{ flex: 1, fontSize: "11px", color: "var(--text3)" }}>
+                        {d.name}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: "11px",
+                          color: "var(--muted)",
+                          fontVariantNumeric: "tabular-nums",
+                        }}
+                      >
+                        {pct}%
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                color: "var(--muted)",
+                fontSize: "12px",
+                textAlign: "center",
+                marginTop: "30px",
+              }}
+            >
+              No data
             </div>
           )}
-        </div>
-      )}
+        </SectionCard>
+      </div>
+
+      {/* Bottom row: cash flow | holdings | liabilities */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+        {/* Cash flow bars */}
+        <SectionCard>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "14px",
+            }}
+          >
+            <SectionLabel>Cash flow</SectionLabel>
+            <Link
+              to="/reports/cash-flow"
+              style={{ fontSize: "11px", color: "var(--label)", textDecoration: "none" }}
+            >
+              Full report →
+            </Link>
+          </div>
+          {cfChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={140}>
+              <BarChart
+                data={cfChartData}
+                barSize={10}
+                margin={{ top: 0, right: 0, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid vertical={false} stroke="var(--grid)" />
+                <XAxis
+                  dataKey="period"
+                  tick={{ fontSize: 9, fill: "var(--axis)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: string) => v.slice(5)}
+                />
+                <YAxis
+                  tick={{ fontSize: 9, fill: "var(--axis)" }}
+                  tickLine={false}
+                  axisLine={false}
+                  width={38}
+                  tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  formatter={(v, name) => [formatCurrency(String(v ?? 0)), String(name)]}
+                  contentStyle={{
+                    background: "var(--card)",
+                    border: "1px solid var(--bd2)",
+                    borderRadius: "10px",
+                    fontSize: 12,
+                  }}
+                />
+                <Bar dataKey="Income" fill="var(--up)" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="Expenses" fill="var(--liab)" radius={[3, 3, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div
+              style={{
+                height: "140px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "var(--muted)",
+                fontSize: "12px",
+              }}
+            >
+              No data for this range
+            </div>
+          )}
+        </SectionCard>
+
+        {/* Liabilities breakdown */}
+        <SectionCard>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "14px",
+            }}
+          >
+            <SectionLabel>Liabilities</SectionLabel>
+            <Link
+              to="/debt"
+              style={{ fontSize: "11px", color: "var(--label)", textDecoration: "none" }}
+            >
+              Manage →
+            </Link>
+          </div>
+          {liabBreakdown.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {liabBreakdown.map((l) => (
+                <div
+                  key={l.name}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <span style={{ fontSize: "12.5px", color: "var(--text3)" }}>{l.name}</span>
+                  <span style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--liab)" }}>
+                    {formatCurrency(String(l.value))}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: "var(--muted)", fontSize: "12px" }}>No liabilities</div>
+          )}
+        </SectionCard>
+
+        {/* Largest holdings */}
+        <SectionCard>
+          <SectionLabel>Largest holdings</SectionLabel>
+          {topHoldings.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {topHoldings.map((a) => (
+                <div
+                  key={a.id}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <div>
+                    <div style={{ fontSize: "12.5px", color: "var(--text3)", fontWeight: 500 }}>
+                      {a.nickname}
+                    </div>
+                    {(a.institution_name || a.account_number_last4) && (
+                      <div style={{ fontSize: "10px", color: "var(--muted)" }}>
+                        {[
+                          a.institution_name,
+                          formatMaskedAccountNumber(a.account_number_last4),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--text)" }}>
+                    {a.current_balance !== null ? formatCurrency(a.current_balance) : "—"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: "var(--muted)", fontSize: "12px" }}>No accounts yet</div>
+          )}
+        </SectionCard>
+      </div>
     </div>
   )
 }

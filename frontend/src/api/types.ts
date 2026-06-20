@@ -61,6 +61,7 @@ export interface AccountResponse {
   is_active: boolean
   current_balance: string | null
   balance_as_of: string | null
+  notes: string | null
   created_at: string
   updated_at: string
 }
