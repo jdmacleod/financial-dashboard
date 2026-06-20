@@ -11,6 +11,7 @@ Usage:
 The --household all mode is for demo/test environments only.
 Production installs should seed a single household.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -23,10 +24,10 @@ from pathlib import Path
 # Allow running from project root: python scripts/seed_demo_data.py
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from seed_households import h1_chen_nakamura, h2_okonkwo_rivera, h3_whitfield_torres
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import AsyncSessionLocal
-from seed_households import h1_chen_nakamura, h2_okonkwo_rivera, h3_whitfield_torres
 
 _SEEDERS = {
     1: h1_chen_nakamura.seed,
@@ -46,8 +47,10 @@ def _print_summary(results: list[dict], elapsed: float) -> None:
     total_txns = 0
     for r in results:
         print(f"Household {r['num']}: {r['name']} ({r['location']})")
-        print(f"  Members: {r['members']} | Accounts: {r['accounts']} "
-              f"| Transactions: ~{r['transactions']:,} | Properties: {r['properties']}")
+        print(
+            f"  Members: {r['members']} | Accounts: {r['accounts']} "
+            f"| Transactions: ~{r['transactions']:,} | Properties: {r['properties']}"
+        )
         print(f"  Computed Net Worth: ${r['net_worth']:,.0f}")
         print(f"  FIRE scenarios: {r['fire_scenarios']} | Debt records: {r['debt_records']}")
         print()
@@ -83,12 +86,11 @@ async def main(household_arg: str) -> None:
 
     results: list[dict] = []
 
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            rng = random.Random(42)
-            for num in to_seed:
-                result = await _seed_one(session, num, rng)
-                results.append(result)
+    async with AsyncSessionLocal() as session, session.begin():
+        rng = random.Random(42)
+        for num in to_seed:
+            result = await _seed_one(session, num, rng)
+            results.append(result)
 
     elapsed = time.perf_counter() - t0
     _print_summary(results, elapsed)

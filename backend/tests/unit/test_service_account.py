@@ -390,9 +390,7 @@ async def test_list_accounts_heloc_uses_transaction_sum(
     that was accidentally excluded from the set)."""
     ctx = _ctx(household, primary_member, "primary", primary_user)
     service = AccountService(db_session)
-    heloc = await service.create(
-        ctx, AccountCreate(account_type="heloc", nickname="Chase HELOC")
-    )
+    heloc = await service.create(ctx, AccountCreate(account_type="heloc", nickname="Chase HELOC"))
 
     now = datetime.now(UTC)
     for amount in [Decimal("-92000"), Decimal("-920"), Decimal("920")]:

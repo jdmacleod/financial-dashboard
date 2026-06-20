@@ -345,9 +345,7 @@ async def test_update_fire_scenario_member_id(
     )
     assert created.member_id is None
 
-    with_member = await svc.update(
-        ctx, created.id, FireScenarioUpdate(member_id=primary_member.id)
-    )
+    with_member = await svc.update(ctx, created.id, FireScenarioUpdate(member_id=primary_member.id))
     assert with_member.member_id == primary_member.id
 
     cleared = await svc.update(ctx, created.id, FireScenarioUpdate(member_id=None))

@@ -1,9 +1,10 @@
 """Shared utilities for the HearthLedger demo seed script."""
+
 from __future__ import annotations
 
 import calendar
 import uuid
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
@@ -26,7 +27,6 @@ from app.db.models.user import User
 if TYPE_CHECKING:
     import random
 
-    from sqlalchemy.ext.asyncio import AsyncSession
 
 _pwd_ctx = CryptContext(schemes=["bcrypt"])
 DEMO_HASH: str = _pwd_ctx.hash("HearthDemo1!")
@@ -35,21 +35,24 @@ DATE_START = date(2024, 1, 1)
 DATE_END = date(2026, 6, 20)
 
 # Investment account types (balance from snapshots)
-SNAPSHOT_TYPES = frozenset({
-    "investment_brokerage",
-    "retirement_401k",
-    "retirement_403b",
-    "retirement_ira",
-    "retirement_roth_ira",
-    "pension",
-    "hsa",
-})
+SNAPSHOT_TYPES = frozenset(
+    {
+        "investment_brokerage",
+        "retirement_401k",
+        "retirement_403b",
+        "retirement_ira",
+        "retirement_roth_ira",
+        "pension",
+        "hsa",
+    }
+)
 
 
 # ── Timing helpers ────────────────────────────────────────────────────────────
 
+
 def utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def last_day_of(year: int, month: int) -> date:
@@ -57,7 +60,7 @@ def last_day_of(year: int, month: int) -> date:
 
 
 def all_months() -> list[date]:
-    """First-of-month for each month Jan 2024 – Jun 2026 inclusive."""
+    """First-of-month for each month Jan 2024 - Jun 2026 inclusive."""
     months: list[date] = []
     y, m = DATE_START.year, DATE_START.month
     while (y, m) <= (DATE_END.year, DATE_END.month):
@@ -91,8 +94,9 @@ def rand_date(year: int, month: int, rng: random.Random, avoid_sunday: bool = Fa
 
 def friday_dates(year: int, month: int) -> list[date]:
     _, max_d = calendar.monthrange(year, month)
-    return [date(year, month, d) for d in range(1, max_d + 1)
-            if date(year, month, d).weekday() == 4]
+    return [
+        date(year, month, d) for d in range(1, max_d + 1) if date(year, month, d).weekday() == 4
+    ]
 
 
 def jitter(amount: Decimal, rng: random.Random, pct: float = 0.10) -> Decimal:
@@ -101,6 +105,7 @@ def jitter(amount: Decimal, rng: random.Random, pct: float = 0.10) -> Decimal:
 
 
 # ── Row constructors ──────────────────────────────────────────────────────────
+
 
 def make_household(name: str) -> Household:
     return Household(id=uuid.uuid4(), name=name, settings={}, created_at=utcnow())
@@ -188,9 +193,7 @@ def make_property(
     )
 
 
-def make_valuation(
-    property_id: uuid.UUID, val_date: date, amount: Decimal
-) -> PropertyValuation:
+def make_valuation(property_id: uuid.UUID, val_date: date, amount: Decimal) -> PropertyValuation:
     return PropertyValuation(
         id=uuid.uuid4(),
         real_estate_property_id=property_id,
@@ -292,6 +295,7 @@ def make_access_grant(
 
 # ── Transaction helpers ───────────────────────────────────────────────────────
 
+
 def tx(
     account_id: uuid.UUID,
     tx_date: date,
@@ -338,7 +342,7 @@ def transfer(
 ) -> tuple[Transaction, Transaction]:
     """Debit from_id, credit to_id. Returns (debit, credit)."""
     pair_id = uuid.uuid4()
-    kw = dict(is_transfer=True, pair_id=pair_id, prop_id=prop_id, memo=memo)
+    kw = {"is_transfer": True, "pair_id": pair_id, "prop_id": prop_id, "memo": memo}
     return (
         tx(from_id, tx_date, -amount, payee, cat_id, **kw),
         tx(to_id, tx_date, amount, payee, cat_id, **kw),
@@ -414,7 +418,7 @@ def gen_variable(
     prop_id: uuid.UUID | None = None,
 ) -> list[Transaction]:
     """Generate N split variable transactions for a category in a given month."""
-    _, max_d = calendar.monthrange(year, month)
+    _, _max_d = calendar.monthrange(year, month)
     total = jitter((min_total + max_total) / 2, rng, pct=0.12)
     count = rng.randint(min_count, max_count)
     if count == 0:

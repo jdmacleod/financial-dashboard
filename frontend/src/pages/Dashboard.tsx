@@ -691,10 +691,7 @@ export default function Dashboard() {
                     </div>
                     {(a.institution_name || a.account_number_last4) && (
                       <div style={{ fontSize: "10px", color: "var(--muted)" }}>
-                        {[
-                          a.institution_name,
-                          formatMaskedAccountNumber(a.account_number_last4),
-                        ]
+                        {[a.institution_name, formatMaskedAccountNumber(a.account_number_last4)]
                           .filter(Boolean)
                           .join(" · ")}
                       </div>

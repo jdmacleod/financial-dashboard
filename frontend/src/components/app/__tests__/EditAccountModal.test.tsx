@@ -181,9 +181,7 @@ describe("EditAccountModal", () => {
 
   it("shows account number field with last-4 placeholder for primary role", () => {
     renderModal()
-    expect(
-      screen.getByPlaceholderText("•••• 1234 — enter to replace"),
-    ).toBeInTheDocument()
+    expect(screen.getByPlaceholderText("•••• 1234 — enter to replace")).toBeInTheDocument()
   })
 
   it("shows account number field with 'Optional' placeholder when no last-4 exists", () => {

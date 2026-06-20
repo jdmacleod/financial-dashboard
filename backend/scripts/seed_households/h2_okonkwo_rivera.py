@@ -1,4 +1,5 @@
 """Household 2 — Okonkwo-Rivera (Naperville, IL). ~$3.4M net worth."""
+
 from __future__ import annotations
 
 import random
@@ -43,16 +44,16 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     hid = hh.id
 
     # ── Members ───────────────────────────────────────────────────────────────
-    darius = make_member(hid, "Darius Okonkwo",        "primary")
+    darius = make_member(hid, "Darius Okonkwo", "primary")
     carmen = make_member(hid, "Carmen Rivera-Okonkwo", "partner")
-    emma   = make_member(hid, "Emma Okonkwo",           "dependent")
-    noah   = make_member(hid, "Noah Okonkwo",           "dependent")
+    emma = make_member(hid, "Emma Okonkwo", "dependent")
+    noah = make_member(hid, "Noah Okonkwo", "dependent")
     session.add_all([darius, carmen, emma, noah])
 
     user_darius = make_user(darius.id, "darius@okonkwo-rivera.local")
     user_carmen = make_user(carmen.id, "carmen@okonkwo-rivera.local")
-    user_emma   = make_user(emma.id,   "emma@okonkwo-rivera.local")
-    user_noah   = make_user(noah.id,   "noah@okonkwo-rivera.local")
+    user_emma = make_user(emma.id, "emma@okonkwo-rivera.local")
+    user_noah = make_user(noah.id, "noah@okonkwo-rivera.local")
     session.add_all([user_darius, user_carmen, user_emma, user_noah])
 
     # ── Categories ────────────────────────────────────────────────────────────
@@ -60,30 +61,31 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
 
     # ── Accounts ──────────────────────────────────────────────────────────────
     def acc(atype, name, inst, last4, *, owner=None, in_nw=True):
-        a = make_account(hid, atype, name, inst, last4, owner_member_id=owner,
-                         include_in_net_worth=in_nw)
+        a = make_account(
+            hid, atype, name, inst, last4, owner_member_id=owner, include_in_net_worth=in_nw
+        )
         session.add(a)
         return a
 
-    checking1  = acc("checking",            "Premier Plus Checking",    "Chase",                  "5589")
-    savings2   = acc("savings",             "Savings",                  "Chase",                  "6712")
-    savings3   = acc("savings",             "Online Savings",           "Ally Bank",              "3881")
-    d_401k     = acc("retirement_401k",     "401(k)",                   "Fidelity NetBenefits",   "4405", owner=darius.id)
-    c_403b     = acc("retirement_401k",     "403(b)",                   "TIAA",                   "7723", owner=carmen.id)
-    d_roth     = acc("retirement_roth_ira", "Roth IRA",                 "Fidelity",               "8834", owner=darius.id)
-    c_roth     = acc("retirement_roth_ira", "Roth IRA",                 "Vanguard",               "9921", owner=carmen.id)
-    brokerage  = acc("investment_brokerage","Joint Brokerage",          "Charles Schwab",         "2267")
-    emma_529   = acc("investment_brokerage","529 — Emma",               "Illinois Bright Start",  "3306")
-    noah_529   = acc("investment_brokerage","529 — Noah",               "Illinois Bright Start",  "3307")
-    hsa        = acc("hsa",                 "HSA",                      "HSA Bank",               "8872")
-    cc_reserve = acc("credit_card",         "Sapphire Reserve",         "Chase",                  "1188")
-    cc_amazon  = acc("credit_card",         "Amazon Prime Visa",        "Chase",                  "4456")
-    vw_loan    = acc("auto_loan",           "VW ID.4 Auto Loan",        "Volkswagen Financial",   "5543", owner=darius.id)
-    rav4_loan  = acc("auto_loan",           "Toyota RAV4 Loan",         "Toyota Financial",       "6621", owner=carmen.id)
-    mortgage1  = acc("mortgage",            "Primary Home Mortgage",    "Wells Fargo",            "9905")
-    mortgage2  = acc("mortgage",            "Evanston Condo Mortgage",  "Chase Mortgage",         "1122")
-    home_re    = acc("real_estate",         "2614 Whispering Pines Dr", "—",                      None)
-    condo_re   = acc("real_estate",         "Evanston Rental Condo",    "—",                      None)
+    checking1 = acc("checking", "Premier Plus Checking", "Chase", "5589")
+    savings2 = acc("savings", "Savings", "Chase", "6712")
+    savings3 = acc("savings", "Online Savings", "Ally Bank", "3881")
+    d_401k = acc("retirement_401k", "401(k)", "Fidelity NetBenefits", "4405", owner=darius.id)
+    c_403b = acc("retirement_401k", "403(b)", "TIAA", "7723", owner=carmen.id)
+    d_roth = acc("retirement_roth_ira", "Roth IRA", "Fidelity", "8834", owner=darius.id)
+    c_roth = acc("retirement_roth_ira", "Roth IRA", "Vanguard", "9921", owner=carmen.id)
+    brokerage = acc("investment_brokerage", "Joint Brokerage", "Charles Schwab", "2267")
+    emma_529 = acc("investment_brokerage", "529 — Emma", "Illinois Bright Start", "3306")
+    noah_529 = acc("investment_brokerage", "529 — Noah", "Illinois Bright Start", "3307")
+    hsa = acc("hsa", "HSA", "HSA Bank", "8872")
+    cc_reserve = acc("credit_card", "Sapphire Reserve", "Chase", "1188")
+    cc_amazon = acc("credit_card", "Amazon Prime Visa", "Chase", "4456")
+    vw_loan = acc("auto_loan", "VW ID.4 Auto Loan", "Volkswagen Financial", "5543", owner=darius.id)
+    rav4_loan = acc("auto_loan", "Toyota RAV4 Loan", "Toyota Financial", "6621", owner=carmen.id)
+    mortgage1 = acc("mortgage", "Primary Home Mortgage", "Wells Fargo", "9905")
+    mortgage2 = acc("mortgage", "Evanston Condo Mortgage", "Chase Mortgage", "1122")
+    home_re = acc("real_estate", "2614 Whispering Pines Dr", "—", None)
+    condo_re = acc("real_estate", "Evanston Rental Condo", "—", None)
 
     # ── Access grant: Carmen views Darius's 401k ──────────────────────────────
     session.add(make_access_grant(d_401k.id, darius.id, carmen.id, user_darius.id))
@@ -169,22 +171,29 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         for y2, m2 in [(ms.year, ms.month)]
     }
 
-    session.add_all(build_snapshots(d_401k.id,  D("741000.00"),  k401_contribs,    0.09))
-    session.add_all(build_snapshots(c_403b.id,  D("303200.00"),  b403_contribs,    0.09))
-    session.add_all(build_snapshots(d_roth.id,  D("65400.00"),   roth_contribs,    0.09))
-    session.add_all(build_snapshots(c_roth.id,  D("52200.00"),   roth_contribs,    0.09))
-    session.add_all(build_snapshots(brokerage.id, D("465000.00"), brokerage_contribs, 0.09, brokerage_dips))
-    session.add_all(build_snapshots(emma_529.id, D("70200.00"),  e529_contribs,    0.09))
-    session.add_all(build_snapshots(noah_529.id, D("48600.00"),  e529_contribs,    0.09))
-    session.add_all(build_snapshots(hsa.id,     D("15800.00"),   hsa_contribs,     0.09))
+    session.add_all(build_snapshots(d_401k.id, D("741000.00"), k401_contribs, 0.09))
+    session.add_all(build_snapshots(c_403b.id, D("303200.00"), b403_contribs, 0.09))
+    session.add_all(build_snapshots(d_roth.id, D("65400.00"), roth_contribs, 0.09))
+    session.add_all(build_snapshots(c_roth.id, D("52200.00"), roth_contribs, 0.09))
+    session.add_all(
+        build_snapshots(brokerage.id, D("465000.00"), brokerage_contribs, 0.09, brokerage_dips)
+    )
+    session.add_all(build_snapshots(emma_529.id, D("70200.00"), e529_contribs, 0.09))
+    session.add_all(build_snapshots(noah_529.id, D("48600.00"), e529_contribs, 0.09))
+    session.add_all(build_snapshots(hsa.id, D("15800.00"), hsa_contribs, 0.09))
 
     # ── Transaction generation ────────────────────────────────────────────────
     all_txns: list = []
     running: dict = {
-        checking1.id: D("0"), savings2.id: D("0"), savings3.id: D("0"),
-        cc_reserve.id: D("0"), cc_amazon.id: D("0"),
-        vw_loan.id: D("0"), rav4_loan.id: D("0"),
-        mortgage1.id: D("0"), mortgage2.id: D("0"),
+        checking1.id: D("0"),
+        savings2.id: D("0"),
+        savings3.id: D("0"),
+        cc_reserve.id: D("0"),
+        cc_amazon.id: D("0"),
+        vw_loan.id: D("0"),
+        rav4_loan.id: D("0"),
+        mortgage1.id: D("0"),
+        mortgage2.id: D("0"),
     }
 
     def add(*txs):
@@ -202,57 +211,146 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
 
         # ── Income ────────────────────────────────────────────────────────────
         # Darius law firm draw
-        add(tx(checking1.id, clamp_day(y, m, 1), D("13000.00"),
-               "Feldman & Okonkwo LLP Payroll", cat["salary"]))
+        add(
+            tx(
+                checking1.id,
+                clamp_day(y, m, 1),
+                D("13000.00"),
+                "Feldman & Okonkwo LLP Payroll",
+                cat["salary"],
+            )
+        )
         # Carmen school district (1st and 15th)
         for day in (1, 15):
-            add(tx(checking1.id, clamp_day(y, m, day), D("2875.00"),
-                   "CUSD 203 Payroll", cat["salary"]))
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, day),
+                    D("2875.00"),
+                    "CUSD 203 Payroll",
+                    cat["salary"],
+                )
+            )
         # Rental income — Evanston condo
         rent_day = 8 if (y, m) in late_rent_months else 1
-        add(tx(checking1.id, clamp_day(y, m, rent_day), D("2650.00"),
-               "ACH Tenant Payment", cat["residential_rental"],
-               prop_id=prop_condo.id))
+        add(
+            tx(
+                checking1.id,
+                clamp_day(y, m, rent_day),
+                D("2650.00"),
+                "ACH Tenant Payment",
+                cat["residential_rental"],
+                prop_id=prop_condo.id,
+            )
+        )
         # Year-end bonus (December only)
         if m == 12:
-            add(tx(checking1.id, clamp_day(y, m, 15), D("80000.00"),
-                   "Feldman & Okonkwo Year-End Distribution", cat["profit_distribution"]))
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, 15),
+                    D("80000.00"),
+                    "Feldman & Okonkwo Year-End Distribution",
+                    cat["profit_distribution"],
+                )
+            )
         # IL tax refund (March)
         if m == 3:
-            add(tx(checking1.id, clamp_day(y, m, 20), D("3200.00"),
-                   "Illinois Dept of Revenue", cat["tax_refund"]))
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, 20),
+                    D("3200.00"),
+                    "Illinois Dept of Revenue",
+                    cat["tax_refund"],
+                )
+            )
 
         # ── Fixed checking outflows ────────────────────────────────────────────
-        d, c = transfer(checking1.id, mortgage1.id, clamp_day(y, m, 5),
-                        D("3620.00"), "Wells Fargo Mortgage", cat["mortgage_payment"])
+        d, c = transfer(
+            checking1.id,
+            mortgage1.id,
+            clamp_day(y, m, 5),
+            D("3620.00"),
+            "Wells Fargo Mortgage",
+            cat["mortgage_payment"],
+        )
         add(d, c)
-        d, c = transfer(checking1.id, mortgage2.id, clamp_day(y, m, 5),
-                        D("1352.00"), "Chase Mortgage", cat["mortgage_payment"],
-                        prop_id=prop_condo.id)
+        d, c = transfer(
+            checking1.id,
+            mortgage2.id,
+            clamp_day(y, m, 5),
+            D("1352.00"),
+            "Chase Mortgage",
+            cat["mortgage_payment"],
+            prop_id=prop_condo.id,
+        )
         add(d, c)
-        d, c = transfer(checking1.id, rav4_loan.id, clamp_day(y, m, 22),
-                        D("462.00"), "Toyota Financial", cat["loan_payment"])
+        d, c = transfer(
+            checking1.id,
+            rav4_loan.id,
+            clamp_day(y, m, 22),
+            D("462.00"),
+            "Toyota Financial",
+            cat["loan_payment"],
+        )
         add(d, c)
-        d, c = transfer(checking1.id, vw_loan.id, clamp_day(y, m, 22),
-                        D("548.00"), "Volkswagen Financial", cat["loan_payment"])
+        d, c = transfer(
+            checking1.id,
+            vw_loan.id,
+            clamp_day(y, m, 22),
+            D("548.00"),
+            "Volkswagen Financial",
+            cat["loan_payment"],
+        )
         add(d, c)
-        d, c = transfer(checking1.id, brokerage.id, clamp_day(y, m, 15),
-                        D("2500.00"), "Schwab Auto-Invest", cat["brokerage_contribution"])
+        d, c = transfer(
+            checking1.id,
+            brokerage.id,
+            clamp_day(y, m, 15),
+            D("2500.00"),
+            "Schwab Auto-Invest",
+            cat["brokerage_contribution"],
+        )
         add(d, c)
-        d, c = transfer(checking1.id, emma_529.id, clamp_day(y, m, 10),
-                        D("500.00"), "IL Bright Start — Emma", cat["brokerage_contribution"])
+        d, c = transfer(
+            checking1.id,
+            emma_529.id,
+            clamp_day(y, m, 10),
+            D("500.00"),
+            "IL Bright Start — Emma",
+            cat["brokerage_contribution"],
+        )
         add(d, c)
-        d, c = transfer(checking1.id, noah_529.id, clamp_day(y, m, 10),
-                        D("500.00"), "IL Bright Start — Noah", cat["brokerage_contribution"])
+        d, c = transfer(
+            checking1.id,
+            noah_529.id,
+            clamp_day(y, m, 10),
+            D("500.00"),
+            "IL Bright Start — Noah",
+            cat["brokerage_contribution"],
+        )
         add(d, c)
 
-        # Roth IRA contributions Jan–Oct
+        # Roth IRA contributions Jan-Oct
         if m in range(1, 11):
-            d, c = transfer(checking1.id, d_roth.id, clamp_day(y, m, 5),
-                            D("583.00"), "Fidelity — Backdoor Roth IRA", cat["ira_contribution"])
+            d, c = transfer(
+                checking1.id,
+                d_roth.id,
+                clamp_day(y, m, 5),
+                D("583.00"),
+                "Fidelity — Backdoor Roth IRA",
+                cat["ira_contribution"],
+            )
             add(d, c)
-            d, c = transfer(checking1.id, c_roth.id, clamp_day(y, m, 5),
-                            D("583.00"), "Vanguard — Backdoor Roth IRA", cat["ira_contribution"])
+            d, c = transfer(
+                checking1.id,
+                c_roth.id,
+                clamp_day(y, m, 5),
+                D("583.00"),
+                "Vanguard — Backdoor Roth IRA",
+                cat["ira_contribution"],
+            )
             add(d, c)
 
         # Direct checking debits
@@ -261,55 +359,137 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         add(tx(checking1.id, clamp_day(y, m, 10), -elec, "ComEd", cat["electric"]))
         gas = D("220.00") if m in winter_months else D("45.00")
         add(tx(checking1.id, clamp_day(y, m, 12), -gas, "Nicor Gas", cat["gas_heating"]))
-        add(tx(checking1.id, clamp_day(y, m, 15), -D("298.00"), "State Farm Auto", cat["auto_insurance"]))
-        add(tx(checking1.id, clamp_day(y, m, 15), -D("212.00"), "Allstate Home Insurance", cat["home_insurance"]))
-        add(tx(checking1.id, clamp_day(y, m, 20), -D("280.00"), "Molly Maid", cat["cleaning_services"]))
+        add(
+            tx(
+                checking1.id,
+                clamp_day(y, m, 15),
+                -D("298.00"),
+                "State Farm Auto",
+                cat["auto_insurance"],
+            )
+        )
+        add(
+            tx(
+                checking1.id,
+                clamp_day(y, m, 15),
+                -D("212.00"),
+                "Allstate Home Insurance",
+                cat["home_insurance"],
+            )
+        )
+        add(
+            tx(
+                checking1.id,
+                clamp_day(y, m, 20),
+                -D("280.00"),
+                "Molly Maid",
+                cat["cleaning_services"],
+            )
+        )
 
         # Rental condo expenses (property 2)
-        add(tx(checking1.id, clamp_day(y, m, 10), -D("125.00"),
-               "State Farm Landlord Policy", cat["rental_insurance"], prop_id=prop_condo.id))
+        add(
+            tx(
+                checking1.id,
+                clamp_day(y, m, 10),
+                -D("125.00"),
+                "State Farm Landlord Policy",
+                cat["rental_insurance"],
+                prop_id=prop_condo.id,
+            )
+        )
         if m in (3, 9):
-            add(tx(checking1.id, clamp_day(y, m, 20), -D("2850.00"),
-                   "Cook County Treasurer", cat["rental_property_tax"], prop_id=prop_condo.id))
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, 20),
+                    -D("2850.00"),
+                    "Cook County Treasurer",
+                    cat["rental_property_tax"],
+                    prop_id=prop_condo.id,
+                )
+            )
         # Rental maintenance (1-2 per quarter)
         if rng.random() < 0.5:
             amt = jitter(D("450.00"), rng, 0.30)
-            add(tx(checking1.id, clamp_day(y, m, rng.randint(5, 25)), -amt,
-                   "Contractor", cat["rental_maintenance"], prop_id=prop_condo.id))
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, rng.randint(5, 25)),
+                    -amt,
+                    "Contractor",
+                    cat["rental_maintenance"],
+                    prop_id=prop_condo.id,
+                )
+            )
 
         # Variable student activities from checking
         if rng.random() < 0.80:
             sa_amt = jitter(D("230.00"), rng, 0.25)
-            add(tx(checking1.id, clamp_day(y, m, rng.randint(5, 25)), -sa_amt,
-                   "Activity Fee", cat["student_activities"]))
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, rng.randint(5, 25)),
+                    -sa_amt,
+                    "Activity Fee",
+                    cat["student_activities"],
+                )
+            )
         if rng.random() < 0.60:
             hm_amt = jitter(D("350.00"), rng, 0.40)
-            add(tx(checking1.id, clamp_day(y, m, rng.randint(5, 25)), -hm_amt,
-                   "Home Depot / Contractor", cat["home_maintenance"]))
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, rng.randint(5, 25)),
+                    -hm_amt,
+                    "Home Depot / Contractor",
+                    cat["home_maintenance"],
+                )
+            )
 
         # ── Chase Sapphire Reserve spending ───────────────────────────────────
         res_txns: list = []
 
         def res_var(slug, merchants, mn, mx, min_n, max_n):
-            res_txns.extend(gen_variable(cc_reserve.id, y, m, cat[slug],
-                                         merchants, D(str(mn)), D(str(mx)),
-                                         min_n, max_n, rng))
+            res_txns.extend(
+                gen_variable(
+                    cc_reserve.id,
+                    y,
+                    m,
+                    cat[slug],
+                    merchants,
+                    D(str(mn)),
+                    D(str(mx)),
+                    min_n,
+                    max_n,
+                    rng,
+                )
+            )
 
-        res_var("restaurants", ["Lou Malnati's", "Wildfire", "Boka Restaurant", "Lettuce Entertain You"],
-                480, 680, 4, 7)
-        res_var("coffee", ["Starbucks", "Intelligentsia Coffee", "Caribou Coffee"],
-                85, 130, 4, 8)
-        res_var("food_delivery", ["Grubhub", "DoorDash", "Uber Eats"],
-                120, 200, 2, 4)
-        res_var("gas_fuel", ["BP", "Shell", "Costco Gas"],
-                280, 360, 4, 6)
+        res_var(
+            "restaurants",
+            ["Lou Malnati's", "Wildfire", "Boka Restaurant", "Lettuce Entertain You"],
+            480,
+            680,
+            4,
+            7,
+        )
+        res_var("coffee", ["Starbucks", "Intelligentsia Coffee", "Caribou Coffee"], 85, 130, 4, 8)
+        res_var("food_delivery", ["Grubhub", "DoorDash", "Uber Eats"], 120, 200, 2, 4)
+        res_var("gas_fuel", ["BP", "Shell", "Costco Gas"], 280, 360, 4, 6)
         res_var("fitness", ["Lifetime Fitness Naperville"], 125, 125, 1, 1)
-        res_var("clothing", ["Nordstrom", "Gap Factory", "Target", "Banana Republic"],
-                200, 450, 1, 4)
-        res_var("personal_care", ["Salon", "Dry Cleaning", "CVS Pharmacy"],
-                180, 280, 2, 4)
-        res_var("events_tickets", ["Goodman Theatre", "Cubs Wrigley", "United Center", "House of Blues"],
-                200, 450, 1, 3)
+        res_var(
+            "clothing", ["Nordstrom", "Gap Factory", "Target", "Banana Republic"], 200, 450, 1, 4
+        )
+        res_var("personal_care", ["Salon", "Dry Cleaning", "CVS Pharmacy"], 180, 280, 2, 4)
+        res_var(
+            "events_tickets",
+            ["Goodman Theatre", "Cubs Wrigley", "United Center", "House of Blues"],
+            200,
+            450,
+            1,
+            3,
+        )
         if m == 10:
             res_var("events_tickets", ["Cubs NLCS", "Fall Events"], 400, 900, 1, 2)
 
@@ -317,19 +497,48 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         amz_txns: list = []
 
         def amz_var(slug, merchants, mn, mx, min_n, max_n, **kw):
-            amz_txns.extend(gen_variable(cc_amazon.id, y, m, cat[slug],
-                                          merchants, D(str(mn)), D(str(mx)),
-                                          min_n, max_n, rng, **kw))
+            amz_txns.extend(
+                gen_variable(
+                    cc_amazon.id,
+                    y,
+                    m,
+                    cat[slug],
+                    merchants,
+                    D(str(mn)),
+                    D(str(mx)),
+                    min_n,
+                    max_n,
+                    rng,
+                    **kw,
+                )
+            )
 
-        amz_var("groceries", ["Jewel-Osco", "Whole Foods", "Costco", "Trader Joe's"],
-                1050, 1280, 6, 9, avoid_sunday=True)
-        amz_txns.append(tx(cc_amazon.id, clamp_day(y, m, 5), -D("185.00"), "Verizon", cat["cell_phone"]))
-        for sub_payee, sub_amt in [("Netflix", D("23.00")), ("Peacock", D("13.00")),
-                                    ("Apple TV+", D("10.00")), ("Spotify", D("11.00"))]:
-            amz_txns.append(tx(cc_amazon.id, clamp_day(y, m, 7), -sub_amt, sub_payee, cat["streaming"]))
+        amz_var(
+            "groceries",
+            ["Jewel-Osco", "Whole Foods", "Costco", "Trader Joe's"],
+            1050,
+            1280,
+            6,
+            9,
+            avoid_sunday=True,
+        )
+        amz_txns.append(
+            tx(cc_amazon.id, clamp_day(y, m, 5), -D("185.00"), "Verizon", cat["cell_phone"])
+        )
+        for sub_payee, sub_amt in [
+            ("Netflix", D("23.00")),
+            ("Peacock", D("13.00")),
+            ("Apple TV+", D("10.00")),
+            ("Spotify", D("11.00")),
+        ]:
+            amz_txns.append(
+                tx(cc_amazon.id, clamp_day(y, m, 7), -sub_amt, sub_payee, cat["streaming"])
+            )
         amz_var("school_supplies", ["Staples", "Target", "Amazon"], 40, 120, 1, 2)
         for sub in [("Amazon Prime", D("14.99")), ("Hulu", D("18.00")), ("Audible", D("14.95"))]:
-            amz_txns.append(tx(cc_amazon.id, clamp_day(y, m, 8), -sub[1], sub[0], cat["subscriptions"]))
+            amz_txns.append(
+                tx(cc_amazon.id, clamp_day(y, m, 8), -sub[1], sub[0], cat["subscriptions"])
+            )
 
         add(*res_txns, *amz_txns)
 
@@ -339,48 +548,79 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         if m == 7:
             res_var("travel", ["Delta Airlines", "Resort Hotel", "Hertz"], 4500, 6800, 2, 4)
         if m == 8:
-            add(tx(cc_reserve.id, clamp_day(y, m, 15), -D("3200.00"),
-                   "Northwestern Summer Program", cat["tuition"]))
+            add(
+                tx(
+                    cc_reserve.id,
+                    clamp_day(y, m, 15),
+                    -D("3200.00"),
+                    "Northwestern Summer Program",
+                    cat["tuition"],
+                )
+            )
         if m == 12:
             res_var("gifts_given", ["Amazon", "Nordstrom", "Local Merchants"], 1800, 2800, 3, 6)
         if m == 4:
-            add(tx(cc_reserve.id, clamp_day(y, m, 20), -D("2400.00"),
-                   "CPA Firm", cat["tax_prep"]))
+            add(tx(cc_reserve.id, clamp_day(y, m, 20), -D("2400.00"), "CPA Firm", cat["tax_prep"]))
         if m == 1:
-            add(tx(cc_reserve.id, clamp_day(y, m, 10), -D("850.00"),
-                   "Schwab Portfolio Advisory", cat["advisory_fees"]))
+            add(
+                tx(
+                    cc_reserve.id,
+                    clamp_day(y, m, 10),
+                    -D("850.00"),
+                    "Schwab Portfolio Advisory",
+                    cat["advisory_fees"],
+                )
+            )
 
         # ── CC payments ───────────────────────────────────────────────────────
         reserve_total = sum(abs(t.amount) for t in res_txns)
         if reserve_total > 0:
-            d, c = transfer(checking1.id, cc_reserve.id, clamp_day(y, m, 28),
-                            reserve_total, "Chase Sapphire Reserve Payment", cat["cc_payment"])
+            d, c = transfer(
+                checking1.id,
+                cc_reserve.id,
+                clamp_day(y, m, 28),
+                reserve_total,
+                "Chase Sapphire Reserve Payment",
+                cat["cc_payment"],
+            )
             add(d, c)
 
         amz_total = sum(abs(t.amount) for t in amz_txns)
         if amz_total > 0:
-            d, c = transfer(checking1.id, cc_amazon.id, clamp_day(y, m, 27),
-                            amz_total, "Amazon Prime Visa Payment", cat["cc_payment"])
+            d, c = transfer(
+                checking1.id,
+                cc_amazon.id,
+                clamp_day(y, m, 27),
+                amz_total,
+                "Amazon Prime Visa Payment",
+                cat["cc_payment"],
+            )
             add(d, c)
 
         # Periodic savings transfer from checking to Ally
         if rng.random() < 0.75:
             sav_amt = D(str(rng.choice([2000, 3000, 5000])))
-            d, c = transfer(checking1.id, savings3.id, clamp_day(y, m, 26),
-                            sav_amt, "Transfer to Ally Savings", cat["savings_transfer"])
+            d, c = transfer(
+                checking1.id,
+                savings3.id,
+                clamp_day(y, m, 26),
+                sav_amt,
+                "Transfer to Ally Savings",
+                cat["savings_transfer"],
+            )
             add(d, c)
 
     # ── Opening balance transactions ───────────────────────────────────────────
     targets = {
-        checking1.id:  D("35200.00"),
-        savings2.id:   D("52400.00"),
-        savings3.id:   D("118000.00"),
+        checking1.id: D("35200.00"),
+        savings2.id: D("52400.00"),
+        savings3.id: D("118000.00"),
         cc_reserve.id: D("-4850.00"),
-        cc_amazon.id:  D("-1650.00"),
-        vw_loan.id:    D("-22800.00"),
-        rav4_loan.id:  D("-16400.00"),
-        mortgage1.id:  D("-512400.00"),
-        mortgage2.id:  D("-261200.00"),
+        cc_amazon.id: D("-1650.00"),
+        vw_loan.id: D("-22800.00"),
+        rav4_loan.id: D("-16400.00"),
+        mortgage1.id: D("-512400.00"),
+        mortgage2.id: D("-261200.00"),
     }
     for acc_id, target in targets.items():
         needed = target - running[acc_id]
@@ -390,73 +630,185 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
 
     # ── FIRE scenarios ─────────────────────────────────────────────────────────
     fire_a_streams = [
-        {"id": str(uuid.uuid4()), "label": "Darius — Law Firm Income", "type": "salary",
-         "amount_annual": 285000.00, "start_year": 2024, "end_year": 2038, "growth_rate_annual": 0.03},
-        {"id": str(uuid.uuid4()), "label": "Carmen — School District", "type": "salary",
-         "amount_annual": 130000.00, "start_year": 2024, "end_year": 2038, "growth_rate_annual": 0.025},
-        {"id": str(uuid.uuid4()), "label": "Evanston Rental — Net", "type": "rental",
-         "amount_annual": 24000.00, "start_year": 2024, "end_year": None, "growth_rate_annual": 0.02},
-        {"id": str(uuid.uuid4()), "label": "Carmen IMRF Pension (age 62)", "type": "pension",
-         "amount_annual": 72000.00, "start_year": 2044, "end_year": None, "growth_rate_annual": 0.00},
-        {"id": str(uuid.uuid4()), "label": "Darius Social Security (age 67)", "type": "social_security",
-         "amount_annual": 48000.00, "start_year": 2045, "end_year": None, "growth_rate_annual": 0.025},
-        {"id": str(uuid.uuid4()), "label": "Carmen Social Security (age 67)", "type": "social_security",
-         "amount_annual": 36000.00, "start_year": 2047, "end_year": None, "growth_rate_annual": 0.025},
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Darius — Law Firm Income",
+            "type": "salary",
+            "amount_annual": 285000.00,
+            "start_year": 2024,
+            "end_year": 2038,
+            "growth_rate_annual": 0.03,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Carmen — School District",
+            "type": "salary",
+            "amount_annual": 130000.00,
+            "start_year": 2024,
+            "end_year": 2038,
+            "growth_rate_annual": 0.025,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Evanston Rental — Net",
+            "type": "rental",
+            "amount_annual": 24000.00,
+            "start_year": 2024,
+            "end_year": None,
+            "growth_rate_annual": 0.02,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Carmen IMRF Pension (age 62)",
+            "type": "pension",
+            "amount_annual": 72000.00,
+            "start_year": 2044,
+            "end_year": None,
+            "growth_rate_annual": 0.00,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Darius Social Security (age 67)",
+            "type": "social_security",
+            "amount_annual": 48000.00,
+            "start_year": 2045,
+            "end_year": None,
+            "growth_rate_annual": 0.025,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Carmen Social Security (age 67)",
+            "type": "social_security",
+            "amount_annual": 36000.00,
+            "start_year": 2047,
+            "end_year": None,
+            "growth_rate_annual": 0.025,
+        },
     ]
-    session.add(make_fire_scenario(
-        hid, darius.id, "Retire at 60",
-        D("220000.00"), D("0.0650"), D("0.0300"), 60, fire_a_streams,
-    ))
+    session.add(
+        make_fire_scenario(
+            hid,
+            darius.id,
+            "Retire at 60",
+            D("220000.00"),
+            D("0.0650"),
+            D("0.0300"),
+            60,
+            fire_a_streams,
+        )
+    )
 
     fire_b_streams = [
-        {"id": str(uuid.uuid4()), "label": "Darius — Law Firm Income", "type": "salary",
-         "amount_annual": 285000.00, "start_year": 2024, "end_year": 2033, "growth_rate_annual": 0.03},
-        {"id": str(uuid.uuid4()), "label": "Carmen — School District", "type": "salary",
-         "amount_annual": 130000.00, "start_year": 2024, "end_year": 2033, "growth_rate_annual": 0.025},
-        {"id": str(uuid.uuid4()), "label": "Evanston Rental — Net", "type": "rental",
-         "amount_annual": 24000.00, "start_year": 2024, "end_year": None, "growth_rate_annual": 0.02},
-        {"id": str(uuid.uuid4()), "label": "Carmen IMRF Pension (age 62)", "type": "pension",
-         "amount_annual": 72000.00, "start_year": 2044, "end_year": None, "growth_rate_annual": 0.00},
-        {"id": str(uuid.uuid4()), "label": "Darius Social Security (age 67)", "type": "social_security",
-         "amount_annual": 48000.00, "start_year": 2045, "end_year": None, "growth_rate_annual": 0.025},
-        {"id": str(uuid.uuid4()), "label": "Carmen Social Security (age 67)", "type": "social_security",
-         "amount_annual": 36000.00, "start_year": 2047, "end_year": None, "growth_rate_annual": 0.025},
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Darius — Law Firm Income",
+            "type": "salary",
+            "amount_annual": 285000.00,
+            "start_year": 2024,
+            "end_year": 2033,
+            "growth_rate_annual": 0.03,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Carmen — School District",
+            "type": "salary",
+            "amount_annual": 130000.00,
+            "start_year": 2024,
+            "end_year": 2033,
+            "growth_rate_annual": 0.025,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Evanston Rental — Net",
+            "type": "rental",
+            "amount_annual": 24000.00,
+            "start_year": 2024,
+            "end_year": None,
+            "growth_rate_annual": 0.02,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Carmen IMRF Pension (age 62)",
+            "type": "pension",
+            "amount_annual": 72000.00,
+            "start_year": 2044,
+            "end_year": None,
+            "growth_rate_annual": 0.00,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Darius Social Security (age 67)",
+            "type": "social_security",
+            "amount_annual": 48000.00,
+            "start_year": 2045,
+            "end_year": None,
+            "growth_rate_annual": 0.025,
+        },
+        {
+            "id": str(uuid.uuid4()),
+            "label": "Carmen Social Security (age 67)",
+            "type": "social_security",
+            "amount_annual": 36000.00,
+            "start_year": 2047,
+            "end_year": None,
+            "growth_rate_annual": 0.025,
+        },
     ]
-    session.add(make_fire_scenario(
-        hid, darius.id, "Aggressive FIRE at 55",
-        D("180000.00"), D("0.0700"), D("0.0300"), 55, fire_b_streams,
-    ))
+    session.add(
+        make_fire_scenario(
+            hid,
+            darius.id,
+            "Aggressive FIRE at 55",
+            D("180000.00"),
+            D("0.0700"),
+            D("0.0300"),
+            55,
+            fire_b_streams,
+        )
+    )
 
     # ── Debt records ──────────────────────────────────────────────────────────
-    session.add(make_debt(vw_loan.id, D("34000.00"), D("22800.00"),
-                          D("0.0690"), D("548.00"), 72, date(2022, 8, 1)))
-    session.add(make_debt(rav4_loan.id, D("28000.00"), D("16400.00"),
-                          D("0.0399"), D("462.00"), 72, date(2021, 9, 1)))
+    session.add(
+        make_debt(
+            vw_loan.id, D("34000.00"), D("22800.00"), D("0.0690"), D("548.00"), 72, date(2022, 8, 1)
+        )
+    )
+    session.add(
+        make_debt(
+            rav4_loan.id,
+            D("28000.00"),
+            D("16400.00"),
+            D("0.0399"),
+            D("462.00"),
+            72,
+            date(2021, 9, 1),
+        )
+    )
 
     # ── Budgets ───────────────────────────────────────────────────────────────
     for slug, amount, eff_from in [
-        ("groceries",        D("1150.00"), date(2024, 1, 1)),
-        ("restaurants",      D("550.00"),  date(2024, 1, 1)),
-        ("restaurants",      D("650.00"),  date(2025, 3, 1)),  # lifestyle creep
-        ("coffee",           D("100.00"),  date(2024, 1, 1)),
-        ("food_delivery",    D("150.00"),  date(2024, 1, 1)),
-        ("gas_fuel",         D("320.00"),  date(2024, 1, 1)),
-        ("internet",         D("95.00"),   date(2024, 1, 1)),
-        ("cell_phone",       D("185.00"),  date(2024, 1, 1)),
-        ("streaming",        D("68.00"),   date(2024, 1, 1)),
-        ("electric",         D("195.00"),  date(2024, 1, 1)),
-        ("auto_insurance",   D("298.00"),  date(2024, 1, 1)),
-        ("home_insurance",   D("212.00"),  date(2024, 1, 1)),
-        ("fitness",          D("125.00"),  date(2024, 1, 1)),
-        ("clothing",         D("300.00"),  date(2024, 1, 1)),
-        ("personal_care",    D("230.00"),  date(2024, 1, 1)),
-        ("cleaning_services",D("280.00"),  date(2024, 1, 1)),
-        ("student_activities",D("250.00"), date(2024, 1, 1)),
-        ("events_tickets",   D("300.00"),  date(2024, 1, 1)),
-        ("home_maintenance", D("300.00"),  date(2024, 1, 1)),
-        ("travel",           D("600.00"),  date(2024, 1, 1)),
-        ("gifts_given",      D("200.00"),  date(2024, 1, 1)),
-        ("subscriptions",    D("48.00"),   date(2024, 1, 1)),
+        ("groceries", D("1150.00"), date(2024, 1, 1)),
+        ("restaurants", D("550.00"), date(2024, 1, 1)),
+        ("restaurants", D("650.00"), date(2025, 3, 1)),  # lifestyle creep
+        ("coffee", D("100.00"), date(2024, 1, 1)),
+        ("food_delivery", D("150.00"), date(2024, 1, 1)),
+        ("gas_fuel", D("320.00"), date(2024, 1, 1)),
+        ("internet", D("95.00"), date(2024, 1, 1)),
+        ("cell_phone", D("185.00"), date(2024, 1, 1)),
+        ("streaming", D("68.00"), date(2024, 1, 1)),
+        ("electric", D("195.00"), date(2024, 1, 1)),
+        ("auto_insurance", D("298.00"), date(2024, 1, 1)),
+        ("home_insurance", D("212.00"), date(2024, 1, 1)),
+        ("fitness", D("125.00"), date(2024, 1, 1)),
+        ("clothing", D("300.00"), date(2024, 1, 1)),
+        ("personal_care", D("230.00"), date(2024, 1, 1)),
+        ("cleaning_services", D("280.00"), date(2024, 1, 1)),
+        ("student_activities", D("250.00"), date(2024, 1, 1)),
+        ("events_tickets", D("300.00"), date(2024, 1, 1)),
+        ("home_maintenance", D("300.00"), date(2024, 1, 1)),
+        ("travel", D("600.00"), date(2024, 1, 1)),
+        ("gifts_given", D("200.00"), date(2024, 1, 1)),
+        ("subscriptions", D("48.00"), date(2024, 1, 1)),
     ]:
         session.add(make_budget(hid, cat[slug], amount, eff_from))
 

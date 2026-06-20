@@ -1,9 +1,9 @@
 # HearthLedger — Demo Dataset Specification
 ## Planning Artifact for Claude Code Seed Script Generation
 
-**Date prepared:** June 20, 2026  
-**Target file:** `backend/scripts/seed_demo_data.py`  
-**Transaction date range:** January 1, 2024 – June 20, 2026 (≈ 30 months)  
+**Date prepared:** June 20, 2026
+**Target file:** `backend/scripts/seed_demo_data.py`
+**Transaction date range:** January 1, 2024 – June 20, 2026 (≈ 30 months)
 **Reference spec:** `~/Documents/hearthledger-spec/` (read `CLAUDE.md` and `docs/data-model.md` before implementing)
 
 ---
@@ -237,9 +237,9 @@ All accounts belong to `household_id` = H1's UUID. Fields: `name` (encrypted), `
 
 Account #12 links to the `real_estate_properties` record below. Its `current_balance` should be updated to match the most recent `property_valuations` entry whenever valuations are refreshed.
 
-**Net worth sanity check:**  
-Assets: 18,200 + 58,200 + 210,400 + 95,200 + 48,100 + 32,200 + 72,800 + 13,100 + 665,000 = **1,213,200**  
-Liabilities: 3,200 + 12,400 + 298,700 = **314,300**  
+**Net worth sanity check:**
+Assets: 18,200 + 58,200 + 210,400 + 95,200 + 48,100 + 32,200 + 72,800 + 13,100 + 665,000 = **1,213,200**
+Liabilities: 3,200 + 12,400 + 298,700 = **314,300**
 **Net worth: $898,900** ✓
 
 ### Real Estate Property
@@ -284,8 +284,8 @@ Insert monthly snapshots for all retirement/brokerage/HSA accounts. Starting bal
 | Joint Brokerage | 51,200 | $1,000/mo (auto-invest) | Irregular; add $2,000 in June, $0 in Dec |
 | HSA | 7,600 | $358/mo | Annual max $4,300 for self-only; payroll contribution |
 
-Use a simplified month-over-month growth formula:  
-`balance[m] = balance[m-1] × (1 + 0.09/12) + contribution[m]`  
+Use a simplified month-over-month growth formula:
+`balance[m] = balance[m-1] × (1 + 0.09/12) + contribution[m]`
 with a flat -3% month applied to October 2024 to simulate a brief market dip.
 
 ### FIRE Scenario
@@ -486,9 +486,9 @@ Emma and Noah have `dependent` role — they can view joint accounts but have no
 | 18 | Primary Residence | (property valuation) | `real_estate` | joint | null | — | 1,225,000.00 |
 | 19 | Evanston Rental Condo | (property valuation) | `real_estate` | joint | null | — | 488,000.00 |
 
-**Net worth sanity check:**  
-Assets: 35,200 + 52,400 + 118,000 + 920,500 + 385,200 + 84,200 + 67,800 + 660,400 + 94,600 + 70,200 + 25,600 + 1,225,000 + 488,000 = **4,227,100**  
-Liabilities: 4,850 + 1,650 + 22,800 + 16,400 + 512,400 + 261,200 = **819,300**  
+**Net worth sanity check:**
+Assets: 35,200 + 52,400 + 118,000 + 920,500 + 385,200 + 84,200 + 67,800 + 660,400 + 94,600 + 70,200 + 25,600 + 1,225,000 + 488,000 = **4,227,100**
+Liabilities: 4,850 + 1,650 + 22,800 + 16,400 + 512,400 + 261,200 = **819,300**
 **Net worth: $3,407,800** ✓
 
 ### Account Access Grants
@@ -771,9 +771,9 @@ Ethan has no grants beyond the joint-account read access that all dependents rec
 | 24 | Silver Lake Duplex | (property valuation) | `real_estate` | joint | null | — | 1,350,000.00 |
 | 25 | Palm Springs Vacation Rental | (property valuation) | `real_estate` | joint | null | — | 985,000.00 |
 
-**Net worth sanity check:**  
-Assets: 72,400 + 145,000 + 38,500 + 168,000 + 1,920,400 + 695,200 + 118,400 + 98,600 + 1,580,500 + 568,200 + 12,400 + 88,400 + 44,200 + 4,100,000 + 1,350,000 + 985,000 = **11,985,200**  
-Liabilities: 8,200 + 3,800 + 2,400 + 1,285,000 + 645,200 + 418,600 + 92,000 + 38,200 + 28,400 = **2,521,800**  
+**Net worth sanity check:**
+Assets: 72,400 + 145,000 + 38,500 + 168,000 + 1,920,400 + 695,200 + 118,400 + 98,600 + 1,580,500 + 568,200 + 12,400 + 88,400 + 44,200 + 4,100,000 + 1,350,000 + 985,000 = **11,985,200**
+Liabilities: 8,200 + 3,800 + 2,400 + 1,285,000 + 645,200 + 418,600 + 92,000 + 38,200 + 28,400 = **2,521,800**
 **Net worth: $9,463,400** ✓
 
 ### Real Estate Properties
