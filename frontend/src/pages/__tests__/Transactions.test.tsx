@@ -1,4 +1,5 @@
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { type ReactNode } from "react"
+import { render, screen, waitFor, within, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { vi, describe, it, expect, beforeEach } from "vitest"
@@ -15,6 +16,15 @@ import type {
 
 vi.mock("@tanstack/react-router", () => ({
   useParams: () => ({ accountId: "acct-1" }),
+  Link: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+}))
+
+vi.mock("@/api/pension", () => ({
+  pensionApi: { get: vi.fn().mockRejectedValue(new Error("not found")) },
+}))
+
+vi.mock("@/api/properties", () => ({
+  propertiesApi: { getByAccountId: vi.fn().mockRejectedValue(new Error("not found")) },
 }))
 
 vi.mock("@/api/transactions", () => ({
@@ -270,6 +280,19 @@ describe("Transactions — delete confirm", () => {
     expect(dialog.textContent).toContain('"Coffee Shop"')
     expect(dialog.textContent).toMatch(/\$50\.00/)
   })
+
+  it("pressing Escape closes delete confirm dialog", async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => screen.getByTitle(/delete transaction/i))
+    await user.click(screen.getByTitle(/delete transaction/i))
+
+    fireEvent(screen.getByRole("dialog"), new Event("cancel"))
+
+    expect(screen.queryByText("Delete transaction?")).not.toBeInTheDocument()
+    expect(transactionsApi.delete).not.toHaveBeenCalled()
+  })
 })
 
 describe("Transactions — empty state — pension", () => {
@@ -287,5 +310,27 @@ describe("Transactions — empty state — pension", () => {
     await waitFor(() => {
       expect(screen.getAllByRole("button", { name: /new entry/i })).toHaveLength(1)
     })
+  })
+
+  it("hides Import button in header for pension accounts", async () => {
+    vi.mocked(accountsApi.get).mockResolvedValue(makeAccount("pension"))
+
+    renderPage()
+
+    // Wait for account data to load (Edit pension details link appears for pension)
+    await waitFor(() => screen.getByRole("link", { name: /edit pension details/i }))
+    expect(screen.queryByRole("button", { name: /import/i })).not.toBeInTheDocument()
+  })
+
+  it("shows New entry CTA (not Import) in empty state for pension accounts", async () => {
+    vi.mocked(accountsApi.get).mockResolvedValue(makeAccount("pension"))
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getByText(/no transactions yet/i)).toBeInTheDocument()
+    })
+    expect(screen.getByText(/add your first entry/i)).toBeInTheDocument()
+    expect(screen.queryByText(/import a bank export/i)).not.toBeInTheDocument()
   })
 })

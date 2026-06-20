@@ -29,7 +29,7 @@ function AmountField({ control, defaultSign, error }: AmountFieldProps) {
                 const next: "+" | "-" = sign === "-" ? "+" : "-"
                 setSign(next)
                 const abs = field.value.replace(/^[+-]/, "")
-                field.onChange(next + abs)
+                if (abs) field.onChange(next + abs)
               }}
               className="px-3 py-2 text-sm font-medium bg-gray-50 border-r border-gray-300 hover:bg-gray-100 transition-colors select-none"
               aria-label={sign === "-" ? "Expense (negative)" : "Income (positive)"}

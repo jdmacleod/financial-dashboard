@@ -106,10 +106,13 @@ export function ImportModal({ accountId, onClose }: { accountId: string; onClose
     <dialog
       ref={dialogRef}
       onCancel={onClose}
+      aria-labelledby="import-transactions-title"
       className="w-full max-w-lg rounded-xl shadow-xl p-6 m-auto backdrop:bg-black/30"
     >
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Import transactions</h2>
+        <h2 id="import-transactions-title" className="text-lg font-semibold">
+          Import transactions
+        </h2>
         <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
           ✕
         </button>

@@ -91,9 +91,12 @@ function DeleteConfirmDialog({
     <dialog
       ref={dialogRef}
       onCancel={onCancel}
+      aria-labelledby="delete-transaction-title"
       className="w-full max-w-sm rounded-xl shadow-xl p-6 m-auto backdrop:bg-black/30"
     >
-      <h2 className="text-lg font-semibold mb-2">Delete transaction?</h2>
+      <h2 id="delete-transaction-title" className="text-lg font-semibold mb-2">
+        Delete transaction?
+      </h2>
       <p className="text-sm text-gray-600 mb-1">
         <span className="font-medium">"{payee}"</span> · {formattedAmount}
       </p>
@@ -465,7 +468,7 @@ export default function Transactions() {
           ))}
           {transactions.length === 0 && (
             <div className="px-4 py-12 text-center">
-              {isInvestmentAccount ? (
+              {isInvestmentAccount || isPensionAccount ? (
                 <>
                   <Receipt className="mx-auto mb-3 text-gray-300" size={36} />
                   <p className="text-sm font-medium text-gray-700 mb-1">No transactions yet</p>
