@@ -19,7 +19,7 @@ import { useRouterState } from "@tanstack/react-router"
 import { reportsApi } from "@/api/reports"
 import { accountsApi } from "@/api/accounts"
 import { useCurrentUser } from "@/hooks/useCurrentUser"
-import { formatCurrency } from "@/lib/formatters"
+import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
 import { toIso } from "@/lib/dateRange"
 import { startOfYear, subYears, subDays } from "date-fns"
 
@@ -689,9 +689,14 @@ export default function Dashboard() {
                     <div style={{ fontSize: "12.5px", color: "var(--text3)", fontWeight: 500 }}>
                       {a.nickname}
                     </div>
-                    {a.institution_name && (
+                    {(a.institution_name || a.account_number_last4) && (
                       <div style={{ fontSize: "10px", color: "var(--muted)" }}>
-                        {a.institution_name}
+                        {[
+                          a.institution_name,
+                          formatMaskedAccountNumber(a.account_number_last4),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </div>
                     )}
                   </div>

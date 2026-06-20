@@ -263,6 +263,24 @@ describe("Accounts — split-panel ledger", () => {
     expect(screen.getByTestId("edit-account-modal")).toBeInTheDocument()
   })
 
+  it("shows masked account number in list row subtitle", async () => {
+    renderAccounts()
+    await waitFor(() => {
+      // Chase Checking: institution · type · masked number
+      expect(screen.getByText("Chase · Checking · XXX...1234")).toBeInTheDocument()
+    })
+  })
+
+  it("shows masked account number in detail panel", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => {
+      expect(screen.getByText("XXX...1234")).toBeInTheDocument()
+    })
+  })
+
   it("shows empty state when no accounts", async () => {
     const { accountsApi: mock } = await import("@/api/accounts")
     ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([])

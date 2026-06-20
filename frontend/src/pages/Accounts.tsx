@@ -7,7 +7,7 @@ import { snapshotsApi } from "@/api/snapshots"
 import { useAuth } from "@/hooks/useAuth"
 import { ACCOUNT_LABELS, ACCOUNT_CATEGORY_COLORS } from "@/lib/accountLabels"
 import { RETIREMENT_ACCOUNT_TYPES, BROKERAGE_ACCOUNT_TYPES } from "@/lib/accountTypes"
-import { formatCurrency } from "@/lib/formatters"
+import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
 import AddAccountModal from "@/components/app/AddAccountModal"
 import ArchiveAccountModal from "@/components/app/ArchiveAccountModal"
 import EditAccountModal from "@/components/app/EditAccountModal"
@@ -145,9 +145,13 @@ function AccountRow({
           {account.nickname}
         </div>
         <div style={{ fontSize: "11px", color: "var(--muted)" }}>
-          {account.institution_name
-            ? `${account.institution_name} · ${ACCOUNT_LABELS[account.account_type]}`
-            : ACCOUNT_LABELS[account.account_type]}
+          {[
+            account.institution_name,
+            ACCOUNT_LABELS[account.account_type],
+            formatMaskedAccountNumber(account.account_number_last4),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </div>
       </div>
       {/* Balance */}
@@ -363,6 +367,11 @@ function DetailPanel({
         </div>
         {account.institution_name && (
           <div style={{ fontSize: "12px", color: "var(--muted)" }}>{account.institution_name}</div>
+        )}
+        {account.account_number_last4 && (
+          <div style={{ fontSize: "12px", color: "var(--muted)" }}>
+            {formatMaskedAccountNumber(account.account_number_last4)}
+          </div>
         )}
         <div
           style={{

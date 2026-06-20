@@ -4,11 +4,13 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { accountsApi } from "@/api/accounts"
+import { useAuth } from "@/hooks/useAuth"
 import type { AccountResponse } from "@/api/types"
 
 const editSchema = z.object({
   nickname: z.string().min(1, "Required"),
   institution_name: z.string().optional(),
+  account_number: z.string().optional(),
   notes: z.string().optional(),
   include_in_net_worth: z.boolean(),
 })
@@ -42,6 +44,8 @@ const LABEL_STYLE: React.CSSProperties = {
 export default function EditAccountModal({ account, onClose }: EditAccountModalProps) {
   const qc = useQueryClient()
   const overlayRef = useRef<HTMLDivElement>(null)
+  const role = useAuth((s) => s.role)
+  const canViewAccountNumber = role === "primary" || role === "partner"
 
   const {
     register,
@@ -52,6 +56,7 @@ export default function EditAccountModal({ account, onClose }: EditAccountModalP
     defaultValues: {
       nickname: account.nickname,
       institution_name: account.institution_name ?? "",
+      account_number: "",
       notes: account.notes ?? "",
       include_in_net_worth: account.include_in_net_worth,
     },
@@ -62,6 +67,7 @@ export default function EditAccountModal({ account, onClose }: EditAccountModalP
       accountsApi.update(account.id, {
         nickname: data.nickname,
         institution_name: data.institution_name || null,
+        account_number: data.account_number || null,
         notes: data.notes || null,
         include_in_net_worth: data.include_in_net_worth,
       }),
@@ -165,6 +171,23 @@ export default function EditAccountModal({ account, onClose }: EditAccountModalP
               placeholder="e.g. Chase Bank"
             />
           </div>
+
+          {/* Account number — only shown to primary/partner */}
+          {canViewAccountNumber && (
+            <div>
+              <label style={LABEL_STYLE}>Account number</label>
+              <input
+                {...register("account_number")}
+                style={INPUT_STYLE}
+                placeholder={
+                  account.account_number_last4
+                    ? `•••• ${account.account_number_last4} — enter to replace`
+                    : "Optional"
+                }
+                autoComplete="off"
+              />
+            </div>
+          )}
 
           {/* Notes */}
           <div>

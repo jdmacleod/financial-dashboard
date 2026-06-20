@@ -140,6 +140,14 @@ describe("Retirement page", () => {
     })
   })
 
+  it("shows masked account number in subtitle", async () => {
+    renderPage()
+    await waitFor(() => {
+      // Fidelity 401k: institution · type · masked number
+      expect(screen.getByText("Fidelity · 401(k) · XXX...1111")).toBeInTheDocument()
+    })
+  })
+
   it("shows empty state when no retirement accounts", async () => {
     const { accountsApi: mock } = await import("@/api/accounts")
     ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([])

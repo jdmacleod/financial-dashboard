@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 import EditAccountModal from "../EditAccountModal"
 import { accountsApi } from "@/api/accounts"
+import { useAuth } from "@/hooks/useAuth"
 import { ApiError } from "@/api/client"
 import { createClient, wrapper } from "@/test/testUtils"
 import type { AccountResponse } from "@/api/types"
@@ -11,6 +12,11 @@ vi.mock("@/api/accounts", () => ({
   accountsApi: {
     update: vi.fn(),
   },
+}))
+
+vi.mock("@/hooks/useAuth", () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  useAuth: vi.fn((selector: any) => selector({ role: "primary" })),
 }))
 
 const mockAccount: AccountResponse = {
@@ -171,5 +177,61 @@ describe("EditAccountModal", () => {
         expect.objectContaining({ notes: null }),
       )
     })
+  })
+
+  it("shows account number field with last-4 placeholder for primary role", () => {
+    renderModal()
+    expect(
+      screen.getByPlaceholderText("•••• 1234 — enter to replace"),
+    ).toBeInTheDocument()
+  })
+
+  it("shows account number field with 'Optional' placeholder when no last-4 exists", () => {
+    const accountNoNumber: AccountResponse = { ...mockAccount, account_number_last4: null }
+    renderModal(accountNoNumber)
+    expect(screen.getByPlaceholderText("Optional")).toBeInTheDocument()
+  })
+
+  it("sends account_number in update payload when a value is entered", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    vi.mocked(accountsApi.update).mockResolvedValue(mockAccount)
+
+    renderModal(mockAccount, onClose)
+
+    const accountNumberInput = screen.getByPlaceholderText("•••• 1234 — enter to replace")
+    await user.type(accountNumberInput, "9876543210")
+    await user.click(screen.getByRole("button", { name: /save/i }))
+
+    await waitFor(() => {
+      expect(accountsApi.update).toHaveBeenCalledWith(
+        "acct-1",
+        expect.objectContaining({ account_number: "9876543210" }),
+      )
+    })
+  })
+
+  it("sends account_number as null when field is left blank", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountsApi.update).mockResolvedValue(mockAccount)
+
+    renderModal()
+
+    await user.click(screen.getByRole("button", { name: /save/i }))
+
+    await waitFor(() => {
+      expect(accountsApi.update).toHaveBeenCalledWith(
+        "acct-1",
+        expect.objectContaining({ account_number: null }),
+      )
+    })
+  })
+
+  it("hides account number field for dependent role", () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(useAuth).mockImplementation((selector: any) => selector({ role: "dependent" }))
+    renderModal()
+    expect(screen.queryByPlaceholderText("•••• 1234 — enter to replace")).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/account number/i)).not.toBeInTheDocument()
   })
 })

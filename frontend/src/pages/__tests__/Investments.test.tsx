@@ -84,7 +84,15 @@ describe("Investments page", () => {
   it("shows institution name", async () => {
     renderPage()
     await waitFor(() => {
-      expect(screen.getAllByText("Fidelity").length).toBeGreaterThan(0)
+      // Institution is now combined with the masked account number
+      expect(screen.getByText("Fidelity · XXX...9012")).toBeInTheDocument()
+    })
+  })
+
+  it("shows masked account number", async () => {
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText("Fidelity · XXX...9012")).toBeInTheDocument()
     })
   })
 

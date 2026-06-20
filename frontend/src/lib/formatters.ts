@@ -19,3 +19,8 @@ export function formatDate(value: string): string {
     day: "numeric",
   })
 }
+
+export function formatMaskedAccountNumber(last4: string | null): string | null {
+  if (!last4) return null
+  return `XXX...${last4}`
+}

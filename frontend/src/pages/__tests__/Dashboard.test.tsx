@@ -221,6 +221,14 @@ describe("Dashboard — Overview tab", () => {
     })
   })
 
+  it("shows masked account number alongside institution in holdings list", async () => {
+    renderDashboard()
+    await waitFor(() => {
+      // Fidelity 401k has institution_name "Fidelity" and account_number_last4 "5678"
+      expect(screen.getByText("Fidelity · XXX...5678")).toBeInTheDocument()
+    })
+  })
+
   it("calls netWorth with 1Y date range when range=1y", async () => {
     const { reportsApi: mock } = await import("@/api/reports")
     mockUseRouterState.mockReturnValue("?range=1y")

@@ -8,7 +8,7 @@ import { useQuery, useQueries } from "@tanstack/react-query"
 import { accountsApi } from "@/api/accounts"
 import { snapshotsApi } from "@/api/snapshots"
 import { ACCOUNT_LABELS } from "@/lib/accountLabels"
-import { formatCurrency } from "@/lib/formatters"
+import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
 import type { AccountResponse, AccountType } from "@/api/types"
 
 const GOLD = "#d9b96a"
@@ -77,9 +77,13 @@ function RetirementRow({ account }: { account: AccountResponse }) {
           {account.nickname}
         </div>
         <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "1px" }}>
-          {account.institution_name
-            ? `${account.institution_name} · ${ACCOUNT_LABELS[account.account_type]}`
-            : ACCOUNT_LABELS[account.account_type]}
+          {[
+            account.institution_name,
+            ACCOUNT_LABELS[account.account_type],
+            formatMaskedAccountNumber(account.account_number_last4),
+          ]
+            .filter(Boolean)
+            .join(" · ")}
         </div>
       </div>
       <div style={{ textAlign: "right", flexShrink: 0 }}>
