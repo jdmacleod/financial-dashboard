@@ -1,21 +1,108 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
-  ComposedChart,
+  BarChart,
   Bar,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
-  Legend,
+  Cell,
 } from "recharts"
 import { reportsApi } from "@/api/reports"
 import { formatCurrency } from "@/lib/formatters"
 import { lastNMonthsRange } from "@/lib/dateRange"
 
 type GroupBy = "month" | "quarter"
+
+// ── KPI card ─────────────────────────────────────────────────────────────────
+
+function KpiCard({
+  label,
+  value,
+  accent,
+  negative,
+}: {
+  label: string
+  value: string
+  accent?: boolean
+  negative?: boolean
+}) {
+  const color = accent ? "var(--text)" : negative ? "var(--liab)" : "var(--up)"
+
+  return (
+    <div
+      style={{
+        background: accent ? "var(--grad)" : "var(--card)",
+        border: `1px solid ${accent ? "var(--accent-bd)" : "var(--bd)"}`,
+        borderRadius: "14px",
+        padding: "16px 18px",
+      }}
+    >
+      <div
+        style={{
+          fontSize: "10px",
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: accent ? "var(--label)" : "var(--faint)",
+          marginBottom: "6px",
+        }}
+      >
+        {label}
+      </div>
+      <div style={{ fontSize: "20px", fontWeight: 700, color, lineHeight: 1 }}>{value}</div>
+    </div>
+  )
+}
+
+// Category bar (horizontal)
+function CategoryBar({
+  name,
+  amount,
+  percentage,
+  max,
+}: {
+  name: string
+  amount: string
+  percentage: number
+  max: number
+}) {
+  const barWidth = max > 0 ? (Math.abs(Number(amount)) / max) * 100 : 0
+
+  return (
+    <div style={{ marginBottom: "10px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
+        <span style={{ fontSize: "12px", color: "var(--text3)" }}>{name}</span>
+        <span style={{ fontSize: "12px", color: "var(--muted)" }}>
+          {formatCurrency(String(Math.abs(Number(amount))))}
+          <span style={{ fontSize: "10px", color: "var(--faint)", marginLeft: "4px" }}>
+            {percentage.toFixed(0)}%
+          </span>
+        </span>
+      </div>
+      <div
+        style={{
+          height: "4px",
+          borderRadius: "2px",
+          background: "var(--track)",
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            height: "100%",
+            width: `${barWidth}%`,
+            background: "var(--liab)",
+            borderRadius: "2px",
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ReportCashFlow() {
   const [months, setMonths] = useState(12)
@@ -28,139 +115,343 @@ export default function ReportCashFlow() {
     queryFn: () => reportsApi.cashFlow(range.from, range.to, groupBy),
   })
 
-  const chartData = data?.series.map((p) => ({
-    period: p.period,
-    Income: Number(p.income),
-    Expenses: Math.abs(Number(p.expenses)),
-    Net: Number(p.net),
-  }))
+  const { data: spending } = useQuery({
+    queryKey: ["reports", "spending-by-category", range],
+    queryFn: () => reportsApi.spendingByCategory(range.from, range.to),
+    staleTime: 30_000,
+  })
+
+  const chartData = useMemo(
+    () =>
+      data?.series.map((p) => ({
+        period: p.period.slice(0, 7),
+        Income: Number(p.income),
+        Expenses: Math.abs(Number(p.expenses)),
+        isPositive: Number(p.net) >= 0,
+      })) ?? [],
+    [data],
+  )
+
+  const maxSpend = useMemo(
+    () =>
+      spending ? Math.max(0, ...spending.categories.map((c) => Math.abs(Number(c.amount)))) : 0,
+    [spending],
+  )
+
+  const savingsRateStr = data?.totals ? `${data.totals.savings_rate.toFixed(1)}%` : "—"
+  const netPositive = data?.totals ? Number(data.totals.net) >= 0 : true
 
   return (
-    <div className="p-8 max-w-5xl mx-auto space-y-6">
-      <h1 className="text-2xl font-semibold">Cash Flow</h1>
-
-      {data?.totals && (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 mb-1">Total Income</p>
-            <p className="text-xl font-semibold text-emerald-600">
-              {formatCurrency(data.totals.income)}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 mb-1">Total Expenses</p>
-            <p className="text-xl font-semibold text-red-600">
-              {formatCurrency(data.totals.expenses)}
-            </p>
-          </div>
-          <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 mb-1">Savings Rate</p>
-            <p
-              className={`text-xl font-semibold ${data.totals.savings_rate >= 0 ? "text-indigo-600" : "text-red-600"}`}
-            >
-              {data.totals.savings_rate.toFixed(1)}%
-            </p>
-          </div>
-        </div>
-      )}
-
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <div className="flex gap-1">
-            {[6, 12, 24].map((m) => (
-              <button
-                key={m}
-                onClick={() => setMonths(m)}
-                className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
-                  months === m
-                    ? "bg-indigo-600 border-indigo-600 text-white"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {m}m
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-1">
-            {(["month", "quarter"] as GroupBy[]).map((g) => (
-              <button
-                key={g}
-                onClick={() => setGroupBy(g)}
-                className={`rounded-full px-3 py-1 text-xs font-medium border capitalize transition-colors ${
-                  groupBy === g
-                    ? "bg-indigo-600 border-indigo-600 text-white"
-                    : "border-gray-300 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {g}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {isLoading && <div className="text-sm text-gray-400 py-8 text-center">Loading…</div>}
-        {error && <div className="text-sm text-red-500 py-4">Failed to load report.</div>}
-
-        {chartData && chartData.length > 0 && (
-          <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-              <XAxis dataKey="period" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
-              <YAxis
-                tick={{ fontSize: 11 }}
-                tickLine={false}
-                axisLine={false}
-                tickFormatter={(v: number) => `$${(v / 1000).toFixed(0)}k`}
-              />
-              <Tooltip formatter={(v) => formatCurrency(v as number)} />
-              <Legend iconType="circle" iconSize={8} />
-              <Bar dataKey="Income" fill="#10b981" radius={[3, 3, 0, 0]} />
-              <Bar dataKey="Expenses" fill="#ef4444" radius={[3, 3, 0, 0]} />
-              <Line type="monotone" dataKey="Net" stroke="#6366f1" strokeWidth={2} dot={false} />
-            </ComposedChart>
-          </ResponsiveContainer>
-        )}
+    <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+      {/* Header */}
+      <div style={{ marginBottom: "20px" }}>
+        <h1 style={{ fontSize: "22px", fontWeight: 700, color: "var(--text)", margin: 0 }}>
+          Cash flow
+        </h1>
       </div>
 
-      {data?.series && data.series.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-500">Period</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Income</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">
-                  Expenses
-                </th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">Net</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-500">
-                  Savings %
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {[...data.series].reverse().map((p) => (
-                <tr key={p.period}>
-                  <td className="px-4 py-2 text-gray-600">{p.period}</td>
-                  <td className="px-4 py-2 text-right text-emerald-600">
-                    {formatCurrency(p.income)}
-                  </td>
-                  <td className="px-4 py-2 text-right text-red-600">
-                    {formatCurrency(p.expenses)}
-                  </td>
-                  <td
-                    className={`px-4 py-2 text-right font-medium ${Number(p.net) >= 0 ? "text-indigo-600" : "text-red-600"}`}
-                  >
-                    {formatCurrency(p.net)}
-                  </td>
-                  <td className="px-4 py-2 text-right text-gray-600">
-                    {p.savings_rate.toFixed(1)}%
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Period controls */}
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          alignItems: "center",
+          marginBottom: "16px",
+          flexWrap: "wrap",
+        }}
+      >
+        <div style={{ display: "flex", gap: "4px" }}>
+          {[6, 12, 24].map((m) => (
+            <button
+              key={m}
+              onClick={() => setMonths(m)}
+              style={{
+                padding: "4px 12px",
+                borderRadius: "20px",
+                fontSize: "12px",
+                fontWeight: 500,
+                border: `1px solid ${months === m ? "transparent" : "var(--bd)"}`,
+                background: months === m ? "var(--toggle-on-bg)" : "transparent",
+                color: months === m ? "var(--toggle-on-text)" : "var(--muted)",
+                cursor: "pointer",
+              }}
+            >
+              {m}m
+            </button>
+          ))}
         </div>
+        <div style={{ display: "flex", gap: "4px" }}>
+          {(["month", "quarter"] as GroupBy[]).map((g) => (
+            <button
+              key={g}
+              onClick={() => setGroupBy(g)}
+              style={{
+                padding: "4px 12px",
+                borderRadius: "20px",
+                fontSize: "12px",
+                fontWeight: 500,
+                border: `1px solid ${groupBy === g ? "transparent" : "var(--bd)"}`,
+                background: groupBy === g ? "var(--toggle-on-bg)" : "transparent",
+                color: groupBy === g ? "var(--toggle-on-text)" : "var(--muted)",
+                cursor: "pointer",
+                textTransform: "capitalize",
+              }}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading && (
+        <div style={{ padding: "48px 0", textAlign: "center", color: "var(--muted)" }}>
+          Loading…
+        </div>
+      )}
+      {error && (
+        <div style={{ padding: "24px 0", color: "var(--liab)" }}>Failed to load report.</div>
+      )}
+
+      {data?.totals && (
+        <>
+          {/* 4 KPI cards */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: "12px",
+              marginBottom: "16px",
+            }}
+          >
+            <KpiCard label="Total income" value={formatCurrency(data.totals.income)} />
+            <KpiCard
+              label="Total expenses"
+              value={formatCurrency(String(Math.abs(Number(data.totals.expenses))))}
+              negative
+            />
+            <KpiCard
+              label="Net saved"
+              value={formatCurrency(data.totals.net)}
+              accent={netPositive}
+              negative={!netPositive}
+            />
+            <KpiCard label="Savings rate" value={savingsRateStr} />
+          </div>
+
+          {/* 12-month bar chart */}
+          <div
+            style={{
+              background: "var(--card)",
+              border: "1px solid var(--bd)",
+              borderRadius: "14px",
+              padding: "18px 20px",
+              marginBottom: "16px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "11px",
+                letterSpacing: "0.1em",
+                textTransform: "uppercase",
+                color: "var(--faint)",
+                marginBottom: "14px",
+              }}
+            >
+              Income vs Expenses
+            </div>
+            {chartData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={chartData} barCategoryGap="30%" barGap={2}>
+                  <CartesianGrid stroke="var(--axis)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="period"
+                    tick={{ fontSize: 10, fill: "var(--muted)" }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: "var(--muted)" }}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(v: number) =>
+                      v >= 1000 ? `$${(v / 1000).toFixed(0)}k` : `$${v}`
+                    }
+                    width={44}
+                  />
+                  <Tooltip
+                    formatter={(v) => [formatCurrency(String(v ?? 0)), ""]}
+                    contentStyle={{
+                      background: "var(--card)",
+                      border: "1px solid var(--bd2)",
+                      borderRadius: "10px",
+                      fontSize: 11,
+                    }}
+                    labelStyle={{ color: "var(--text3)", fontSize: 10 }}
+                  />
+                  <Bar dataKey="Income" radius={[3, 3, 0, 0]}>
+                    {chartData.map((_, i) => (
+                      <Cell key={i} fill="var(--up)" />
+                    ))}
+                  </Bar>
+                  <Bar dataKey="Expenses" radius={[3, 3, 0, 0]}>
+                    {chartData.map((_, i) => (
+                      <Cell key={i} fill="var(--liab)" />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div
+                style={{
+                  padding: "32px 0",
+                  textAlign: "center",
+                  color: "var(--faint)",
+                  fontSize: "12px",
+                }}
+              >
+                No data for this period.
+              </div>
+            )}
+          </div>
+
+          {/* Bottom row: category breakdown + period table */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "14px" }}>
+            {/* Spending by category */}
+            {spending && spending.categories.length > 0 && (
+              <div
+                style={{
+                  background: "var(--card)",
+                  border: "1px solid var(--bd)",
+                  borderRadius: "14px",
+                  padding: "18px 20px",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "11px",
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "var(--faint)",
+                    marginBottom: "14px",
+                  }}
+                >
+                  Top spending categories
+                </div>
+                {spending.categories.slice(0, 8).map((c) => (
+                  <CategoryBar
+                    key={c.category_id ?? c.name}
+                    name={c.name}
+                    amount={c.amount}
+                    percentage={c.percentage}
+                    max={maxSpend}
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Period table */}
+            {data.series.length > 0 && (
+              <div
+                style={{
+                  background: "var(--card)",
+                  border: "1px solid var(--bd)",
+                  borderRadius: "14px",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "11px",
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                    color: "var(--faint)",
+                    padding: "14px 16px 0",
+                    marginBottom: "8px",
+                  }}
+                >
+                  By period
+                </div>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ borderBottom: "1px solid var(--bd)" }}>
+                      {["Period", "Income", "Expenses", "Net", "Rate"].map((h) => (
+                        <th
+                          key={h}
+                          style={{
+                            padding: "6px 12px",
+                            textAlign: h === "Period" ? "left" : "right",
+                            fontSize: "10px",
+                            fontWeight: 600,
+                            color: "var(--faint)",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...data.series].reverse().map((p) => {
+                      const isPositive = Number(p.net) >= 0
+                      return (
+                        <tr key={p.period} style={{ borderBottom: "1px solid var(--bd)" }}>
+                          <td
+                            style={{ padding: "7px 12px", fontSize: "12px", color: "var(--muted)" }}
+                          >
+                            {p.period.slice(0, 7)}
+                          </td>
+                          <td
+                            style={{
+                              padding: "7px 12px",
+                              fontSize: "12px",
+                              color: "var(--up)",
+                              textAlign: "right",
+                            }}
+                          >
+                            {formatCurrency(p.income)}
+                          </td>
+                          <td
+                            style={{
+                              padding: "7px 12px",
+                              fontSize: "12px",
+                              color: "var(--liab)",
+                              textAlign: "right",
+                            }}
+                          >
+                            {formatCurrency(String(Math.abs(Number(p.expenses))))}
+                          </td>
+                          <td
+                            style={{
+                              padding: "7px 12px",
+                              fontSize: "12px",
+                              fontWeight: 600,
+                              color: isPositive ? "var(--up)" : "var(--liab)",
+                              textAlign: "right",
+                            }}
+                          >
+                            {formatCurrency(p.net)}
+                          </td>
+                          <td
+                            style={{
+                              padding: "7px 12px",
+                              fontSize: "12px",
+                              color: "var(--muted)",
+                              textAlign: "right",
+                            }}
+                          >
+                            {p.savings_rate.toFixed(1)}%
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   )
