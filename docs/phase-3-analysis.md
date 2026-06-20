@@ -14,15 +14,15 @@ audit log UI pages.
 
 ## Deliverables
 
-- [ ] Net worth over time (monthly time series)
-- [ ] Cash flow: income vs expenses by month
-- [ ] Spending by category (with drilldown)
-- [ ] Budget CRUD and vs-actuals comparison
-- [ ] Property P&L report (Amendment 3)
-- [ ] Dashboard summary page with key metric cards
-- [ ] Settings > Activity log page (primary only)
-- [ ] Settings > Security log page (own events; primary sees all)
-- [ ] Per-record history panel on transactions and accounts
+- [x] Net worth over time (monthly time series)
+- [x] Cash flow: income vs expenses by month
+- [x] Spending by category (with drilldown)
+- [x] Budget CRUD and vs-actuals comparison
+- [x] Property P&L report (Amendment 3)
+- [x] Dashboard summary page with key metric cards
+- [x] Settings > Activity log page (primary only)
+- [x] Settings > Security log page (own events; primary sees all)
+- [x] Per-record history panel on transactions and accounts
 
 ---
 

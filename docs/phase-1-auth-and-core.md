@@ -14,19 +14,19 @@ infrastructure. Every subsequent phase depends on these foundations.
 
 ## Deliverables
 
-- [ ] Login / logout / token refresh endpoints
-- [ ] JWT middleware resolving `VisibilityContext` on every authenticated request
-- [ ] Account lockout after `MAX_LOGIN_ATTEMPTS` failed attempts
-- [ ] Executor re-auth endpoint
-- [ ] Household read endpoint (single household per installation)
-- [ ] Member CRUD (primary role only for create/update/delete)
-- [ ] User CRUD (create user account linked to member)
-- [ ] Account CRUD — all queries through `AccountRepository.get_visible(ctx)`
-- [ ] Account access grant / revoke (primary role only)
-- [ ] `AuditRepository` (append-only) + `@audit` decorator
-- [ ] All Phase 1 service methods emit audit events
-- [ ] `POST /api/v1/setup` one-time setup endpoint (creates household + first primary user)
-- [ ] Frontend: login page, member list, account list
+- [x] Login / logout / token refresh endpoints
+- [x] JWT middleware resolving `VisibilityContext` on every authenticated request
+- [x] Account lockout after `MAX_LOGIN_ATTEMPTS` failed attempts
+- [x] Executor re-auth endpoint
+- [x] Household read endpoint (single household per installation)
+- [x] Member CRUD (primary role only for create/update/delete)
+- [x] User CRUD (create user account linked to member)
+- [x] Account CRUD — all queries through `AccountRepository.get_visible(ctx)`
+- [x] Account access grant / revoke (primary role only)
+- [x] `AuditRepository` (append-only) + `@audit` decorator
+- [x] All Phase 1 service methods emit audit events
+- [x] `POST /api/v1/setup` one-time setup endpoint (creates household + first primary user)
+- [x] Frontend: login page, member list, account list
 
 ---
 

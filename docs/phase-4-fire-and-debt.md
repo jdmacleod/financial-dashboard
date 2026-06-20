@@ -14,13 +14,13 @@ snowball), and the FIRE and debt analysis UI pages.
 
 ## Deliverables
 
-- [ ] `FireInputDetector` service (auto-detects income streams from transactions)
-- [ ] `FireProjector` service (year-by-year compound projection)
-- [ ] FIRE scenario CRUD with income stream editor
-- [ ] FIRE projection endpoint
-- [ ] Debt payoff projector (avalanche + snowball)
-- [ ] Debt payoff endpoint
-- [ ] Frontend: FIRE scenario editor, FIRE projection chart, debt payoff page
+- [x] `FireInputDetector` service (auto-detects income streams from transactions)
+- [x] `FireProjector` service (year-by-year compound projection)
+- [x] FIRE scenario CRUD with income stream editor
+- [x] FIRE projection endpoint
+- [x] Debt payoff projector (avalanche + snowball)
+- [x] Debt payoff endpoint
+- [x] Frontend: FIRE scenario editor, FIRE projection chart, debt payoff page
 
 ---
 

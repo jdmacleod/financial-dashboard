@@ -13,17 +13,17 @@ with duplicate detection, and import job tracking.
 
 ## Deliverables
 
-- [ ] Transaction CRUD endpoints
-- [ ] Category CRUD (system categories non-deletable)
-- [ ] Manual balance snapshot CRUD
-- [ ] CSV import with interactive column mapping
-- [ ] OFX/QFX import (auto-mapped fields)
-- [ ] Duplicate detection (by `external_id` and amount+date+payee fuzzy match)
-- [ ] Transfer detection and pairing
-- [ ] Import job status polling endpoint
-- [ ] ARQ import tasks registered in worker
-- [ ] Property tag on transactions (Amendment 3)
-- [ ] Frontend: transaction list, import flow, category management
+- [x] Transaction CRUD endpoints
+- [x] Category CRUD (system categories non-deletable)
+- [x] Manual balance snapshot CRUD
+- [x] CSV import with interactive column mapping
+- [x] OFX/QFX import (auto-mapped fields)
+- [x] Duplicate detection (by `external_id` and amount+date+payee fuzzy match)
+- [x] Transfer detection and pairing
+- [x] Import job status polling endpoint
+- [x] ARQ import tasks registered in worker
+- [x] Property tag on transactions (Amendment 3)
+- [x] Frontend: transaction list, import flow, category management
 
 ---
 

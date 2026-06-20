@@ -14,13 +14,13 @@ re-authentication before download.
 
 ## Deliverables
 
-- [ ] PDF summary report (anonymized — account numbers last-4 only)
-- [ ] PDF executor report (full detail — requires re-auth)
-- [ ] Excel summary workbook
-- [ ] Excel executor workbook
-- [ ] Export job tracking and download endpoint
-- [ ] ARQ export tasks registered in worker
-- [ ] Frontend: export modal with type/date-range selection, download flow
+- [x] PDF summary report (anonymized — account numbers last-4 only)
+- [x] PDF executor report (full detail — requires re-auth)
+- [x] Excel summary workbook
+- [x] Excel executor workbook
+- [x] Export job tracking and download endpoint
+- [x] ARQ export tasks registered in worker
+- [x] Frontend: export modal with type/date-range selection, download flow
 
 ---
 

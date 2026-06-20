@@ -12,14 +12,14 @@ system after core functionality is complete and verified.
 
 ## Deliverables
 
-- [ ] Settings > Backups page (history, manual trigger, download)
-- [ ] Real estate valuation provider configuration in Settings
-- [ ] Manual valuation entry on property detail page
-- [ ] Backup ARQ task registered and scheduled
-- [ ] Valuation refresh ARQ task registered and scheduled
-- [ ] Dashboard widget layout persistence
-- [ ] Dark mode (Tailwind `dark:` classes throughout)
-- [ ] Import history page
+- [x] Settings > Backups page (history, manual trigger, download)
+- [x] Real estate valuation provider configuration in Settings
+- [x] Manual valuation entry on property detail page
+- [x] Backup ARQ task registered and scheduled
+- [x] Valuation refresh ARQ task registered and scheduled
+- [x] Dashboard widget layout persistence
+- [x] Dark mode (Tailwind `dark:` classes throughout)
+- [x] Import history page
 
 ---
 

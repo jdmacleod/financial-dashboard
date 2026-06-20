@@ -15,18 +15,18 @@ in this phase.
 
 ## Deliverables
 
-- [ ] Repository scaffolded with correct directory structure (see CLAUDE.md)
-- [ ] `docker-compose.yml` with all five services
-- [ ] `.env.example` documenting every environment variable
-- [ ] `.gitignore` excluding `.env`, `data/`, `__pycache__`, `node_modules`, `dist/`
-- [ ] FastAPI app skeleton running and reachable at `http://localhost/api/v1/health`
-- [ ] React + Vite skeleton served at `http://localhost/`
-- [ ] Alembic configured and baseline migration applied
-- [ ] All tables created per `docs/data-model.md`
-- [ ] `hearthledger_app` Postgres role created with restricted `audit_log` permissions
-- [ ] ARQ worker running (no tasks registered yet; just the worker process)
-- [ ] Redis reachable from both backend and worker containers
-- [ ] Backup volume mounted and writable from worker container
+- [x] Repository scaffolded with correct directory structure (see CLAUDE.md)
+- [x] `docker-compose.yml` with all five services
+- [x] `.env.example` documenting every environment variable
+- [x] `.gitignore` excluding `.env`, `data/`, `__pycache__`, `node_modules`, `dist/`
+- [x] FastAPI app skeleton running and reachable at `http://localhost/api/v1/health`
+- [x] React + Vite skeleton served at `http://localhost/`
+- [x] Alembic configured and baseline migration applied
+- [x] All tables created per `docs/data-model.md`
+- [x] `hearthledger_app` Postgres role created with restricted `audit_log` permissions
+- [x] ARQ worker running (no tasks registered yet; just the worker process)
+- [x] Redis reachable from both backend and worker containers
+- [x] Backup volume mounted and writable from worker container
 
 ---
 
