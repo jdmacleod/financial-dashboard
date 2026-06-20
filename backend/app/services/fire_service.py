@@ -128,7 +128,7 @@ class FireScenarioService:
 
         prev = _snapshot(row, exclude=AUDIT_EXCLUDED_FIELDS)
 
-        if data.member_id is not None:
+        if "member_id" in data.model_fields_set:
             row.member_id = data.member_id
         if data.name is not None:
             row.name = data.name

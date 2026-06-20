@@ -377,3 +377,40 @@ async def test_list_accounts_investment_account_still_uses_snapshot(
 
     assert brokerage_response.current_balance == Decimal("95000")
     assert brokerage_response.balance_as_of == date(2025, 6, 30)
+
+
+async def test_list_accounts_heloc_uses_transaction_sum(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """heloc is in _TRANSACTION_BASED_TYPES — balance must come from SUM(transactions),
+    not from AccountSnapshot (which would return None for a non-investment account type
+    that was accidentally excluded from the set)."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    heloc = await service.create(
+        ctx, AccountCreate(account_type="heloc", nickname="Chase HELOC")
+    )
+
+    now = datetime.now(UTC)
+    for amount in [Decimal("-92000"), Decimal("-920"), Decimal("920")]:
+        db_session.add(
+            Transaction(
+                account_id=heloc.id,
+                transaction_date=date(2024, 1, 31),
+                amount=amount,
+                tags=[],
+                source="manual",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+    await db_session.flush()
+
+    accounts = await service.list_accounts(ctx)
+    heloc_response = next(a for a in accounts if a.id == heloc.id)
+
+    assert heloc_response.current_balance == Decimal("-92000")
+    assert heloc_response.balance_as_of is None
