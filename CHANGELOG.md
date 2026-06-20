@@ -3,6 +3,22 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.2.0] - 2026-06-20
+
+### Added
+
+- **Phase 7 demo seed script** — `backend/scripts/seed_demo_data.py --household 1|2|3|all` populates HearthLedger with three fictitious households of increasing financial complexity, covering every major feature surface (30 months of transactions, investment snapshots, property valuations, FIRE scenarios, debt records, budgets).
+  - **H1 Chen-Nakamura** (Round Rock, TX) — 2 members, 12 accounts, 1 property, ~$899K net worth. Exercises: dual income, Roth IRA contributions, auto loan, IRS refund, seasonal spending.
+  - **H2 Okonkwo-Rivera** (Naperville, IL) — 4 members (2 dependents), 19 accounts, 2 properties, ~$3.4M net worth. Exercises: long-term rental, 529 college savings, year-end bonus, access grants, property tax, late rental payment.
+  - **H3 Whitfield-Torres** (Brentwood, LA) — 4 members (2 dependents, 1 with elevated grants), 25 accounts, 3 properties, ~$9.5M net worth. Exercises: HELOC, SEP-IRA, STR vacation rental, profit-share lump-sums, partner distributions, equity market dips, property management fees.
+- **HELOC account type** — `heloc` added to the `account_type` enum (migration 0005); balance is derived from transaction SUM, consistent with other liability types. Frontend label: "HELOC".
+- **FIRE scenario member attribution** — `fire_scenarios.member_id` nullable FK → `household_members` (migration 0005); allows per-member FIRE scenarios alongside household-level scenarios. Exposed in `FireScenarioCreate`, `FireScenarioUpdate`, and `FireScenarioResponse`.
+
+### Fixed
+
+- **AccountType schema** — `"heloc"` was missing from the `AccountType` Pydantic literal in `schemas/account.py`, causing `AccountCreate` to reject valid heloc accounts even after migration 0005 added the DB enum value.
+- **FireScenarioService.update() member_id clearing** — `member_id` could not be set back to `None` via PATCH because the update guard used `is not None`; fixed with `model_fields_set` check so an explicit `null` payload clears the field.
+
 ## [0.9.1.0] - 2026-06-20
 
 ### Added
