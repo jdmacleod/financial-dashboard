@@ -238,14 +238,15 @@ async def test_detect_sparse_data_warning(
     account = await _make_account(db_session, ctx)
     cat = await _make_category(db_session, household, name="Wages", is_income=True)
 
-    # Only 2 months of data (recent, within 12-month trailing window)
+    # Two transactions in different calendar months, always within 12-month window.
+    # Using relative month arithmetic (not day offsets) avoids the edge case where
+    # both timedelta dates land in the same month (e.g. June 20 - 20d = May 31,
+    # June 20 - 50d = May 1 — both May, so months_with_data would be 1, not 2).
     today = date.today()
-    await _make_transaction(
-        db_session, account.id, "4000", today - timedelta(days=20), category_id=cat.id
-    )
-    await _make_transaction(
-        db_session, account.id, "4000", today - timedelta(days=50), category_id=cat.id
-    )
+    prev_month_15 = (today.replace(day=1) - timedelta(days=1)).replace(day=15)
+    two_months_ago_15 = (prev_month_15.replace(day=1) - timedelta(days=1)).replace(day=15)
+    await _make_transaction(db_session, account.id, "4000", prev_month_15, category_id=cat.id)
+    await _make_transaction(db_session, account.id, "4000", two_months_ago_15, category_id=cat.id)
 
     detector = FireInputDetector(db_session)
     result = await detector.detect(ctx, trailing_months=12)
