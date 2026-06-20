@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Link } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueries } from "@tanstack/react-query"
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { accountsApi } from "@/api/accounts"
 import { snapshotsApi } from "@/api/snapshots"
@@ -515,6 +515,15 @@ export default function Accounts() {
   const [showAdd, setShowAdd] = useState(false)
   const [archivingAccount, setArchivingAccount] = useState<AccountResponse | null>(null)
   const [editingAccount, setEditingAccount] = useState<AccountResponse | null>(null)
+
+  // Prefetch snapshots for all visible accounts so AccountRow hits cache, not the network
+  useQueries({
+    queries: (accounts ?? []).map((account) => ({
+      queryKey: ["snapshots", account.id],
+      queryFn: () => snapshotsApi.list(account.id),
+      staleTime: 60_000,
+    })),
+  })
 
   const groups = useMemo(() => categorise(accounts ?? []), [accounts])
 

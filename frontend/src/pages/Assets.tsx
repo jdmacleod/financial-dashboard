@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { Link } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueries } from "@tanstack/react-query"
 import { accountsApi } from "@/api/accounts"
 import { propertiesApi } from "@/api/properties"
 import { PROPERTY_TYPE_LABELS } from "@/lib/accountLabels"
@@ -232,6 +232,36 @@ export default function Assets() {
     staleTime: 60_000,
   })
   const [showAdd, setShowAdd] = useState(false)
+
+  // Stage 1: prefetch property records for all real-estate accounts
+  const prefetchedPropertyQueries = useQueries({
+    queries: (accounts ?? [])
+      .filter((a) => a.account_type === "real_estate")
+      .map((account) => ({
+        queryKey: ["property-by-account", account.id],
+        queryFn: () => propertiesApi.getByAccountId(account.id),
+        staleTime: 60_000,
+      })),
+  })
+
+  // Stage 2: prefetch equity + valuations for every resolved property
+  const prefetchedPropertyIds = prefetchedPropertyQueries.flatMap((q) =>
+    q.data?.id ? [q.data.id] : [],
+  )
+  useQueries({
+    queries: prefetchedPropertyIds.flatMap((propertyId) => [
+      {
+        queryKey: ["property-equity", propertyId],
+        queryFn: () => propertiesApi.getEquity(propertyId),
+        staleTime: 60_000,
+      },
+      {
+        queryKey: ["property-valuations", propertyId],
+        queryFn: () => propertiesApi.listValuations(propertyId),
+        staleTime: 60_000,
+      },
+    ]),
+  })
 
   const realEstateAccounts = useMemo(
     () => (accounts ?? []).filter((a) => a.account_type === "real_estate"),

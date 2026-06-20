@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 import EditAccountModal from "../EditAccountModal"
@@ -120,32 +120,17 @@ describe("EditAccountModal", () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it("calls onClose when overlay backdrop is clicked", async () => {
-    const user = userEvent.setup()
+  it("calls onClose when overlay backdrop is clicked", () => {
     const onClose = vi.fn()
     renderModal(mockAccount, onClose)
 
-    // The overlay is the fixed-position backdrop div — click outside the modal card.
-    // userEvent pointer-down on document.body simulates clicking outside.
-    // We target the overlay directly by clicking on something outside the card.
-    const overlay =
-      screen.getByText("Edit account").closest('[style*="position: fixed"]') ??
-      document.querySelector('[style*="position: fixed"]')
-    if (overlay) {
-      // Fire a click event directly on the overlay element (simulates clicking the backdrop)
-      await user.pointer({ target: overlay, keys: "[MouseLeft]" })
-    }
+    // Click directly on the overlay element (not a child). In JSDOM, fireEvent.click(el)
+    // dispatches with e.target === el, which satisfies the `e.target === overlayRef.current`
+    // guard in the component's onOverlayClick handler.
+    const overlayEl = screen.getByTestId("modal-overlay")
+    fireEvent.click(overlayEl)
 
-    // Alternative approach: fire click event on the overlay with overlay as target
-    // The component checks `e.target === overlayRef.current`
-    const overlayEl = document.querySelector('[style*="position: fixed"]') as HTMLElement
-    if (overlayEl) {
-      overlayEl.dispatchEvent(new MouseEvent("click", { bubbles: true }))
-    }
-
-    await waitFor(() => {
-      expect(onClose).toHaveBeenCalled()
-    })
+    expect(onClose).toHaveBeenCalled()
   })
 
   it("calls onClose when Cancel button is clicked", async () => {

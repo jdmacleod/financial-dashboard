@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueries } from "@tanstack/react-query"
 import {
   LineChart,
   Line,
@@ -191,6 +191,17 @@ export default function Investments() {
     queryKey: ["accounts"],
     queryFn: accountsApi.list,
     staleTime: 60_000,
+  })
+
+  // Prefetch snapshots for all investment accounts so InvestmentCard hits cache, not the network
+  useQueries({
+    queries: (accounts ?? [])
+      .filter((a) => BROKERAGE_ACCOUNT_TYPES.includes(a.account_type))
+      .map((account) => ({
+        queryKey: ["snapshots", account.id],
+        queryFn: () => snapshotsApi.list(account.id),
+        staleTime: 60_000,
+      })),
   })
 
   const investmentAccounts = useMemo(

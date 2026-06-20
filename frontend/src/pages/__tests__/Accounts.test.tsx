@@ -316,4 +316,20 @@ describe("Accounts — split-panel ledger", () => {
     expect(screen.queryByText("Edit")).not.toBeInTheDocument()
     expect(screen.queryByText("Archive")).not.toBeInTheDocument()
   })
+
+  it("does not show Edit or Archive buttons in detail panel for view_only role", async () => {
+    const { useAuth: mockUseAuth } = await import("@/hooks/useAuth")
+    ;(mockUseAuth as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (selector: (s: { role: string; memberId: string }) => unknown) =>
+        selector({ role: "view_only", memberId: "m1" }),
+    )
+
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => screen.getByText("View transactions →"))
+    expect(screen.queryByText("Edit")).not.toBeInTheDocument()
+    expect(screen.queryByText("Archive")).not.toBeInTheDocument()
+  })
 })

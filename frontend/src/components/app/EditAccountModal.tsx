@@ -87,6 +87,7 @@ export default function EditAccountModal({ account, onClose }: EditAccountModalP
     <div
       ref={overlayRef}
       onClick={onOverlayClick}
+      data-testid="modal-overlay"
       style={{
         position: "fixed",
         inset: 0,

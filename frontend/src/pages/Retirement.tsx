@@ -4,7 +4,7 @@
 // - Guaranteed: pension
 
 import { useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueries } from "@tanstack/react-query"
 import { accountsApi } from "@/api/accounts"
 import { snapshotsApi } from "@/api/snapshots"
 import { ACCOUNT_LABELS } from "@/lib/accountLabels"
@@ -159,6 +159,15 @@ export default function Retirement() {
     queryKey: ["accounts"],
     queryFn: accountsApi.list,
     staleTime: 60_000,
+  })
+
+  // Prefetch snapshots for all retirement accounts so RetirementRow hits cache, not the network
+  useQueries({
+    queries: (accounts ?? []).map((account) => ({
+      queryKey: ["snapshots", account.id],
+      queryFn: () => snapshotsApi.list(account.id),
+      staleTime: 60_000,
+    })),
   })
 
   const taxDeferred = useMemo(

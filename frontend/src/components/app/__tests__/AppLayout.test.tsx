@@ -32,10 +32,11 @@ vi.mock("@tanstack/react-router", () => ({
 }))
 
 // ── Auth / user mocks ─────────────────────────────────────────────────────────
+const mockLogout = vi.fn().mockResolvedValue(undefined)
 vi.mock("@/hooks/useAuth", () => ({
   useAuth: (
     selector: (s: { role: string; logout: () => Promise<void>; memberId: string }) => unknown,
-  ) => selector({ role: "primary", logout: vi.fn().mockResolvedValue(undefined), memberId: "m1" }),
+  ) => selector({ role: "primary", logout: mockLogout, memberId: "m1" }),
 }))
 
 vi.mock("@/hooks/useCurrentUser", () => ({
@@ -223,6 +224,17 @@ describe("AppLayout", () => {
       const exportBtn = screen.getByRole("button", { name: "Export" })
       await user.click(exportBtn)
       expect(screen.getByTestId("export-modal")).toBeInTheDocument()
+    })
+
+    it("calls logout and navigates to /login when Sign out is clicked", async () => {
+      const user = userEvent.setup()
+      renderLayout()
+      await user.click(screen.getByRole("button", { name: /User menu/ }))
+      await user.click(screen.getByRole("button", { name: "Sign out" }))
+      await waitFor(() => {
+        expect(mockLogout).toHaveBeenCalled()
+        expect(mockNavigate).toHaveBeenCalledWith({ to: "/login" })
+      })
     })
   })
 

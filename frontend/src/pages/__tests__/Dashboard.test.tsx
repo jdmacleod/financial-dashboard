@@ -150,11 +150,13 @@ vi.mock("@/hooks/useAuth", () => ({
   ),
 }))
 
+const mockUseRouterState = vi.fn(() => "")
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, ...props }: React.PropsWithChildren<{ to: string }>) => (
     <a href={props.to}>{children}</a>
   ),
-  useRouterState: () => "",
+  useRouterState: (opts: { select: (s: { location: { search: string } }) => unknown }) =>
+    opts.select({ location: { search: mockUseRouterState() as string } }),
 }))
 
 function renderDashboard() {
@@ -171,6 +173,7 @@ function renderDashboard() {
 describe("Dashboard — Overview tab", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseRouterState.mockReturnValue("")
   })
 
   it("shows household name as page heading", async () => {
@@ -216,5 +219,31 @@ describe("Dashboard — Overview tab", () => {
     await waitFor(() => {
       expect(screen.getByText("Fidelity 401k")).toBeInTheDocument()
     })
+  })
+
+  it("calls netWorth with 1Y date range when range=1y", async () => {
+    const { reportsApi: mock } = await import("@/api/reports")
+    mockUseRouterState.mockReturnValue("?range=1y")
+
+    renderDashboard()
+
+    await waitFor(() => {
+      expect(mock.netWorth).toHaveBeenCalled()
+    })
+
+    // For the 1Y range the `from` date is subDays(today, 365) — NOT the start of the
+    // current year (which is what YTD uses). Assert the from year/month is ~1 year ago.
+    const [fromArg] = (mock.netWorth as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      string,
+      string,
+    ]
+    const fromDate = new Date(fromArg)
+    const oneYearAgo = new Date()
+    oneYearAgo.setDate(oneYearAgo.getDate() - 365)
+    // Allow ±2 days tolerance for test timing
+    expect(Math.abs(fromDate.getTime() - oneYearAgo.getTime())).toBeLessThan(
+      2 * 24 * 60 * 60 * 1000,
+    )
   })
 })
