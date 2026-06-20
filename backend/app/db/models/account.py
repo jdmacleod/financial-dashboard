@@ -22,6 +22,7 @@ ACCOUNT_TYPES = (
     "mortgage",
     "auto_loan",
     "personal_loan",
+    "heloc",
     "student_loan",
     "other_asset",
     "other_liability",

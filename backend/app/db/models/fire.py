@@ -17,6 +17,7 @@ class FireScenario(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     household_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    member_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     target_annual_spend: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     safe_withdrawal_rate: Mapped[Decimal] = mapped_column(

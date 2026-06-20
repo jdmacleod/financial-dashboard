@@ -31,6 +31,7 @@ def _to_response(row: FireScenarioModel) -> FireScenarioResponse:
     return FireScenarioResponse(
         id=row.id,
         household_id=row.household_id,
+        member_id=row.member_id,
         name=row.name,
         target_annual_spend=row.target_annual_spend,
         safe_withdrawal_rate=row.safe_withdrawal_rate,
@@ -86,6 +87,7 @@ class FireScenarioService:
         now = datetime.now(UTC)
         row = FireScenarioModel(
             household_id=ctx.household_id,
+            member_id=data.member_id,
             name=data.name,
             target_annual_spend=data.target_annual_spend,
             safe_withdrawal_rate=data.safe_withdrawal_rate,
@@ -126,6 +128,8 @@ class FireScenarioService:
 
         prev = _snapshot(row, exclude=AUDIT_EXCLUDED_FIELDS)
 
+        if data.member_id is not None:
+            row.member_id = data.member_id
         if data.name is not None:
             row.name = data.name
         if data.target_annual_spend is not None:
