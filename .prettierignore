@@ -5,3 +5,4 @@ data
 *.lock
 package-lock.json
 .claude
+docs/design/

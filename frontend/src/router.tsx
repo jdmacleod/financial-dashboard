@@ -33,6 +33,8 @@ import SettingsImports from "@/pages/SettingsImports"
 import SettingsDashboard from "@/pages/SettingsDashboard"
 import SettingsAppearance from "@/pages/SettingsAppearance"
 import Assets from "@/pages/Assets"
+import Investments from "@/pages/Investments"
+import Retirement from "@/pages/Retirement"
 
 // Root layout — checks auth + setup state
 const rootRoute = createRootRoute({
@@ -204,6 +206,18 @@ const assetsRoute = createRoute({
   component: Assets,
 })
 
+const reportsInvestmentsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/reports/investments",
+  component: Investments,
+})
+
+const reportsRetirementRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/reports/retirement",
+  component: Retirement,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
@@ -230,6 +244,8 @@ const routeTree = rootRoute.addChildren([
     settingsDashboardRoute,
     settingsAppearanceRoute,
     assetsRoute,
+    reportsInvestmentsRoute,
+    reportsRetirementRoute,
   ]),
 ])
 

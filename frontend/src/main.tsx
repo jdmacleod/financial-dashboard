@@ -4,7 +4,12 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { RouterProvider } from "@tanstack/react-router"
 import { router } from "./router"
 import "./index.css"
-import "./stores/themeStore" // applies dark class to <html> on startup
+import "@fontsource/archivo/400.css"
+import "@fontsource/archivo/500.css"
+import "@fontsource/archivo/600.css"
+import "@fontsource/archivo/700.css"
+import "@fontsource/spectral/600.css"
+import "./stores/themeStore" // applies data-theme attribute on <html> on startup
 
 const queryClient = new QueryClient({
   defaultOptions: {
