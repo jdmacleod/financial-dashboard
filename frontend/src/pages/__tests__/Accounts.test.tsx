@@ -1,97 +1,236 @@
 import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { vi, describe, it, expect, beforeEach } from "vitest"
-import type { AccountResponse } from "@/api/types"
-
-vi.mock("@/api/accounts", () => ({
-  accountsApi: {
-    list: vi.fn(),
-    create: vi.fn(),
-    deactivate: vi.fn(),
-    listGrants: vi.fn(),
-    createGrant: vi.fn(),
-    revokeGrant: vi.fn(),
-  },
-}))
+import Accounts from "@/pages/Accounts"
 
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ children, ...props }: React.PropsWithChildren<{ to: string }>) => (
-    <a href={props.to}>{children}</a>
+  Link: ({ children, ...props }: React.PropsWithChildren<{ to: string; params?: unknown }>) => (
+    <a href={String(props.to)}>{children}</a>
   ),
-  useNavigate: () => vi.fn(),
 }))
 
 vi.mock("@/hooks/useAuth", () => ({
-  useAuth: vi.fn((selector: (s: { role: string }) => unknown) => selector({ role: "primary" })),
+  useAuth: vi.fn((selector: (s: { role: string; memberId: string }) => unknown) =>
+    selector({ role: "primary", memberId: "m1" }),
+  ),
 }))
 
-function createClient() {
-  return new QueryClient({
+vi.mock("@/api/snapshots", () => ({
+  snapshotsApi: {
+    list: vi.fn(() => Promise.resolve([])),
+  },
+}))
+
+const mockAccounts = [
+  {
+    id: "a1",
+    nickname: "Chase Checking",
+    account_type: "checking",
+    owner_member_id: "m1",
+    institution_name: "Chase",
+    account_number_last4: "1234",
+    include_in_net_worth: true,
+    is_active: true,
+    current_balance: "8000.00",
+    balance_as_of: "2026-06-01",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-06-01T00:00:00Z",
+  },
+  {
+    id: "a2",
+    nickname: "Fidelity 401k",
+    account_type: "retirement_401k",
+    owner_member_id: "m1",
+    institution_name: "Fidelity",
+    account_number_last4: "5678",
+    include_in_net_worth: true,
+    is_active: true,
+    current_balance: "48000.00",
+    balance_as_of: "2026-06-01",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-06-01T00:00:00Z",
+  },
+  {
+    id: "a3",
+    nickname: "Chase Visa",
+    account_type: "credit_card",
+    owner_member_id: "m1",
+    institution_name: "Chase",
+    account_number_last4: "9999",
+    include_in_net_worth: true,
+    is_active: true,
+    current_balance: "-1500.00",
+    balance_as_of: "2026-06-01",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-06-01T00:00:00Z",
+  },
+]
+
+vi.mock("@/api/accounts", () => ({
+  accountsApi: {
+    list: vi.fn(() => Promise.resolve(mockAccounts)),
+  },
+}))
+
+vi.mock("@/components/app/AddAccountModal", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="add-account-modal">
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
+}))
+
+vi.mock("@/components/app/ArchiveAccountModal", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="archive-account-modal">
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
+}))
+
+function renderAccounts() {
+  const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   })
+  return render(
+    <QueryClientProvider client={qc}>
+      <Accounts />
+    </QueryClientProvider>,
+  )
 }
 
-function renderWithClient(ui: React.ReactElement) {
-  return render(<QueryClientProvider client={createClient()}>{ui}</QueryClientProvider>)
-}
-
-const makeAccount = (overrides: Partial<AccountResponse>): AccountResponse => ({
-  id: "acc-1",
-  nickname: "My Account",
-  account_type: "checking",
-  owner_member_id: null,
-  institution_name: null,
-  account_number_last4: null,
-  include_in_net_worth: true,
-  is_active: true,
-  current_balance: "1000.00",
-  balance_as_of: "2026-06-01",
-  created_at: "2026-01-01T00:00:00Z",
-  updated_at: "2026-01-01T00:00:00Z",
-  ...overrides,
-})
-
-describe("Accounts page — DISPLAY_ASSET_TYPES filter (F3)", () => {
+describe("Accounts — split-panel ledger", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it("shows checking and savings accounts", async () => {
-    const { accountsApi: mock } = await import("@/api/accounts")
-    ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([
-      makeAccount({ id: "acc-1", nickname: "Chase Checking", account_type: "checking" }),
-      makeAccount({ id: "acc-2", nickname: "Ally Savings", account_type: "savings" }),
-    ])
-
-    const { default: Accounts } = await import("@/pages/Accounts")
-    renderWithClient(<Accounts />)
-
+  it("renders page heading", async () => {
+    renderAccounts()
     await waitFor(() => {
-      expect(screen.getByText("Chase Checking")).toBeInTheDocument()
-      expect(screen.getByText("Ally Savings")).toBeInTheDocument()
+      expect(screen.getByText("Accounts")).toBeInTheDocument()
     })
   })
 
-  it("hides investment types from the Accounts list", async () => {
-    const { accountsApi: mock } = await import("@/api/accounts")
-    ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([
-      makeAccount({ id: "acc-1", nickname: "Chase Checking", account_type: "checking" }),
-      makeAccount({ id: "acc-2", nickname: "Vanguard 401k", account_type: "retirement_401k" }),
-      makeAccount({ id: "acc-3", nickname: "Brokerage", account_type: "investment_brokerage" }),
-      makeAccount({ id: "acc-4", nickname: "My Home", account_type: "real_estate" }),
-      makeAccount({ id: "acc-5", nickname: "State Pension", account_type: "pension" }),
-    ])
+  it("shows Banking & Cash category group", async () => {
+    renderAccounts()
+    await waitFor(() => {
+      expect(screen.getByText("Banking & Cash")).toBeInTheDocument()
+    })
+  })
 
-    const { default: Accounts } = await import("@/pages/Accounts")
-    renderWithClient(<Accounts />)
+  it("shows Retirement category group", async () => {
+    renderAccounts()
+    await waitFor(() => {
+      expect(screen.getByText("Retirement")).toBeInTheDocument()
+    })
+  })
 
+  it("shows Liabilities category group", async () => {
+    renderAccounts()
+    await waitFor(() => {
+      expect(screen.getByText("Liabilities")).toBeInTheDocument()
+    })
+  })
+
+  it("renders Chase Checking in the list", async () => {
+    renderAccounts()
     await waitFor(() => {
       expect(screen.getByText("Chase Checking")).toBeInTheDocument()
     })
+  })
 
-    expect(screen.queryByText("Vanguard 401k")).not.toBeInTheDocument()
-    expect(screen.queryByText("Brokerage")).not.toBeInTheDocument()
-    expect(screen.queryByText("My Home")).not.toBeInTheDocument()
-    expect(screen.queryByText("State Pension")).not.toBeInTheDocument()
+  it("renders Fidelity 401k in the list", async () => {
+    renderAccounts()
+    await waitFor(() => {
+      expect(screen.getByText("Fidelity 401k")).toBeInTheDocument()
+    })
+  })
+
+  it("renders Chase Visa in Liabilities", async () => {
+    renderAccounts()
+    await waitFor(() => {
+      expect(screen.getByText("Chase Visa")).toBeInTheDocument()
+    })
+  })
+
+  it("shows Add account button for primary role", async () => {
+    renderAccounts()
+    await waitFor(() => {
+      expect(screen.getByText("+ Add account")).toBeInTheDocument()
+    })
+  })
+
+  it("opens add account modal when + Add account is clicked", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("+ Add account"))
+    await user.click(screen.getByText("+ Add account"))
+    expect(screen.getByTestId("add-account-modal")).toBeInTheDocument()
+  })
+
+  it("shows detail panel when an account is selected", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => {
+      expect(screen.getByText("View transactions →")).toBeInTheDocument()
+    })
+  })
+
+  it("hides detail panel when same account is clicked again", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => screen.getByText("View transactions →"))
+    // Detail panel is now open: "Chase Checking" appears in both the list row and the panel header.
+    // Click the first occurrence (the list row button) to deselect.
+    await user.click(screen.getAllByText("Chase Checking")[0])
+    await waitFor(() => {
+      expect(screen.queryByText("View transactions →")).not.toBeInTheDocument()
+    })
+  })
+
+  it("shows balance in detail panel", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => {
+      expect(screen.getAllByText("$8,000.00").length).toBeGreaterThan(0)
+    })
+  })
+
+  it("shows archive button in detail panel for primary role", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => {
+      expect(screen.getByText("Archive")).toBeInTheDocument()
+    })
+  })
+
+  it("opens archive modal when Archive is clicked", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => screen.getByText("Archive"))
+    await user.click(screen.getByText("Archive"))
+    expect(screen.getByTestId("archive-account-modal")).toBeInTheDocument()
+  })
+
+  it("shows empty state when no accounts", async () => {
+    const { accountsApi: mock } = await import("@/api/accounts")
+    ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([])
+    renderAccounts()
+    await waitFor(() => {
+      expect(
+        screen.getByText("No accounts yet. Add your first account to get started."),
+      ).toBeInTheDocument()
+    })
   })
 })

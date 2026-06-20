@@ -20,6 +20,15 @@ export const ACCOUNT_LABELS: Record<AccountType, string> = {
   other_liability: "Other Liability",
 }
 
+// Color dots per account category group (used in Accounts split-panel ledger)
+export const ACCOUNT_CATEGORY_COLORS: Record<string, string> = {
+  "Banking & Cash": "#46b888",
+  Retirement: "#d9b96a",
+  Investments: "#6c97c4",
+  "Real estate": "#a9743f",
+  Liabilities: "#e0b48a",
+}
+
 export const PROPERTY_TYPE_LABELS: Record<string, string> = {
   primary_residence: "Primary Residence",
   rental: "Rental Property",
