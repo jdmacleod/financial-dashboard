@@ -34,6 +34,7 @@ const mockAccounts = [
     is_active: true,
     current_balance: "8000.00",
     balance_as_of: "2026-06-01",
+    notes: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-06-01T00:00:00Z",
   },
@@ -48,6 +49,7 @@ const mockAccounts = [
     is_active: true,
     current_balance: "48000.00",
     balance_as_of: "2026-06-01",
+    notes: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-06-01T00:00:00Z",
   },
@@ -62,6 +64,7 @@ const mockAccounts = [
     is_active: true,
     current_balance: "-1500.00",
     balance_as_of: "2026-06-01",
+    notes: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-06-01T00:00:00Z",
   },
@@ -110,8 +113,16 @@ function renderAccounts() {
 }
 
 describe("Accounts — split-panel ledger", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+    // Restore default mock implementations that may have been overridden by individual tests
+    const { accountsApi: mock } = await import("@/api/accounts")
+    ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue(mockAccounts)
+    const { useAuth: mockUseAuth } = await import("@/hooks/useAuth")
+    ;(mockUseAuth as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (selector: (s: { role: string; memberId: string }) => unknown) =>
+        selector({ role: "primary", memberId: "m1" }),
+    )
   })
 
   it("renders page heading", async () => {
@@ -261,5 +272,48 @@ describe("Accounts — split-panel ledger", () => {
         screen.getByText("No accounts yet. Add your first account to get started."),
       ).toBeInTheDocument()
     })
+  })
+
+  it("does not show Notes section in detail panel when account.notes is null", async () => {
+    const user = userEvent.setup()
+    // mockAccounts[0] has notes: null
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => screen.getByText("View transactions →"))
+    expect(screen.queryByText("Notes")).not.toBeInTheDocument()
+  })
+
+  it("shows Notes section in detail panel when account.notes is non-null", async () => {
+    const user = userEvent.setup()
+    const { accountsApi: mock } = await import("@/api/accounts")
+    const accountsWithNotes = mockAccounts.map((a) =>
+      a.id === "a1" ? { ...a, notes: "My primary daily account" } : a,
+    )
+    ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue(accountsWithNotes)
+
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => {
+      expect(screen.getByText("Notes")).toBeInTheDocument()
+      expect(screen.getByText("My primary daily account")).toBeInTheDocument()
+    })
+  })
+
+  it("does not show Edit button in detail panel for partner role", async () => {
+    const { useAuth: mockUseAuth } = await import("@/hooks/useAuth")
+    ;(mockUseAuth as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+      (selector: (s: { role: string; memberId: string }) => unknown) =>
+        selector({ role: "partner", memberId: "m1" }),
+    )
+
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => screen.getByText("View transactions →"))
+    expect(screen.queryByText("Edit")).not.toBeInTheDocument()
+    expect(screen.queryByText("Archive")).not.toBeInTheDocument()
   })
 })
