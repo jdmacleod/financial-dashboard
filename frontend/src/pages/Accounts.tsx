@@ -10,6 +10,7 @@ import { RETIREMENT_ACCOUNT_TYPES, BROKERAGE_ACCOUNT_TYPES } from "@/lib/account
 import { formatCurrency } from "@/lib/formatters"
 import AddAccountModal from "@/components/app/AddAccountModal"
 import ArchiveAccountModal from "@/components/app/ArchiveAccountModal"
+import EditAccountModal from "@/components/app/EditAccountModal"
 import type { AccountResponse, AccountType } from "@/api/types"
 
 // ── Category definitions ──────────────────────────────────────────────────────
@@ -277,10 +278,12 @@ function DetailPanel({
   account,
   category,
   onArchive,
+  onEdit,
 }: {
   account: AccountResponse
   category: CategoryName
   onArchive: () => void
+  onEdit: () => void
 }) {
   const isPrimary = useAuth((s) => s.role === "primary")
   const isLiability = LIABILITY_TYPES.includes(account.account_type)
@@ -419,6 +422,31 @@ function DetailPanel({
         </div>
       )}
 
+      {/* Notes section */}
+      {account.notes && (
+        <div
+          style={{
+            padding: "14px 20px",
+            borderTop: `1px solid ${accentBd}`,
+          }}
+        >
+          <div
+            style={{
+              fontSize: "10px",
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "var(--label)",
+              marginBottom: "6px",
+            }}
+          >
+            Notes
+          </div>
+          <div style={{ fontSize: "12.5px", color: "var(--text3)", lineHeight: 1.5 }}>
+            {account.notes}
+          </div>
+        </div>
+      )}
+
       {/* Footer: transactions link + edit/archive */}
       <div
         style={{
@@ -437,18 +465,32 @@ function DetailPanel({
           View transactions →
         </Link>
         {isPrimary && (
-          <button
-            onClick={onArchive}
-            style={{
-              fontSize: "11px",
-              color: "var(--liab)",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            Archive
-          </button>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+            <button
+              onClick={onEdit}
+              style={{
+                fontSize: "11px",
+                color: "var(--label)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Edit
+            </button>
+            <button
+              onClick={onArchive}
+              style={{
+                fontSize: "11px",
+                color: "var(--liab)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Archive
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -472,6 +514,7 @@ export default function Accounts() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
   const [archivingAccount, setArchivingAccount] = useState<AccountResponse | null>(null)
+  const [editingAccount, setEditingAccount] = useState<AccountResponse | null>(null)
 
   const groups = useMemo(() => categorise(accounts ?? []), [accounts])
 
@@ -598,6 +641,7 @@ export default function Accounts() {
             account={selectedAccount}
             category={selectedCategory}
             onArchive={() => setArchivingAccount(selectedAccount)}
+            onEdit={() => setEditingAccount(selectedAccount)}
           />
         )}
       </div>
@@ -613,6 +657,9 @@ export default function Accounts() {
             setSelectedId(null)
           }}
         />
+      )}
+      {editingAccount && (
+        <EditAccountModal account={editingAccount} onClose={() => setEditingAccount(null)} />
       )}
     </div>
   )

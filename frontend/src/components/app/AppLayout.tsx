@@ -144,6 +144,25 @@ export function AppLayout() {
           borderBottom: "1px solid var(--bd)",
         }}
       >
+        <div
+          style={{
+            width: "32px",
+            height: "32px",
+            borderRadius: "8px",
+            background: "var(--toggle-on-bg)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect x="2" y="2" width="5" height="5" rx="1.5" fill="rgba(255,255,255,0.85)" />
+            <rect x="9" y="2" width="5" height="5" rx="1.5" fill="rgba(255,255,255,0.85)" />
+            <rect x="2" y="9" width="5" height="5" rx="1.5" fill="rgba(255,255,255,0.85)" />
+            <rect x="9" y="9" width="5" height="5" rx="1.5" fill="rgba(255,255,255,0.85)" />
+          </svg>
+        </div>
         <div>
           <div
             style={{
@@ -171,21 +190,91 @@ export function AppLayout() {
       {/* Nav */}
       <nav style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "2px" }}>
         <SidebarNavLink to="/" onClick={() => setSidebarOpen(false)}>
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
+            <rect x="1.5" y="1.5" width="5.5" height="5.5" rx="1.5" />
+            <rect x="9" y="1.5" width="5.5" height="5.5" rx="1.5" />
+            <rect x="1.5" y="9" width="5.5" height="5.5" rx="1.5" />
+            <rect x="9" y="9" width="5.5" height="5.5" rx="1.5" />
+          </svg>
           Overview
         </SidebarNavLink>
         <SidebarNavLink to="/accounts" onClick={() => setSidebarOpen(false)}>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          >
+            <line x1="2" y1="4.5" x2="14" y2="4.5" />
+            <line x1="2" y1="8.5" x2="14" y2="8.5" />
+            <line x1="2" y1="12.5" x2="14" y2="12.5" />
+          </svg>
           Accounts
         </SidebarNavLink>
         <SidebarNavLink to="/reports/investments" onClick={() => setSidebarOpen(false)}>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <polyline points="1,12 5,7.5 9,9.5 15,3" />
+            <polyline points="11,3 15,3 15,7" />
+          </svg>
           Investments
         </SidebarNavLink>
         <SidebarNavLink to="/reports/retirement" onClick={() => setSidebarOpen(false)}>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+          >
+            <circle cx="8" cy="8" r="6.5" />
+            <polyline points="8,4.5 8,8.5 10.5,10" strokeLinejoin="round" />
+          </svg>
           Retirement
         </SidebarNavLink>
         <SidebarNavLink to="/assets" onClick={() => setSidebarOpen(false)}>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M1.5 7.5L8 2l6.5 5.5" />
+            <path d="M3.5 6.5V14H6.5V10.5H9.5V14H12.5V6.5" />
+          </svg>
           Real estate
         </SidebarNavLink>
         <SidebarNavLink to="/reports/cash-flow" onClick={() => setSidebarOpen(false)}>
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="8" cy="8" r="6.5" />
+            <path d="M8 4.5v7M6 6.5a2 2 0 0 1 2-1.5h.5a1.5 1.5 0 0 1 0 3h-1a1.5 1.5 0 0 0 0 3H8a2 2 0 0 0 2-1.5" />
+          </svg>
           Cash flow
         </SidebarNavLink>
       </nav>

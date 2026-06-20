@@ -70,6 +70,7 @@ const mockAccounts = [
 vi.mock("@/api/accounts", () => ({
   accountsApi: {
     list: vi.fn(() => Promise.resolve(mockAccounts)),
+    update: vi.fn(() => Promise.resolve({})),
   },
 }))
 
@@ -84,6 +85,14 @@ vi.mock("@/components/app/AddAccountModal", () => ({
 vi.mock("@/components/app/ArchiveAccountModal", () => ({
   default: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="archive-account-modal">
+      <button onClick={onClose}>Close</button>
+    </div>
+  ),
+}))
+
+vi.mock("@/components/app/EditAccountModal", () => ({
+  default: ({ onClose }: { onClose: () => void }) => (
+    <div data-testid="edit-account-modal">
       <button onClick={onClose}>Close</button>
     </div>
   ),
@@ -221,6 +230,26 @@ describe("Accounts — split-panel ledger", () => {
     await waitFor(() => screen.getByText("Archive"))
     await user.click(screen.getByText("Archive"))
     expect(screen.getByTestId("archive-account-modal")).toBeInTheDocument()
+  })
+
+  it("shows Edit button in detail panel for primary role", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => {
+      expect(screen.getByText("Edit")).toBeInTheDocument()
+    })
+  })
+
+  it("opens edit modal when Edit is clicked", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Chase Checking"))
+    await user.click(screen.getByText("Chase Checking"))
+    await waitFor(() => screen.getByText("Edit"))
+    await user.click(screen.getByText("Edit"))
+    expect(screen.getByTestId("edit-account-modal")).toBeInTheDocument()
   })
 
   it("shows empty state when no accounts", async () => {

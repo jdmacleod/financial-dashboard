@@ -636,37 +636,6 @@ export default function Dashboard() {
           )}
         </SectionCard>
 
-        {/* Largest holdings */}
-        <SectionCard>
-          <SectionLabel>Largest holdings</SectionLabel>
-          {topHoldings.length > 0 ? (
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-              {topHoldings.map((a) => (
-                <div
-                  key={a.id}
-                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-                >
-                  <div>
-                    <div style={{ fontSize: "12.5px", color: "var(--text3)", fontWeight: 500 }}>
-                      {a.nickname}
-                    </div>
-                    {a.institution_name && (
-                      <div style={{ fontSize: "10px", color: "var(--muted)" }}>
-                        {a.institution_name}
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--text)" }}>
-                    {a.current_balance !== null ? formatCurrency(a.current_balance) : "—"}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ color: "var(--muted)", fontSize: "12px" }}>No accounts yet</div>
-          )}
-        </SectionCard>
-
         {/* Liabilities breakdown */}
         <SectionCard>
           <div
@@ -701,6 +670,37 @@ export default function Dashboard() {
             </div>
           ) : (
             <div style={{ color: "var(--muted)", fontSize: "12px" }}>No liabilities</div>
+          )}
+        </SectionCard>
+
+        {/* Largest holdings */}
+        <SectionCard>
+          <SectionLabel>Largest holdings</SectionLabel>
+          {topHoldings.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {topHoldings.map((a) => (
+                <div
+                  key={a.id}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
+                  <div>
+                    <div style={{ fontSize: "12.5px", color: "var(--text3)", fontWeight: 500 }}>
+                      {a.nickname}
+                    </div>
+                    {a.institution_name && (
+                      <div style={{ fontSize: "10px", color: "var(--muted)" }}>
+                        {a.institution_name}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--text)" }}>
+                    {a.current_balance !== null ? formatCurrency(a.current_balance) : "—"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: "var(--muted)", fontSize: "12px" }}>No accounts yet</div>
           )}
         </SectionCard>
       </div>

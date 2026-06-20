@@ -94,6 +94,7 @@ function makeAccount(accountType: AccountResponse["account_type"]): AccountRespo
     is_active: true,
     current_balance: "0.00",
     balance_as_of: null,
+    notes: null,
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2025-01-01T00:00:00Z",
   }
