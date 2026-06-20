@@ -12,6 +12,7 @@ from app.db.models.audit_log import AuditLog
 from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
 from app.db.models.snapshot import AccountSnapshot
+from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.schemas.account import AccessGrantCreate, AccountCreate, AccountUpdate
 from app.schemas.real_estate import PropertyCreate, ValuationCreate
@@ -292,14 +293,14 @@ async def test_list_accounts_real_estate_orphan_no_property_returns_none(
     assert re_response.current_balance is None
 
 
-async def test_list_accounts_non_re_account_still_uses_snapshot(
+async def test_list_accounts_transaction_account_uses_transaction_sum(
     db_session: AsyncSession,
     household: Household,
     primary_member: HouseholdMember,
     primary_user: User,
 ) -> None:
-    """Non-RE accounts still get their balance from the AccountSnapshot path
-    after the B1 RE batch refactor — regression guard.
+    """Transaction-based accounts (checking, savings, credit_card, etc.) derive
+    current_balance from SUM(transaction.amount), not from AccountSnapshot.
     """
     ctx = _ctx(household, primary_member, "primary", primary_user)
     service = AccountService(db_session)
@@ -307,10 +308,64 @@ async def test_list_accounts_non_re_account_still_uses_snapshot(
         ctx, AccountCreate(account_type="checking", nickname="Chase Checking")
     )
 
+    now = datetime.now(UTC)
+    for amount in [Decimal("3000"), Decimal("1500"), Decimal("-200")]:
+        db_session.add(
+            Transaction(
+                account_id=checking.id,
+                transaction_date=date(2025, 6, 1),
+                amount=amount,
+                tags=[],
+                source="manual",
+                created_at=now,
+                updated_at=now,
+            )
+        )
+    await db_session.flush()
+
+    accounts = await service.list_accounts(ctx)
+    checking_response = next(a for a in accounts if a.id == checking.id)
+
+    assert checking_response.current_balance == Decimal("4300")
+    assert checking_response.balance_as_of is None
+
+
+async def test_list_accounts_transaction_account_no_transactions_returns_none(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A transaction-based account with no transactions returns None balance (not zero)."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    checking = await service.create(
+        ctx, AccountCreate(account_type="checking", nickname="Empty Checking")
+    )
+
+    accounts = await service.list_accounts(ctx)
+    checking_response = next(a for a in accounts if a.id == checking.id)
+
+    assert checking_response.current_balance is None
+
+
+async def test_list_accounts_investment_account_still_uses_snapshot(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Valuation-based accounts (investments, pension) still use AccountSnapshot."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    service = AccountService(db_session)
+    brokerage = await service.create(
+        ctx, AccountCreate(account_type="investment_brokerage", nickname="Fidelity")
+    )
+
     snap = AccountSnapshot(
-        account_id=checking.id,
+        account_id=brokerage.id,
         snapshot_date=date(2025, 6, 30),
-        balance=Decimal("7500"),
+        balance=Decimal("95000"),
         source="manual",
         created_at=datetime.now(UTC),
     )
@@ -318,6 +373,7 @@ async def test_list_accounts_non_re_account_still_uses_snapshot(
     await db_session.flush()
 
     accounts = await service.list_accounts(ctx)
-    checking_response = next(a for a in accounts if a.id == checking.id)
+    brokerage_response = next(a for a in accounts if a.id == brokerage.id)
 
-    assert checking_response.current_balance == Decimal("7500")
+    assert brokerage_response.current_balance == Decimal("95000")
+    assert brokerage_response.balance_as_of == date(2025, 6, 30)

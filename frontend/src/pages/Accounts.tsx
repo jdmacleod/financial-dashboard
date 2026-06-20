@@ -1,33 +1,16 @@
 import { useState } from "react"
 import { Link } from "@tanstack/react-router"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
+import { useQuery } from "@tanstack/react-query"
 import { accountsApi } from "@/api/accounts"
-import { membersApi } from "@/api/members"
-import { propertiesApi } from "@/api/properties"
 import { useAuth } from "@/hooks/useAuth"
-import { ACCOUNT_LABELS, PROPERTY_TYPE_LABELS } from "@/lib/accountLabels"
-import { formatCurrencyOrDash } from "@/lib/formatters"
-import type { AccountResponse, AccountType, PropertyType } from "@/api/types"
+import { ACCOUNT_LABELS } from "@/lib/accountLabels"
+import { formatCurrency } from "@/lib/formatters"
+import AddAccountModal from "@/components/app/AddAccountModal"
+import ArchiveAccountModal from "@/components/app/ArchiveAccountModal"
+import type { AccountResponse, AccountType } from "@/api/types"
 
-// Full list used by AddAccountModal so users can create any account type here.
-const ASSET_TYPES: AccountType[] = [
-  "checking",
-  "savings",
-  "investment_brokerage",
-  "retirement_401k",
-  "retirement_403b",
-  "retirement_ira",
-  "retirement_roth_ira",
-  "pension",
-  "hsa",
-  "real_estate",
-  "other_asset",
-]
-
-// Narrowed to transaction-based types only — valuation-based types appear in Assets page.
+// Types shown in the Accounts list — transaction-based only.
+// Valuation-based types (RE, pension, investment) appear on the Assets page.
 const DISPLAY_ASSET_TYPES: AccountType[] = ["checking", "savings", "other_asset"]
 const LIABILITY_TYPES: AccountType[] = [
   "credit_card",
@@ -38,308 +21,80 @@ const LIABILITY_TYPES: AccountType[] = [
   "other_liability",
 ]
 
-const createSchema = z
-  .object({
-    account_type: z.string().min(1, "Required"),
-    nickname: z.string().min(1, "Required"),
-    institution_name: z.string().optional(),
-    account_number: z.string().optional(),
-    owner_member_id: z.string().optional(),
-    property_type: z.string().optional(),
-    address: z.string().optional(),
-    purchase_date: z.string().optional(),
-    purchase_price: z.string().optional(),
-    linked_mortgage_account_id: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.account_type === "real_estate" && !data.address?.trim()) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "Address is required for real estate accounts",
-        path: ["address"],
-      })
-    }
-  })
-type CreateForm = z.infer<typeof createSchema>
+// Types available in the Add Account modal on this page.
+const ACCOUNTS_PAGE_TYPES: AccountType[] = [
+  "checking",
+  "savings",
+  "other_asset",
+  "credit_card",
+  "mortgage",
+  "auto_loan",
+  "personal_loan",
+  "student_loan",
+  "other_liability",
+]
 
-function AddAccountModal({ onClose }: { onClose: () => void }) {
-  const queryClient = useQueryClient()
+function AccountRow({ account }: { account: AccountResponse }) {
   const isPrimary = useAuth((s) => s.role === "primary")
-  const memberId = useAuth((s) => s.memberId)
-  const { data: allMembers } = useQuery({ queryKey: ["members"], queryFn: membersApi.list })
-  const { data: existingAccounts } = useQuery({
-    queryKey: ["accounts"],
-    queryFn: accountsApi.list,
-  })
-  // Partners may only own accounts jointly or as themselves — same rule
-  // AccountService.create enforces server-side; this just keeps the UI from
-  // offering choices the API will reject with 403.
-  const members = isPrimary ? allMembers : allMembers?.filter((m) => m.id === memberId)
-  const mortgageAccounts =
-    existingAccounts?.filter((a) => a.account_type === "mortgage" && a.is_active) ?? []
-  const [modalStep, setModalStep] = useState(0)
-  const [error, setError] = useState<string | null>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [archiving, setArchiving] = useState(false)
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setValue,
-    formState: { errors },
-  } = useForm<CreateForm>({
-    resolver: zodResolver(createSchema),
-  })
-
-  const create = useMutation({
-    mutationFn: async (data: CreateForm) => {
-      const account = await accountsApi.create({
-        account_type: data.account_type as AccountType,
-        nickname: data.nickname,
-        institution_name: data.institution_name || null,
-        account_number: data.account_number || null,
-        owner_member_id: data.owner_member_id || null,
-      })
-      if (data.account_type === "real_estate") {
-        await propertiesApi.create({
-          account_id: account.id,
-          address: data.address || "",
-          property_type: (data.property_type || "primary_residence") as PropertyType,
-          purchase_date: data.purchase_date || null,
-          purchase_price: data.purchase_price || null,
-          linked_mortgage_account_id: data.linked_mortgage_account_id || null,
-        })
-      }
-      return account
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["accounts"] })
-      onClose()
-    },
-    onError: () => setError("Failed to create account."),
-  })
-
-  const selectedType = watch("account_type") as AccountType | undefined
+  // All accounts on this page are transaction-based. Null balance = no transactions yet = $0.00.
+  const balance = formatCurrency(account.current_balance ?? "0")
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Add account</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            ✕
-          </button>
+    <>
+      <div className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors group">
+        <Link
+          to="/accounts/$accountId/transactions"
+          params={{ accountId: account.id }}
+          className="flex-1 min-w-0"
+        >
+          <p className="font-medium text-gray-900 truncate">{account.nickname}</p>
+          <p className="text-sm text-gray-500">
+            {account.institution_name ?? ACCOUNT_LABELS[account.account_type]}
+            {account.account_number_last4 && ` •••• ${account.account_number_last4}`}
+          </p>
+        </Link>
+        <div className="text-right">
+          <p className="font-medium text-gray-900">{balance}</p>
+          {account.balance_as_of && (
+            <p className="text-xs text-gray-400">{account.balance_as_of}</p>
+          )}
         </div>
-
-        <form onSubmit={handleSubmit((d) => create.mutate(d))} className="space-y-4">
-          {modalStep === 0 && (
-            <div>
-              <p className="text-sm font-medium text-gray-700 mb-2">Account type</p>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                    Assets
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {ASSET_TYPES.map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => {
-                          setValue("account_type", t)
-                          setModalStep(1)
-                        }}
-                        className={`text-xs rounded-lg border px-2 py-2 text-left hover:bg-indigo-50 hover:border-indigo-300 transition-colors ${selectedType === t ? "border-indigo-500 bg-indigo-50" : "border-gray-200"}`}
-                      >
-                        {ACCOUNT_LABELS[t]}
-                      </button>
-                    ))}
-                  </div>
+        {isPrimary && (
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setMenuOpen((o) => !o)
+              }}
+              aria-label={`Account options for ${account.nickname}`}
+              className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              ···
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-7 z-50 w-44 bg-white rounded-lg border border-gray-200 shadow-lg py-1">
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false)
+                      setArchiving(true)
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Archive account
+                  </button>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
-                    Liabilities
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {LIABILITY_TYPES.map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => {
-                          setValue("account_type", t)
-                          setModalStep(1)
-                        }}
-                        className={`text-xs rounded-lg border px-2 py-2 text-left hover:bg-indigo-50 hover:border-indigo-300 transition-colors ${selectedType === t ? "border-indigo-500 bg-indigo-50" : "border-gray-200"}`}
-                      >
-                        {ACCOUNT_LABELS[t]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {modalStep === 1 && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nickname</label>
-                <input
-                  {...register("nickname")}
-                  placeholder="e.g. BofA Checking"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                {errors.nickname && (
-                  <p className="mt-1 text-xs text-red-600">{errors.nickname.message}</p>
-                )}
-              </div>
-              {selectedType === "real_estate" && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Property type
-                    </label>
-                    <select
-                      {...register("property_type")}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      defaultValue="primary_residence"
-                    >
-                      {(Object.entries(PROPERTY_TYPE_LABELS) as [PropertyType, string][]).map(
-                        ([value, label]) => (
-                          <option key={value} value={value}>
-                            {label}
-                          </option>
-                        ),
-                      )}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                    <input
-                      {...register("address")}
-                      placeholder="e.g. 123 Main St"
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Purchase date
-                      </label>
-                      <input
-                        type="date"
-                        {...register("purchase_date")}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Purchase price
-                      </label>
-                      <input
-                        {...register("purchase_price")}
-                        placeholder="e.g. 350000.00"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-                  </div>
-                  {mortgageAccounts.length > 0 && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Linked mortgage{" "}
-                        <span className="text-gray-400 font-normal">(optional)</span>
-                      </label>
-                      <select
-                        {...register("linked_mortgage_account_id")}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="">None</option>
-                        {mortgageAccounts.map((a) => (
-                          <option key={a.id} value={a.id}>
-                            {a.nickname}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Institution name
-                </label>
-                <input
-                  {...register("institution_name")}
-                  placeholder="e.g. Bank of America"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Account number
-                </label>
-                <input
-                  {...register("account_number")}
-                  placeholder="Optional"
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-              </div>
-            </>
-          )}
-
-          {modalStep === 2 && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Owner</label>
-              <select
-                {...register("owner_member_id")}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">Joint account</option>
-                {members?.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.display_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
-
-          {modalStep > 0 && (
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => setModalStep((s) => s - 1)}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Back
-              </button>
-              {modalStep < 2 ? (
-                <button
-                  type="button"
-                  onClick={() => setModalStep((s) => s + 1)}
-                  className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-                >
-                  Next
-                </button>
-              ) : (
-                <button
-                  type="submit"
-                  disabled={create.isPending}
-                  className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
-                >
-                  {create.isPending ? "Adding…" : "Add account"}
-                </button>
-              )}
-            </div>
-          )}
-        </form>
+              </>
+            )}
+          </div>
+        )}
       </div>
-    </div>
+      {archiving && <ArchiveAccountModal account={account} onClose={() => setArchiving(false)} />}
+    </>
   )
 }
 
@@ -350,24 +105,7 @@ function AccountGroup({ title, accounts }: { title: string; accounts: AccountRes
       <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">{title}</h2>
       <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100 mb-6">
         {accounts.map((a) => (
-          <Link
-            key={a.id}
-            to="/accounts/$accountId/transactions"
-            params={{ accountId: a.id }}
-            className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
-          >
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-gray-900 truncate">{a.nickname}</p>
-              <p className="text-sm text-gray-500">
-                {a.institution_name ?? ACCOUNT_LABELS[a.account_type]}
-                {a.account_number_last4 && ` •••• ${a.account_number_last4}`}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="font-medium text-gray-900">{formatCurrencyOrDash(a.current_balance)}</p>
-              {a.balance_as_of && <p className="text-xs text-gray-400">{a.balance_as_of}</p>}
-            </div>
-          </Link>
+          <AccountRow key={a.id} account={a} />
         ))}
       </div>
     </div>
@@ -413,7 +151,9 @@ export default function Accounts() {
         </div>
       )}
 
-      {showAdd && <AddAccountModal onClose={() => setShowAdd(false)} />}
+      {showAdd && (
+        <AddAccountModal allowedTypes={ACCOUNTS_PAGE_TYPES} onClose={() => setShowAdd(false)} />
+      )}
     </div>
   )
 }

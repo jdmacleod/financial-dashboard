@@ -10,6 +10,9 @@ import { pensionApi } from "@/api/pension"
 import { snapshotsApi } from "@/api/snapshots"
 import { ACCOUNT_LABELS, PROPERTY_TYPE_LABELS } from "@/lib/accountLabels"
 import { formatCurrencyOrDash } from "@/lib/formatters"
+import { useAuth } from "@/hooks/useAuth"
+import AddAccountModal from "@/components/app/AddAccountModal"
+import ArchiveAccountModal from "@/components/app/ArchiveAccountModal"
 import type {
   AccountResponse,
   AccountType,
@@ -26,10 +29,49 @@ const INVESTMENT_TYPES: AccountType[] = [
   "hsa",
 ]
 
+// Types shown in the Add Asset modal — valuation-based only.
+const ASSETS_PAGE_TYPES: AccountType[] = ["real_estate", "pension", ...INVESTMENT_TYPES]
+
 function pensionPV(monthlyBenefit: string | null): string {
   if (!monthlyBenefit) return "—"
   const pv = (Number(monthlyBenefit) * 12) / 0.04
   return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(pv)
+}
+
+// Three-dot menu button — appears on hover
+function OptionsMenu({ onArchive }: { onArchive: () => void }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative">
+      <button
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          setOpen((o) => !o)
+        }}
+        aria-label="Account options"
+        className="p-1 rounded text-gray-400 hover:text-gray-600 hover:bg-gray-100 opacity-0 group-hover:opacity-100 transition-opacity"
+      >
+        ···
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-7 z-50 w-44 bg-white rounded-lg border border-gray-200 shadow-lg py-1">
+            <button
+              onClick={() => {
+                setOpen(false)
+                onArchive()
+              }}
+              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+            >
+              Archive account
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  )
 }
 
 // UpdateValueModal — creates a snapshot for an investment account
@@ -129,6 +171,8 @@ function UpdateValueModal({ account, onClose }: { account: AccountResponse; onCl
 
 // Real Estate section
 function RealEstateCard({ account }: { account: AccountResponse }) {
+  const isPrimary = useAuth((s) => s.role === "primary")
+  const [archiving, setArchiving] = useState(false)
   const { data: property, isLoading: propertyLoading } = useQuery<PropertyResponse | null>({
     queryKey: ["property-by-account", account.id],
     queryFn: () => propertiesApi.getByAccountId(account.id),
@@ -141,26 +185,32 @@ function RealEstateCard({ account }: { account: AccountResponse }) {
       : "No property record"
 
   return (
-    <Link
-      to="/properties/$propertyId"
-      params={{ propertyId: property?.id ?? "" }}
-      className={`flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors ${!property ? "pointer-events-none" : ""}`}
-    >
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-900 truncate">{account.nickname}</p>
-        <p className="text-sm text-gray-500">{subtitle}</p>
+    <>
+      <div className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors group">
+        <Link
+          to="/properties/$propertyId"
+          params={{ propertyId: property?.id ?? "" }}
+          className={`flex flex-1 min-w-0 items-center gap-4 ${!property ? "pointer-events-none" : ""}`}
+        >
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-gray-900 truncate">{account.nickname}</p>
+            <p className="text-sm text-gray-500">{subtitle}</p>
+          </div>
+          <div className="text-right">
+            <p className="font-medium text-gray-900">
+              {property
+                ? formatCurrencyOrDash(property.current_estimated_value)
+                : formatCurrencyOrDash(account.current_balance)}
+            </p>
+            {property?.current_value_as_of && (
+              <p className="text-xs text-gray-400">as of {property.current_value_as_of}</p>
+            )}
+          </div>
+        </Link>
+        {isPrimary && <OptionsMenu onArchive={() => setArchiving(true)} />}
       </div>
-      <div className="text-right">
-        <p className="font-medium text-gray-900">
-          {property
-            ? formatCurrencyOrDash(property.current_estimated_value)
-            : formatCurrencyOrDash(account.current_balance)}
-        </p>
-        {property?.current_value_as_of && (
-          <p className="text-xs text-gray-400">as of {property.current_value_as_of}</p>
-        )}
-      </div>
-    </Link>
+      {archiving && <ArchiveAccountModal account={account} onClose={() => setArchiving(false)} />}
+    </>
   )
 }
 
@@ -173,9 +223,7 @@ function RealEstateSection({ accounts }: { accounts: AccountResponse[] }) {
       {accounts.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-8 text-center text-gray-400">
           <p className="text-sm mb-1">No properties yet</p>
-          <p className="text-xs">
-            Add a real estate account from the Accounts page to get started.
-          </p>
+          <p className="text-xs">Add a real estate account to get started.</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
@@ -190,37 +238,45 @@ function RealEstateSection({ accounts }: { accounts: AccountResponse[] }) {
 
 // Pension section
 function PensionCard({ account }: { account: AccountResponse }) {
+  const isPrimary = useAuth((s) => s.role === "primary")
+  const [archiving, setArchiving] = useState(false)
   const { data: pension } = useQuery<PensionAccountResponse>({
     queryKey: ["pension-by-account", account.id],
     queryFn: () => pensionApi.get(account.id),
   })
 
   return (
-    <Link
-      to="/accounts/$accountId/pension"
-      params={{ accountId: account.id }}
-      className="flex items-center gap-4 px-4 py-3 hover:bg-gray-50 transition-colors"
-    >
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-gray-900 truncate">{account.nickname}</p>
-        <p className="text-sm text-gray-500">
-          {pension?.plan_name ?? "Pension"}
-          {pension && (
-            <span
-              className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${pension.is_vested ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}
-            >
-              {pension.is_vested ? "Vested" : "Unvested"}
-            </span>
-          )}
-        </p>
+    <>
+      <div className="flex items-center gap-2 px-4 py-3 hover:bg-gray-50 transition-colors group">
+        <Link
+          to="/accounts/$accountId/pension"
+          params={{ accountId: account.id }}
+          className="flex flex-1 min-w-0 items-center gap-4"
+        >
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-gray-900 truncate">{account.nickname}</p>
+            <p className="text-sm text-gray-500">
+              {pension?.plan_name ?? "Pension"}
+              {pension && (
+                <span
+                  className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${pension.is_vested ? "bg-emerald-50 text-emerald-700" : "bg-gray-100 text-gray-500"}`}
+                >
+                  {pension.is_vested ? "Vested" : "Unvested"}
+                </span>
+              )}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="font-medium text-gray-900">
+              {pensionPV(pension?.monthly_benefit_estimate ?? null)}
+            </p>
+            <p className="text-xs text-gray-400">~est. PV (4% discount)</p>
+          </div>
+        </Link>
+        {isPrimary && <OptionsMenu onArchive={() => setArchiving(true)} />}
       </div>
-      <div className="text-right">
-        <p className="font-medium text-gray-900">
-          {pensionPV(pension?.monthly_benefit_estimate ?? null)}
-        </p>
-        <p className="text-xs text-gray-400">~est. PV (4% discount)</p>
-      </div>
-    </Link>
+      {archiving && <ArchiveAccountModal account={account} onClose={() => setArchiving(false)} />}
+    </>
   )
 }
 
@@ -231,7 +287,7 @@ function PensionSection({ accounts }: { accounts: AccountResponse[] }) {
       {accounts.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-8 text-center text-gray-400">
           <p className="text-sm mb-1">No pension accounts yet</p>
-          <p className="text-xs">Add a pension account from the Accounts page to get started.</p>
+          <p className="text-xs">Add a pension account to get started.</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
@@ -252,32 +308,41 @@ function InvestmentRow({
   account: AccountResponse
   onUpdateValue: (a: AccountResponse) => void
 }) {
+  const isPrimary = useAuth((s) => s.role === "primary")
+  const [archiving, setArchiving] = useState(false)
+
   return (
-    <div className="flex items-center gap-4 px-4 py-3">
-      <Link
-        to="/accounts/$accountId/transactions"
-        params={{ accountId: account.id }}
-        className="flex-1 min-w-0 hover:text-indigo-600 transition-colors"
-      >
-        <p className="font-medium text-gray-900 truncate">{account.nickname}</p>
-        <p className="text-sm text-gray-500">
-          {account.institution_name ?? ACCOUNT_LABELS[account.account_type]}
-          {account.account_number_last4 && ` •••• ${account.account_number_last4}`}
-        </p>
-      </Link>
-      <div className="text-right mr-4">
-        <p className="font-medium text-gray-900">{formatCurrencyOrDash(account.current_balance)}</p>
-        {account.balance_as_of && (
-          <p className="text-xs text-gray-400">as of {account.balance_as_of}</p>
-        )}
+    <>
+      <div className="flex items-center gap-2 px-4 py-3 group">
+        <Link
+          to="/accounts/$accountId/transactions"
+          params={{ accountId: account.id }}
+          className="flex-1 min-w-0 hover:text-indigo-600 transition-colors"
+        >
+          <p className="font-medium text-gray-900 truncate">{account.nickname}</p>
+          <p className="text-sm text-gray-500">
+            {account.institution_name ?? ACCOUNT_LABELS[account.account_type]}
+            {account.account_number_last4 && ` •••• ${account.account_number_last4}`}
+          </p>
+        </Link>
+        <div className="text-right mr-2">
+          <p className="font-medium text-gray-900">
+            {formatCurrencyOrDash(account.current_balance)}
+          </p>
+          {account.balance_as_of && (
+            <p className="text-xs text-gray-400">as of {account.balance_as_of}</p>
+          )}
+        </div>
+        <button
+          onClick={() => onUpdateValue(account)}
+          className="text-xs rounded-lg border border-gray-300 px-3 py-1.5 text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors whitespace-nowrap"
+        >
+          Update value
+        </button>
+        {isPrimary && <OptionsMenu onArchive={() => setArchiving(true)} />}
       </div>
-      <button
-        onClick={() => onUpdateValue(account)}
-        className="text-xs rounded-lg border border-gray-300 px-3 py-1.5 text-gray-600 hover:bg-gray-50 hover:border-gray-400 transition-colors whitespace-nowrap"
-      >
-        Update value
-      </button>
-    </div>
+      {archiving && <ArchiveAccountModal account={account} onClose={() => setArchiving(false)} />}
+    </>
   )
 }
 
@@ -296,9 +361,7 @@ function InvestmentsSection({
       {accounts.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-8 text-center text-gray-400">
           <p className="text-sm mb-1">No investment accounts yet</p>
-          <p className="text-xs">
-            Add a brokerage, 401(k), IRA, or HSA account from the Accounts page to get started.
-          </p>
+          <p className="text-xs">Add a brokerage, 401(k), IRA, or HSA account to get started.</p>
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 divide-y divide-gray-100">
@@ -322,6 +385,7 @@ export default function Assets() {
   })
 
   const [updateTarget, setUpdateTarget] = useState<AccountResponse | null>(null)
+  const [showAdd, setShowAdd] = useState(false)
 
   const realEstate = accounts?.filter((a) => a.account_type === "real_estate") ?? []
   const pensions = accounts?.filter((a) => a.account_type === "pension") ?? []
@@ -334,6 +398,12 @@ export default function Assets() {
     <div className="p-8 max-w-3xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Assets</h1>
+        <button
+          onClick={() => setShowAdd(true)}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+        >
+          Add asset
+        </button>
       </div>
 
       <RealEstateSection accounts={realEstate} />
@@ -342,6 +412,13 @@ export default function Assets() {
 
       {updateTarget && (
         <UpdateValueModal account={updateTarget} onClose={() => setUpdateTarget(null)} />
+      )}
+      {showAdd && (
+        <AddAccountModal
+          allowedTypes={ASSETS_PAGE_TYPES}
+          label="asset"
+          onClose={() => setShowAdd(false)}
+        />
       )}
     </div>
   )
