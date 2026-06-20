@@ -1,7 +1,7 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useParams, Link } from "@tanstack/react-router"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Pencil, Trash2 } from "lucide-react"
+import { Pencil, Trash2, Receipt, Upload } from "lucide-react"
 import { transactionsApi } from "@/api/transactions"
 import { categoriesApi } from "@/api/categories"
 import { accountsApi } from "@/api/accounts"
@@ -66,43 +66,59 @@ function CategoryBadge({
 }
 
 function DeleteConfirmDialog({
+  payee,
+  amount,
   onConfirm,
   onCancel,
   isPending,
   hasError,
 }: {
+  payee: string
+  amount: string
   onConfirm: () => void
   onCancel: () => void
   isPending: boolean
   hasError: boolean
 }) {
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    dialogRef.current?.showModal()
+  }, [])
+
+  const formattedAmount = formatCurrency(amount)
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-xl p-6">
-        <h2 className="text-lg font-semibold mb-2">Delete transaction?</h2>
-        <p className="text-sm text-gray-600 mb-4">This cannot be undone.</p>
-        {hasError && (
-          <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            Failed to delete. Please try again.
-          </p>
-        )}
-        <div className="flex gap-3">
-          <button
-            onClick={onCancel}
-            className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isPending}
-            className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
-          >
-            {isPending ? "Deleting…" : "Delete"}
-          </button>
-        </div>
+    <dialog
+      ref={dialogRef}
+      onCancel={onCancel}
+      className="w-full max-w-sm rounded-xl shadow-xl p-6 m-auto backdrop:bg-black/30"
+    >
+      <h2 className="text-lg font-semibold mb-2">Delete transaction?</h2>
+      <p className="text-sm text-gray-600 mb-1">
+        <span className="font-medium">"{payee}"</span> · {formattedAmount}
+      </p>
+      <p className="text-sm text-gray-500 mb-4">This cannot be undone.</p>
+      {hasError && (
+        <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          Failed to delete. Please try again.
+        </p>
+      )}
+      <div className="flex gap-3">
+        <button
+          onClick={onCancel}
+          className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={onConfirm}
+          disabled={isPending}
+          className="flex-1 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-60"
+        >
+          {isPending ? "Deleting…" : "Delete"}
+        </button>
       </div>
-    </div>
+    </dialog>
   )
 }
 
@@ -117,7 +133,7 @@ export default function Transactions() {
   const [showImport, setShowImport] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<TransactionResponse | null>(null)
-  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deletingTransaction, setDeletingTransaction] = useState<TransactionResponse | null>(null)
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null)
 
   const { data: account } = useQuery({
@@ -165,7 +181,7 @@ export default function Transactions() {
     mutationFn: (id: string) => transactionsApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transactions", accountId] })
-      setDeletingId(null)
+      setDeletingTransaction(null)
     },
   })
 
@@ -207,7 +223,7 @@ export default function Transactions() {
           <p className="text-sm text-gray-500">Transactions</p>
         </div>
         <div className="flex items-center gap-2">
-          {!isRealEstateAccount && !isPensionAccount && (
+          {!isRealEstateAccount && (
             <button
               onClick={() => setShowAdd(true)}
               className="rounded-lg border border-indigo-600 px-4 py-2 text-sm font-medium text-indigo-600 hover:bg-indigo-50 transition-colors"
@@ -425,7 +441,7 @@ export default function Transactions() {
                     <Pencil size={14} />
                   </button>
                   <button
-                    onClick={() => setDeletingId(t.id)}
+                    onClick={() => setDeletingTransaction(t)}
                     className="p-1 text-gray-400 hover:text-red-600 transition-colors"
                     title="Delete transaction"
                   >
@@ -448,11 +464,13 @@ export default function Transactions() {
             </div>
           ))}
           {transactions.length === 0 && (
-            <div className="px-4 py-10 text-center">
+            <div className="px-4 py-12 text-center">
               {isInvestmentAccount ? (
                 <>
-                  <p className="text-gray-400 mb-3">
-                    No transactions recorded yet. Add your first entry →
+                  <Receipt className="mx-auto mb-3 text-gray-300" size={36} />
+                  <p className="text-sm font-medium text-gray-700 mb-1">No transactions yet</p>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Add your first entry to start tracking contributions.
                   </p>
                   <button
                     onClick={() => setShowAdd(true)}
@@ -463,8 +481,10 @@ export default function Transactions() {
                 </>
               ) : (
                 <>
-                  <p className="text-gray-400 mb-3">
-                    No transactions yet. Import a file or add one manually.
+                  <Upload className="mx-auto mb-3 text-gray-300" size={36} />
+                  <p className="text-sm font-medium text-gray-700 mb-1">No transactions yet</p>
+                  <p className="text-sm text-gray-400 mb-4">
+                    Import a bank export or add one manually.
                   </p>
                   <div className="flex items-center justify-center gap-2">
                     <button
@@ -528,10 +548,12 @@ export default function Transactions() {
         />
       )}
 
-      {deletingId && (
+      {deletingTransaction && (
         <DeleteConfirmDialog
-          onConfirm={() => deleteTransaction.mutate(deletingId)}
-          onCancel={() => setDeletingId(null)}
+          payee={deletingTransaction.payee_normalized ?? deletingTransaction.payee_raw ?? "Unknown"}
+          amount={deletingTransaction.amount}
+          onConfirm={() => deleteTransaction.mutate(deletingTransaction.id)}
+          onCancel={() => setDeletingTransaction(null)}
           isPending={deleteTransaction.isPending}
           hasError={deleteTransaction.isError}
         />

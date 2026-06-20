@@ -124,7 +124,7 @@ describe("Transactions — empty state", () => {
     renderPage()
 
     await waitFor(() => {
-      expect(screen.getByText(/no transactions recorded yet/i)).toBeInTheDocument()
+      expect(screen.getByText(/no transactions yet/i)).toBeInTheDocument()
     })
     // Two "New entry" buttons: one in the header, one in the empty state CTA
     expect(screen.getAllByRole("button", { name: /new entry/i })).toHaveLength(2)
@@ -139,7 +139,7 @@ describe("Transactions — empty state", () => {
     await waitFor(() => {
       expect(screen.getByText(/no transactions yet/i)).toBeInTheDocument()
     })
-    expect(screen.getByText(/import a file or add one manually/i)).toBeInTheDocument()
+    expect(screen.getByText(/import a bank export or add one manually/i)).toBeInTheDocument()
   })
 })
 
@@ -216,7 +216,7 @@ describe("Transactions — delete confirm", () => {
     await waitFor(() => screen.getByTitle(/delete transaction/i))
     await user.click(screen.getByTitle(/delete transaction/i))
 
-    const dialog = screen.getByText("Delete transaction?").closest("div")!
+    const dialog = screen.getByRole("dialog")!
     await user.click(within(dialog).getByRole("button", { name: /cancel/i }))
 
     expect(screen.queryByText("Delete transaction?")).not.toBeInTheDocument()
@@ -232,7 +232,7 @@ describe("Transactions — delete confirm", () => {
     await waitFor(() => screen.getByTitle(/delete transaction/i))
     await user.click(screen.getByTitle(/delete transaction/i))
 
-    const dialog = screen.getByText("Delete transaction?").closest("div")!
+    const dialog = screen.getByRole("dialog")!
     await user.click(within(dialog).getByRole("button", { name: /^delete$/i }))
 
     await waitFor(() => {
@@ -250,11 +250,42 @@ describe("Transactions — delete confirm", () => {
     await waitFor(() => screen.getByTitle(/delete transaction/i))
     await user.click(screen.getByTitle(/delete transaction/i))
 
-    const dialog = screen.getByText("Delete transaction?").closest("div")!
+    const dialog = screen.getByRole("dialog")!
     await user.click(within(dialog).getByRole("button", { name: /^delete$/i }))
 
     await waitFor(() => {
       expect(screen.getByText(/failed to delete/i)).toBeInTheDocument()
+    })
+  })
+
+  it("shows payee and amount in delete confirm dialog", async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await waitFor(() => screen.getByTitle(/delete transaction/i))
+    await user.click(screen.getByTitle(/delete transaction/i))
+
+    const dialog = screen.getByRole("dialog")
+    // textContent avoids span/p multiple-match and minus-sign encoding issues
+    expect(dialog.textContent).toContain('"Coffee Shop"')
+    expect(dialog.textContent).toMatch(/\$50\.00/)
+  })
+})
+
+describe("Transactions — empty state — pension", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(categoriesApi.list).mockResolvedValue(categories)
+    vi.mocked(transactionsApi.list).mockResolvedValue(emptyTransactions)
+  })
+
+  it("shows New entry button in header for pension accounts", async () => {
+    vi.mocked(accountsApi.get).mockResolvedValue(makeAccount("pension"))
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("button", { name: /new entry/i })).toHaveLength(1)
     })
   })
 })
