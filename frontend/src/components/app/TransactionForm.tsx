@@ -1,9 +1,62 @@
-import type { FieldErrors, UseFormRegister } from "react-hook-form"
+import { useState } from "react"
+import { Controller } from "react-hook-form"
+import type { Control, FieldErrors, UseFormRegister } from "react-hook-form"
 import type { TransactionFormValues } from "@/lib/transactionSchema"
 import type { CategoryResponse } from "@/api/types"
 
+interface AmountFieldProps {
+  control: Control<TransactionFormValues>
+  defaultSign: "+" | "-"
+  error?: string
+}
+
+function AmountField({ control, defaultSign, error }: AmountFieldProps) {
+  const [sign, setSign] = useState<"+" | "-">(defaultSign)
+
+  return (
+    <div>
+      <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
+        Amount
+      </label>
+      <Controller
+        name="amount"
+        control={control}
+        render={({ field }) => (
+          <div className="flex rounded-lg border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500">
+            <button
+              type="button"
+              onClick={() => {
+                const next: "+" | "-" = sign === "-" ? "+" : "-"
+                setSign(next)
+                const abs = field.value.replace(/^[+-]/, "")
+                if (abs) field.onChange(next + abs)
+              }}
+              className="px-3 py-2 text-sm font-medium bg-gray-50 border-r border-gray-300 hover:bg-gray-100 transition-colors select-none"
+              aria-label={sign === "-" ? "Expense (negative)" : "Income (positive)"}
+            >
+              {sign}
+            </button>
+            <input
+              id="amount"
+              type="text"
+              inputMode="decimal"
+              value={field.value.replace(/^[+-]/, "")}
+              onChange={(e) => field.onChange(sign + e.target.value)}
+              onBlur={field.onBlur}
+              className="flex-1 px-3 py-2 text-sm focus:outline-none"
+            />
+          </div>
+        )}
+      />
+      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+    </div>
+  )
+}
+
 interface TransactionFormProps {
   register: UseFormRegister<TransactionFormValues>
+  control: Control<TransactionFormValues>
+  defaultSign?: "+" | "-"
   errors: FieldErrors<TransactionFormValues>
   categories: CategoryResponse[]
   onSubmit: (e: React.FormEvent) => void
@@ -15,6 +68,8 @@ interface TransactionFormProps {
 
 export function TransactionForm({
   register,
+  control,
+  defaultSign = "-",
   errors,
   categories,
   onSubmit,
@@ -41,23 +96,6 @@ export function TransactionForm({
       </div>
 
       <div>
-        <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-1">
-          Amount
-          <span className="ml-1 text-xs font-normal text-gray-400">
-            (negative for expenses, e.g. -50.00)
-          </span>
-        </label>
-        <input
-          id="amount"
-          type="text"
-          inputMode="decimal"
-          {...register("amount")}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-        {errors.amount && <p className="mt-1 text-xs text-red-600">{errors.amount.message}</p>}
-      </div>
-
-      <div>
         <label htmlFor="payee_normalized" className="block text-sm font-medium text-gray-700 mb-1">
           Payee
         </label>
@@ -72,18 +110,7 @@ export function TransactionForm({
         )}
       </div>
 
-      <div>
-        <label htmlFor="memo" className="block text-sm font-medium text-gray-700 mb-1">
-          Memo <span className="text-gray-400">(optional)</span>
-        </label>
-        <input
-          id="memo"
-          type="text"
-          {...register("memo")}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
-        {errors.memo && <p className="mt-1 text-xs text-red-600">{errors.memo.message}</p>}
-      </div>
+      <AmountField control={control} defaultSign={defaultSign} error={errors.amount?.message} />
 
       <div>
         <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 mb-1">
@@ -101,6 +128,19 @@ export function TransactionForm({
             </option>
           ))}
         </select>
+      </div>
+
+      <div>
+        <label htmlFor="memo" className="block text-sm font-medium text-gray-700 mb-1">
+          Memo <span className="text-gray-400">(optional)</span>
+        </label>
+        <input
+          id="memo"
+          type="text"
+          {...register("memo")}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        {errors.memo && <p className="mt-1 text-xs text-red-600">{errors.memo.message}</p>}
       </div>
 
       {error && (

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -20,8 +20,11 @@ export function EditTransactionModal({
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
 
+  const defaultSign: "+" | "-" = transaction.amount.startsWith("-") ? "-" : "+"
+
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<TransactionFormValues>({
@@ -54,26 +57,37 @@ export function EditTransactionModal({
       }),
   })
 
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    dialogRef.current?.showModal()
+  }, [])
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="w-full max-w-lg bg-white rounded-xl shadow-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Edit transaction</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            ✕
-          </button>
-        </div>
-        <TransactionForm
-          register={register}
-          errors={errors}
-          categories={categories}
-          onSubmit={handleSubmit((v) => update.mutate(v))}
-          onCancel={onClose}
-          isPending={update.isPending}
-          submitLabel="Save changes"
-          error={error}
-        />
+    <dialog
+      ref={dialogRef}
+      onCancel={onClose}
+      className="w-full max-w-lg rounded-xl shadow-xl p-6 m-auto backdrop:bg-black/30"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <h2 id="edit-transaction-title" className="text-lg font-semibold">
+          Edit transaction
+        </h2>
+        <button onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
+          ✕
+        </button>
       </div>
-    </div>
+      <TransactionForm
+        register={register}
+        control={control}
+        defaultSign={defaultSign}
+        errors={errors}
+        categories={categories}
+        onSubmit={handleSubmit((v) => update.mutate(v))}
+        onCancel={onClose}
+        isPending={update.isPending}
+        submitLabel="Save changes"
+        error={error}
+      />
+    </dialog>
   )
 }

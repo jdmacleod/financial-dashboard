@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 import { AddTransactionModal } from "../AddTransactionModal"
@@ -127,7 +127,7 @@ describe("AddTransactionModal", () => {
     await waitFor(() => {
       expect(transactionsApi.create).toHaveBeenCalledWith(
         "acct-1",
-        expect.objectContaining({ amount: "50.00", payee_normalized: "Coffee Shop" }),
+        expect.objectContaining({ amount: "-50.00", payee_normalized: "Coffee Shop" }),
       )
       expect(onClose).toHaveBeenCalled()
     })
@@ -280,5 +280,122 @@ describe("AddTransactionModal", () => {
     await waitFor(() => {
       expect(screen.getByText(/failed to save/i)).toBeInTheDocument()
     })
+  })
+
+  it("sign toggle defaults to expense (−)", () => {
+    render(
+      <AddTransactionModal
+        accountId="acct-1"
+        accountType="checking"
+        categories={categories}
+        onClose={onClose}
+      />,
+      { wrapper: wrapper(createClient()) },
+    )
+
+    expect(screen.getByRole("button", { name: /expense/i })).toHaveTextContent("-")
+  })
+
+  it("clicking sign toggle switches to income (+)", async () => {
+    const user = userEvent.setup()
+    render(
+      <AddTransactionModal
+        accountId="acct-1"
+        accountType="checking"
+        categories={categories}
+        onClose={onClose}
+      />,
+      { wrapper: wrapper(createClient()) },
+    )
+
+    const toggle = screen.getByRole("button", { name: /expense/i })
+    await user.click(toggle)
+
+    expect(screen.getByRole("button", { name: /income/i })).toHaveTextContent("+")
+  })
+
+  it("submits with negative sign when toggle is − (default)", async () => {
+    const user = userEvent.setup()
+    vi.mocked(transactionsApi.create).mockResolvedValue(mockTransaction)
+
+    render(
+      <AddTransactionModal
+        accountId="acct-1"
+        accountType="checking"
+        categories={categories}
+        onClose={onClose}
+      />,
+      { wrapper: wrapper(createClient()) },
+    )
+
+    await user.type(screen.getByLabelText(/amount/i), "75.00")
+    await user.type(screen.getByLabelText(/payee/i), "Coffee Shop")
+    await user.click(screen.getByRole("button", { name: /add transaction/i }))
+
+    await waitFor(() => {
+      expect(transactionsApi.create).toHaveBeenCalledWith(
+        "acct-1",
+        expect.objectContaining({ amount: "-75.00" }),
+      )
+    })
+  })
+
+  it("submits with positive sign when toggle is switched to +", async () => {
+    const user = userEvent.setup()
+    vi.mocked(transactionsApi.create).mockResolvedValue(mockTransaction)
+
+    render(
+      <AddTransactionModal
+        accountId="acct-1"
+        accountType="checking"
+        categories={categories}
+        onClose={onClose}
+      />,
+      { wrapper: wrapper(createClient()) },
+    )
+
+    await user.click(screen.getByRole("button", { name: /expense/i }))
+    await user.type(screen.getByLabelText(/amount/i), "200.00")
+    await user.type(screen.getByLabelText(/payee/i), "Paycheck")
+    await user.click(screen.getByRole("button", { name: /add transaction/i }))
+
+    await waitFor(() => {
+      expect(transactionsApi.create).toHaveBeenCalledWith(
+        "acct-1",
+        expect.objectContaining({ amount: "+200.00" }),
+      )
+    })
+  })
+
+  it("dialog has role=dialog and Close button accessible label", () => {
+    render(
+      <AddTransactionModal
+        accountId="acct-1"
+        accountType="checking"
+        categories={categories}
+        onClose={onClose}
+      />,
+      { wrapper: wrapper(createClient()) },
+    )
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /close/i })).toBeInTheDocument()
+  })
+
+  it("pressing Escape calls onClose", () => {
+    render(
+      <AddTransactionModal
+        accountId="acct-1"
+        accountType="checking"
+        categories={categories}
+        onClose={onClose}
+      />,
+      { wrapper: wrapper(createClient()) },
+    )
+
+    // jsdom's showModal polyfill doesn't fire cancel on Escape — fire it directly
+    fireEvent(screen.getByRole("dialog"), new Event("cancel"))
+
+    expect(onClose).toHaveBeenCalled()
   })
 })

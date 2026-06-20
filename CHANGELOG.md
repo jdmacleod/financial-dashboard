@@ -3,6 +3,19 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.0.1] - 2026-06-19
+
+### Fixed
+
+- **Transaction dialogs** — all four native `<dialog>` elements (Add transaction, Edit transaction, Import, Delete confirm) now carry `aria-labelledby` wired to their heading, satisfying WCAG 2.1 SC 4.1.2 for modal landmark labeling.
+- **Pension account empty state** — the transaction list empty state for pension accounts was incorrectly showing an Import CTA; it now shows the same "Add your first entry" call-to-action as investment accounts, consistent with Import being hidden in the header for pension accounts.
+- **Amount sign-toggle on empty input** — clicking the ± toggle before entering an amount was writing `"-"` to the RHF field, which passed `min(1)` validation but failed `parseFloat`, surfacing a confusing "Amount must be a valid number" error instead of "Amount is required"; the toggle now skips `field.onChange` when the field is empty.
+
+### Changed
+
+- **Add transaction modal** — default sign is now expense (`−`), so the majority-expense use case requires no extra click. Payees with income can toggle to `+` before entering the amount.
+- **Edit transaction modal** — sign toggle initialises from the stored transaction sign, so editing an income entry preserves the `+` rather than defaulting to expense.
+
 ## [0.9.0.0] - 2026-06-19
 
 ### Added

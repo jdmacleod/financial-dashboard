@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 import { EditTransactionModal } from "../EditTransactionModal"
@@ -55,7 +55,7 @@ describe("EditTransactionModal", () => {
     )
 
     expect((screen.getByLabelText(/date/i) as HTMLInputElement).value).toBe("2026-05-15")
-    expect((screen.getByLabelText(/amount/i) as HTMLInputElement).value).toBe("-250.00")
+    expect((screen.getByLabelText(/amount/i) as HTMLInputElement).value).toBe("250.00")
     expect((screen.getByLabelText(/payee/i) as HTMLInputElement).value).toBe("Grocery Store")
     expect((screen.getByLabelText(/memo/i) as HTMLInputElement).value).toBe("Weekly groceries")
     expect((screen.getByLabelText(/category/i) as HTMLSelectElement).value).toBe(
@@ -188,5 +188,65 @@ describe("EditTransactionModal", () => {
     await waitFor(() => {
       expect(screen.getByText(/failed to save/i)).toBeInTheDocument()
     })
+  })
+
+  it("initializes sign toggle to − for negative transaction amount", () => {
+    render(
+      <EditTransactionModal
+        transaction={existingTransaction}
+        categories={categories}
+        onClose={onClose}
+      />,
+      { wrapper: wrapper(createClient()) },
+    )
+
+    expect(screen.getByRole("button", { name: /expense/i })).toHaveTextContent("-")
+    expect((screen.getByLabelText(/amount/i) as HTMLInputElement).value).toBe("250.00")
+  })
+
+  it("initializes sign toggle to + for positive transaction amount", () => {
+    const positiveTransaction: TransactionResponse = { ...existingTransaction, amount: "100.00" }
+
+    render(
+      <EditTransactionModal
+        transaction={positiveTransaction}
+        categories={categories}
+        onClose={onClose}
+      />,
+      { wrapper: wrapper(createClient()) },
+    )
+
+    expect(screen.getByRole("button", { name: /income/i })).toHaveTextContent("+")
+    expect((screen.getByLabelText(/amount/i) as HTMLInputElement).value).toBe("100.00")
+  })
+
+  it("dialog has role=dialog and Close button accessible label", () => {
+    render(
+      <EditTransactionModal
+        transaction={existingTransaction}
+        categories={categories}
+        onClose={onClose}
+      />,
+      { wrapper: wrapper(createClient()) },
+    )
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /close/i })).toBeInTheDocument()
+  })
+
+  it("pressing Escape calls onClose", () => {
+    render(
+      <EditTransactionModal
+        transaction={existingTransaction}
+        categories={categories}
+        onClose={onClose}
+      />,
+      { wrapper: wrapper(createClient()) },
+    )
+
+    // jsdom's showModal polyfill doesn't fire cancel on Escape — fire it directly
+    fireEvent(screen.getByRole("dialog"), new Event("cancel"))
+
+    expect(onClose).toHaveBeenCalled()
   })
 })
