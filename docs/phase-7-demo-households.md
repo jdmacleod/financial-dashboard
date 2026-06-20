@@ -11,20 +11,20 @@ Source spec: `docs/hearthledger-demo-data-spec.md`
 
 ## Status
 
-**Planned** — v0.7.0.0
+**Complete** — v0.7.0.0
 
 ---
 
 ## Deliverables
 
-- [ ] `backend/scripts/seed_demo_data.py` — entry point (`--household 1|2|3|all`)
-- [ ] `backend/scripts/seed_households/__init__.py`
-- [ ] `backend/scripts/seed_households/shared_categories.py` — full category taxonomy
-- [ ] `backend/scripts/seed_households/h1_chen_nakamura.py`
-- [ ] `backend/scripts/seed_households/h2_okonkwo_rivera.py`
-- [ ] `backend/scripts/seed_households/h3_whitfield_torres.py`
-- [ ] Migration 0005: `heloc` added to `account_type` enum
-- [ ] Migration 0005: nullable `member_id` FK added to `fire_scenarios`
+- [x] `backend/scripts/seed_demo_data.py` — entry point (`--household 1|2|3|all`)
+- [x] `backend/scripts/seed_households/__init__.py`
+- [x] `backend/scripts/seed_households/shared_categories.py` — full category taxonomy
+- [x] `backend/scripts/seed_households/h1_chen_nakamura.py`
+- [x] `backend/scripts/seed_households/h2_okonkwo_rivera.py`
+- [x] `backend/scripts/seed_households/h3_whitfield_torres.py`
+- [x] Migration 0005: `heloc` added to `account_type` enum
+- [x] Migration 0005: nullable `member_id` FK added to `fire_scenarios`
 
 ---
 
