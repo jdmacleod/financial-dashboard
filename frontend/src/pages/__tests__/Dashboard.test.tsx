@@ -38,12 +38,108 @@ vi.mock("@/api/reports", () => ({
   reportsApi: {
     dashboard: vi.fn(() =>
       Promise.resolve({
-        net_worth: { current: "100000.00", change_30d: "500.00", change_30d_pct: 0.5 },
+        net_worth: { current: "142500.00", change_30d: "500.00", change_30d_pct: 0.5 },
         cash_flow_mtd: { income: "5000.00", expenses: "3000.00", net: "2000.00" },
         top_spending_categories: [],
         budget_alerts: [],
-        accounts_summary: { total_assets: "100000.00", total_liabilities: "0.00" },
+        accounts_summary: { total_assets: "150000.00", total_liabilities: "7500.00" },
       }),
+    ),
+    netWorth: vi.fn(() =>
+      Promise.resolve({
+        series: [
+          {
+            date: "2026-01-01",
+            total_assets: "98000.00",
+            total_liabilities: "0.00",
+            net_worth: "98000.00",
+            breakdown: {
+              checking_savings: "10000.00",
+              investment: "40000.00",
+              retirement: "48000.00",
+              real_estate: "0.00",
+              hsa: "0.00",
+              other_assets: "0.00",
+              mortgage: "0.00",
+              other_liabilities: "0.00",
+            },
+          },
+        ],
+        current: {
+          date: "2026-06-01",
+          total_assets: "100000.00",
+          total_liabilities: "0.00",
+          net_worth: "100000.00",
+          breakdown: {
+            checking_savings: "10000.00",
+            investment: "42000.00",
+            retirement: "48000.00",
+            real_estate: "0.00",
+            hsa: "0.00",
+            other_assets: "0.00",
+            mortgage: "0.00",
+            other_liabilities: "0.00",
+          },
+        },
+        pension_annotations: [],
+      }),
+    ),
+    cashFlow: vi.fn(() =>
+      Promise.resolve({
+        series: [
+          {
+            period: "2026-01-01",
+            income: "5000.00",
+            expenses: "3000.00",
+            net: "2000.00",
+            savings_rate: 40,
+          },
+        ],
+        totals: {
+          period: "total",
+          income: "5000.00",
+          expenses: "3000.00",
+          net: "2000.00",
+          savings_rate: 40,
+        },
+      }),
+    ),
+  },
+}))
+
+vi.mock("@/api/accounts", () => ({
+  accountsApi: {
+    list: vi.fn(() =>
+      Promise.resolve([
+        {
+          id: "a1",
+          nickname: "Chase Checking",
+          account_type: "checking",
+          owner_member_id: "member-1",
+          institution_name: "Chase",
+          account_number_last4: "1234",
+          include_in_net_worth: true,
+          is_active: true,
+          current_balance: "8000.00",
+          balance_as_of: "2026-06-01",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-06-01T00:00:00Z",
+        },
+        {
+          id: "a2",
+          nickname: "Fidelity 401k",
+          account_type: "retirement_401k",
+          owner_member_id: "member-1",
+          institution_name: "Fidelity",
+          account_number_last4: "5678",
+          include_in_net_worth: true,
+          is_active: true,
+          current_balance: "48000.00",
+          balance_as_of: "2026-06-01",
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-06-01T00:00:00Z",
+        },
+      ]),
     ),
   },
 }))
@@ -58,6 +154,7 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, ...props }: React.PropsWithChildren<{ to: string }>) => (
     <a href={props.to}>{children}</a>
   ),
+  useRouterState: () => "",
 }))
 
 function renderDashboard() {
@@ -71,14 +168,13 @@ function renderDashboard() {
   )
 }
 
-describe("Dashboard — householdName title (F1)", () => {
+describe("Dashboard — Overview tab", () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it("shows household name as page title when loaded", async () => {
+  it("shows household name as page heading", async () => {
     renderDashboard()
-
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "MacLeod Household" })).toBeInTheDocument()
     })
@@ -87,11 +183,38 @@ describe("Dashboard — householdName title (F1)", () => {
   it("falls back to 'Dashboard' when householdName is null", async () => {
     const { householdApi: mock } = await import("@/api/household")
     ;(mock.get as ReturnType<typeof vi.fn>).mockResolvedValue(null)
-
     renderDashboard()
-
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument()
+    })
+  })
+
+  it("shows Net Worth KPI from dashboard API", async () => {
+    renderDashboard()
+    await waitFor(() => {
+      expect(screen.getByText("$142,500.00")).toBeInTheDocument()
+    })
+  })
+
+  it("shows liquid balance from checking accounts", async () => {
+    renderDashboard()
+    await waitFor(() => {
+      // $8,000 from Chase Checking — appears in KPI card and holdings list
+      expect(screen.getAllByText("$8,000.00").length).toBeGreaterThan(0)
+    })
+  })
+
+  it("shows saved/mo from cash_flow_mtd.net", async () => {
+    renderDashboard()
+    await waitFor(() => {
+      expect(screen.getByText("$2,000.00")).toBeInTheDocument()
+    })
+  })
+
+  it("shows largest holding account name", async () => {
+    renderDashboard()
+    await waitFor(() => {
+      expect(screen.getByText("Fidelity 401k")).toBeInTheDocument()
     })
   })
 })
