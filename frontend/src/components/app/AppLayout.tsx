@@ -11,16 +11,26 @@ import { formatCurrency } from "@/lib/formatters"
 
 type Range = "ytd" | "1y" | "all"
 
+const VALID_RANGES: Range[] = ["ytd", "1y", "all"]
+
 function useRange(): [Range, (r: Range) => void] {
+  const navigate = useNavigate()
   const search = useRouterState({ select: (s) => s.location.search })
   const params = new URLSearchParams(search)
-  const range = (params.get("range") as Range) ?? "ytd"
+  const raw = params.get("range")
+  const range: Range = VALID_RANGES.includes(raw as Range) ? (raw as Range) : "ytd"
   const setRange = (r: Range) => {
-    const url = new URL(window.location.href)
-    url.searchParams.set("range", r)
-    window.history.replaceState(null, "", url.pathname + url.search)
-    // Notify TanStack Router that the URL changed so location state updates
-    window.dispatchEvent(new PopStateEvent("popstate"))
+    // TanStack Router v1 can't infer search param types from a layout route
+    // without an explicit `from` context. The unknown cast bypasses the strict
+    // ParamsReducerFn generic; behaviour is correct at runtime.
+    type NavFn = (o: {
+      search: (p: Record<string, string>) => Record<string, string>
+      replace: boolean
+    }) => void
+    void (navigate as unknown as NavFn)({
+      search: (prev) => ({ ...prev, range: r }),
+      replace: true,
+    })
   }
   return [range, setRange]
 }

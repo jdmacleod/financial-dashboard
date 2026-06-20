@@ -150,9 +150,11 @@ const DONUT_COLORS: Record<string, string> = {
 }
 
 function compactCurrency(n: number): string {
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`
-  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}k`
-  return `$${n.toFixed(0)}`
+  const sign = n < 0 ? "-" : ""
+  const abs = Math.abs(n)
+  if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(2)}M`
+  if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(0)}k`
+  return `${sign}$${abs.toFixed(0)}`
 }
 
 // ── Main component ────────────────────────────────────────────────────────────

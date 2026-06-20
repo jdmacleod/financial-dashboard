@@ -1,9 +1,9 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 AccountType = Literal[
     "checking",
@@ -34,7 +34,7 @@ class AccountCreate(BaseModel):
     account_number: str | None = None
     routing_number: str | None = None
     include_in_net_worth: bool = True
-    notes: str | None = None
+    notes: Annotated[str | None, Field(max_length=2000)] = None
 
 
 class AccountUpdate(BaseModel):
@@ -44,7 +44,7 @@ class AccountUpdate(BaseModel):
     account_number: str | None = None
     routing_number: str | None = None
     include_in_net_worth: bool | None = None
-    notes: str | None = None
+    notes: Annotated[str | None, Field(max_length=2000)] = None
 
 
 class AccountResponse(BaseModel):

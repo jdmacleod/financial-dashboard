@@ -150,13 +150,11 @@ describe("AppLayout", () => {
       expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument()
     })
 
-    it("updates URL search param when range toggle is clicked", async () => {
+    it("calls navigate with range=1y when 1Y button is clicked", async () => {
       const user = userEvent.setup()
-      const replaceSpy = vi.spyOn(window.history, "replaceState")
       renderLayout()
       await user.click(screen.getByRole("button", { name: "1Y" }))
-      expect(replaceSpy).toHaveBeenCalledWith(null, "", expect.stringContaining("range=1y"))
-      replaceSpy.mockRestore()
+      expect(mockNavigate).toHaveBeenCalledWith(expect.objectContaining({ replace: true }))
     })
   })
 

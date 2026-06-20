@@ -54,10 +54,17 @@ const setupRoute = createRoute({
   component: Setup,
 })
 
+type Range = "ytd" | "1y" | "all"
+const VALID_RANGES: Range[] = ["ytd", "1y", "all"]
+
 // Protected layout — redirects to /login if no token, /setup if not configured
 const appLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: "app",
+  validateSearch: (search: Record<string, unknown>): { range?: Range } => {
+    const raw = search.range as string | undefined
+    return raw && VALID_RANGES.includes(raw as Range) ? { range: raw as Range } : {}
+  },
   beforeLoad: async () => {
     const stored = sessionStorage.getItem("access_token")
     if (!stored) {

@@ -161,13 +161,16 @@ export default function Retirement() {
     staleTime: 60_000,
   })
 
-  // Prefetch snapshots for all retirement accounts so RetirementRow hits cache, not the network
+  // Prefetch snapshots for retirement accounts only so RetirementRow hits cache, not the network
+  const RETIREMENT_TYPES = [...TAX_DEFERRED, ...TAX_FREE, ...GUARANTEED]
   useQueries({
-    queries: (accounts ?? []).map((account) => ({
-      queryKey: ["snapshots", account.id],
-      queryFn: () => snapshotsApi.list(account.id),
-      staleTime: 60_000,
-    })),
+    queries: (accounts ?? [])
+      .filter((a) => RETIREMENT_TYPES.includes(a.account_type))
+      .map((account) => ({
+        queryKey: ["snapshots", account.id],
+        queryFn: () => snapshotsApi.list(account.id),
+        staleTime: 60_000,
+      })),
   })
 
   const taxDeferred = useMemo(
