@@ -55,4 +55,4 @@ class TestThirdWednesday:
 )
 def test_date_end_default_value() -> None:
     """DATE_END is 2026-06-21 when SEED_DATE_END is not set."""
-    assert _util.DATE_END == date(2026, 6, 21)
+    assert date(2026, 6, 21) == _util.DATE_END
