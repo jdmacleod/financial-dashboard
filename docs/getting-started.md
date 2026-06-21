@@ -105,17 +105,22 @@ Click **Create household**. You are automatically logged in as the Primary membe
 
 ## 6. Add your first account
 
-From the dashboard, click **Accounts** in the sidebar, then **New account**.
+Click **Accounts** in the sidebar. The page shows five category groups:
+Banking & Cash, Retirement, Investments, Real estate, and Liabilities. Click
+the **+** on the category that matches your account.
 
-Fill in:
+For a first account, click **+** on **Banking & Cash** and fill in:
 
-- **Name** — e.g. "Chase Checking"
-- **Type** — `checking`, `savings`, `credit`, `investment`, `retirement`, or `loan`
+- **Nickname** — e.g. "Chase Checking"
+- **Type** — `checking`, `savings`, or `other_asset`
 - **Institution** — e.g. "Chase Bank"
 
-Click **Save**. Your account appears in the list.
+Click **Save**. Your account appears in the Banking & Cash group.
 
-> **Note:** Institution names and account numbers are stored encrypted (AES-256-GCM). They never appear in plaintext in the database.
+> **Note:** Institution names and account numbers are stored encrypted
+> (AES-256-GCM). They never appear in plaintext in the database.
+
+For all account types and categories, see [How to add accounts](howto-add-accounts.md).
 
 ## 7. Import transactions
 

@@ -65,6 +65,8 @@ Rather than individual holdings, HearthLedger uses balance snapshots. On the Ass
 **Deactivating an account:**
 Click the **…** menu on an account and choose **Deactivate**. Deactivated accounts are hidden from lists but historical data is preserved.
 
+For a step-by-step walkthrough of each account category, see [How to add accounts](howto-add-accounts.md).
+
 ---
 
 ## Pension accounts

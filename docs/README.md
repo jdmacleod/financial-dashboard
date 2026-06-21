@@ -5,12 +5,13 @@ tracking system.
 
 ## User documentation
 
-| File                      | Purpose                                                             |
-| ------------------------- | ------------------------------------------------------------------- |
-| `docs/getting-started.md` | Install, configure, and run HearthLedger for the first time         |
-| `docs/user-guide.md`      | Complete guide to every feature                                     |
-| `docs/api-reference.md`   | REST API reference — all endpoints, parameters, and response shapes |
-| `docs/security.md`        | Authentication, RBAC, encryption, audit log, and secrets management |
+| File                         | Purpose                                                             |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `docs/getting-started.md`    | Install, configure, and run HearthLedger for the first time         |
+| `docs/user-guide.md`         | Complete guide to every feature                                     |
+| `docs/howto-add-accounts.md` | How to add accounts across all five category groups                 |
+| `docs/api-reference.md`      | REST API reference — all endpoints, parameters, and response shapes |
+| `docs/security.md`           | Authentication, RBAC, encryption, audit log, and secrets management |
 
 ## Implementation spec (developer reference)
 
