@@ -7,7 +7,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- **Context-aware "+" buttons on Accounts page** — clicking "+" in the Banking & Cash group opens `AddAccountModal` filtered to checking/savings/other_asset types; clicking in the Liabilities group shows only liability types; clicking in Retirement, Investments, or Real estate navigates to the dedicated page (`/reports/retirement`, `/reports/investments`, `/assets`) where those account types are managed. The header "+ Add account" button retains the full ACCOUNTS_PAGE_TYPES list. Closes Phase 8 F6 deferred item.
+- **Context-aware "+" buttons on Accounts page** — clicking "+" in the Banking & Cash group opens `AddAccountModal` filtered to checking/savings/other_asset types; clicking in the Liabilities group shows only liability types; clicking in Retirement, Investments, or Real estate navigates to the dedicated page (`/reports/retirement`, `/reports/investments`, `/assets`) where those account types are managed. The header "+ Add account" button retains the full list of transaction account types.
 - **Phase 8/9/10 documentation** — `docs/phase-8-accounts-assets.md`, `docs/phase-9-wealth-dashboard.md`, and `docs/phase-10-ux-completeness.md` created; `docs/README.md` updated to include all phases.
 
 ### Fixed

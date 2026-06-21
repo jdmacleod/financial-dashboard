@@ -29,11 +29,9 @@ Real estate, pension, and investment/retirement accounts appear on the **Assets*
 **Creating an account:**
 
 1. Go to **Accounts** in the sidebar.
-2. Click **New account**.
-3. Set the name, type, institution, and optionally the account number.
-4. Click **Save**.
-
-> **Note:** If you create a real estate, pension, or investment account from the Accounts page, it will not appear in the Accounts list — check the Assets page. This will be improved in a future release.
+2. Click the **+** button on the relevant category group, or **+ Add account** in the page header.
+3. For **Banking & Cash** or **Liabilities** accounts, a form appears — set the nickname, type, institution, and optional account number, then click **Save**.
+4. For **Retirement**, **Investments**, or **Real estate** accounts, clicking **+** navigates to the dedicated page for that account type, where you can add accounts of those kinds.
 
 Transaction account types (shown on the Accounts page):
 | Type | Description |
@@ -46,6 +44,7 @@ Transaction account types (shown on the Accounts page):
 | `auto_loan` | Auto loan |
 | `personal_loan` | Personal loan |
 | `student_loan` | Student loan |
+| `heloc` | Home equity line of credit |
 | `other_liability` | Any other liability |
 
 Asset account types (shown on the Assets page):
