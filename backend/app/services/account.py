@@ -27,6 +27,7 @@ _TRANSACTION_BASED_TYPES: frozenset[str] = frozenset(
         "mortgage",
         "auto_loan",
         "personal_loan",
+        "heloc",
         "student_loan",
         "other_asset",
         "other_liability",

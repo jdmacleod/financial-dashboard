@@ -3,6 +3,38 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.2.1] - 2026-06-20
+
+### Fixed
+
+- **ORM model drift** — `FireScenario.member_id` was missing its `ForeignKey('household_members.id', ondelete='SET NULL')` declaration and `__table_args__` partial index, causing Alembic autogenerate to see drift versus migration 0005.
+- **FIRE projection DOB** — `FireScenarioService.project()` always used the primary member's date of birth even when `member_id` was set; it now looks up the attributed member's DOB and falls back to the primary member only when `member_id` is null.
+- **net_worth() N+1 queries** — `net_worth()` series loop issued one SQL query per transaction-based account (credit_card/heloc) per date point; refactored to batch all such sums in one query per date point via `txn_sums` dict passed through `_net_worth_point` → `_liability_value_at`.
+- **fire_detector net worth date cap** — `_net_worth()` transaction sum for credit_card/heloc had no upper date bound; added `Transaction.transaction_date <= date.today()` so future-dated transactions are excluded.
+- **Migration 0005 downgrade** — spurious `GRANT USAGE ON TYPE account_type TO hearthledger_app` was included in `downgrade()`; removed.
+- **Demo seeds — 403(b) account type** — H1 Priya Nakamura and H2 Carmen Rivera's 403(b) accounts were seeded as `retirement_401k`; corrected to `retirement_403b`.
+- **Demo seeds — member date of birth** — All three households were seeded without `date_of_birth` on primary/partner members, causing FIRE `fire_age` to always be null; added realistic DOBs to all six members.
+- **Demo seeds — income stream type** — H2 and H3 pension/social_security income streams lacked `is_pre_retirement: False`; added so the projector correctly counts them as post-retirement income (reducing withdrawals, not pre-retirement savings).
+- **Demo seeds — idempotency** — `seed_demo_data.py` would crash with an opaque `UniqueViolation` on re-run; replaced with an explicit guard that exits with a readable error if households already exist.
+- **Heloc ordering in account type lists** — `AddAccountModal.tsx` and `Accounts.tsx` had `heloc` listed after the `other_liability` catch-all; moved before it so the catch-all remains last.
+- **fire.ts API types** — `member_id` was missing from `fireApi.create()` and `fireApi.update()` typed parameter shapes, preventing the frontend from passing attribution through the typed client.
+
+## [0.9.2.0] - 2026-06-20
+
+### Added
+
+- **Phase 7 demo seed script** — `backend/scripts/seed_demo_data.py --household 1|2|3|all` populates HearthLedger with three fictitious households of increasing financial complexity, covering every major feature surface (30 months of transactions, investment snapshots, property valuations, FIRE scenarios, debt records, budgets).
+  - **H1 Chen-Nakamura** (Round Rock, TX) — 2 members, 12 accounts, 1 property, ~$899K net worth. Exercises: dual income, Roth IRA contributions, auto loan, IRS refund, seasonal spending.
+  - **H2 Okonkwo-Rivera** (Naperville, IL) — 4 members (2 dependents), 19 accounts, 2 properties, ~$3.4M net worth. Exercises: long-term rental, 529 college savings, year-end bonus, access grants, property tax, late rental payment.
+  - **H3 Whitfield-Torres** (Brentwood, LA) — 4 members (2 dependents, 1 with elevated grants), 25 accounts, 3 properties, ~$9.5M net worth. Exercises: HELOC, SEP-IRA, STR vacation rental, profit-share lump-sums, partner distributions, equity market dips, property management fees.
+- **HELOC account type** — `heloc` added to the `account_type` enum (migration 0005); balance is derived from transaction SUM, consistent with other liability types. Frontend label: "HELOC".
+- **FIRE scenario member attribution** — `fire_scenarios.member_id` nullable FK → `household_members` (migration 0005); allows per-member FIRE scenarios alongside household-level scenarios. Exposed in `FireScenarioCreate`, `FireScenarioUpdate`, and `FireScenarioResponse`.
+
+### Fixed
+
+- **AccountType schema** — `"heloc"` was missing from the `AccountType` Pydantic literal in `schemas/account.py`, causing `AccountCreate` to reject valid heloc accounts even after migration 0005 added the DB enum value.
+- **FireScenarioService.update() member_id clearing** — `member_id` could not be set back to `None` via PATCH because the update guard used `is not None`; fixed with `model_fields_set` check so an explicit `null` payload clears the field.
+
 ## [0.9.1.0] - 2026-06-20
 
 ### Added

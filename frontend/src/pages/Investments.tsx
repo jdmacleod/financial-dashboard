@@ -89,10 +89,7 @@ function InvestmentCard({ account }: { account: AccountResponse }) {
             </div>
             {(account.institution_name || account.account_number_last4) && (
               <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>
-                {[
-                  account.institution_name,
-                  formatMaskedAccountNumber(account.account_number_last4),
-                ]
+                {[account.institution_name, formatMaskedAccountNumber(account.account_number_last4)]
                   .filter(Boolean)
                   .join(" · ")}
               </div>

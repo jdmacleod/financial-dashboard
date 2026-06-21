@@ -15,6 +15,7 @@ export const ACCOUNT_LABELS: Record<AccountType, string> = {
   mortgage: "Mortgage",
   auto_loan: "Auto Loan",
   personal_loan: "Personal Loan",
+  heloc: "HELOC",
   student_loan: "Student Loan",
   other_asset: "Other Asset",
   other_liability: "Other Liability",

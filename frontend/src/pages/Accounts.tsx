@@ -23,6 +23,7 @@ const LIABILITY_TYPES: AccountType[] = [
   "auto_loan",
   "personal_loan",
   "student_loan",
+  "heloc",
   "other_liability",
 ]
 
@@ -35,6 +36,7 @@ const ACCOUNTS_PAGE_TYPES: AccountType[] = [
   "auto_loan",
   "personal_loan",
   "student_loan",
+  "heloc",
   "other_liability",
 ]
 

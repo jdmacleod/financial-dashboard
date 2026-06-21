@@ -28,6 +28,20 @@ from app.db.models.user import User
 
 from ..conftest import auth_headers
 
+# WeasyPrint requires libgobject (GTK/GLib) which is only available inside
+# Docker on Linux. Skip PDF tests locally on macOS when the library is absent.
+try:
+    import ctypes.util
+
+    _WEASYPRINT_AVAILABLE = ctypes.util.find_library("gobject-2.0") is not None
+except Exception:
+    _WEASYPRINT_AVAILABLE = False
+
+_skip_weasyprint = pytest.mark.skipif(
+    not _WEASYPRINT_AVAILABLE,
+    reason="WeasyPrint requires libgobject-2.0 (unavailable outside Docker)",
+)
+
 
 def _now() -> datetime:
     return datetime.now(UTC)
@@ -227,6 +241,7 @@ async def test_reauth_token_single_use_enforcement(
 # ── AC 4: PDF summary masks account numbers as last-4 only ────────────────
 
 
+@_skip_weasyprint
 async def test_pdf_summary_masks_account_number_to_last_four(
     db_session: AsyncSession,
     household: Household,
@@ -248,6 +263,7 @@ async def test_pdf_summary_masks_account_number_to_last_four(
 # ── AC 5: PDF executor contains full (not masked) account numbers ──────────
 
 
+@_skip_weasyprint
 async def test_pdf_executor_includes_full_account_number(
     db_session: AsyncSession,
     household: Household,
@@ -470,6 +486,7 @@ async def test_export_task_writes_audit_log_entry(
 # ── AC 10: PDF executor includes audit summary page ───────────────────────
 
 
+@_skip_weasyprint
 async def test_pdf_executor_contains_audit_page_content(
     db_session: AsyncSession,
     household: Household,

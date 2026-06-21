@@ -18,6 +18,7 @@ export const fireApi = {
     expected_annual_return?: string
     expected_inflation_rate?: string
     target_retirement_age?: number | null
+    member_id?: string | null
     additional_income_streams?: IncomeStream[]
   }) => api.post<FireScenarioResponse>("/fire-scenarios", data),
 
@@ -30,6 +31,7 @@ export const fireApi = {
       expected_annual_return: string
       expected_inflation_rate: string
       target_retirement_age: number | null
+      member_id: string | null
       additional_income_streams: IncomeStream[]
       detection_trailing_months: number
     }>,

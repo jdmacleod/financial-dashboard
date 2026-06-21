@@ -46,6 +46,7 @@ export type AccountType =
   | "mortgage"
   | "auto_loan"
   | "personal_loan"
+  | "heloc"
   | "student_loan"
   | "other_asset"
   | "other_liability"
@@ -472,6 +473,7 @@ export interface IncomeStream {
 export interface FireScenarioResponse {
   id: string
   household_id: string
+  member_id: string | null
   name: string
   target_annual_spend: string
   safe_withdrawal_rate: string

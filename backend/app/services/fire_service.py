@@ -31,6 +31,7 @@ def _to_response(row: FireScenarioModel) -> FireScenarioResponse:
     return FireScenarioResponse(
         id=row.id,
         household_id=row.household_id,
+        member_id=row.member_id,
         name=row.name,
         target_annual_spend=row.target_annual_spend,
         safe_withdrawal_rate=row.safe_withdrawal_rate,
@@ -58,6 +59,20 @@ class FireScenarioService:
         if not ctx.can_write:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
+    async def _assert_member_in_household(
+        self, ctx: VisibilityContext, member_id: uuid.UUID | None
+    ) -> None:
+        if member_id is None:
+            return
+        result = await self.session.execute(
+            select(HouseholdMember.id).where(
+                HouseholdMember.id == member_id,
+                HouseholdMember.household_id == ctx.household_id,
+            )
+        )
+        if result.scalar_one_or_none() is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+
     async def _get_row(self, ctx: VisibilityContext, scenario_id: uuid.UUID) -> FireScenarioModel:
         result = await self.session.execute(
             select(FireScenarioModel).where(
@@ -83,9 +98,11 @@ class FireScenarioService:
         self, ctx: VisibilityContext, data: FireScenarioCreate
     ) -> FireScenarioResponse:
         self._assert_writable(ctx)
+        await self._assert_member_in_household(ctx, data.member_id)
         now = datetime.now(UTC)
         row = FireScenarioModel(
             household_id=ctx.household_id,
+            member_id=data.member_id,
             name=data.name,
             target_annual_spend=data.target_annual_spend,
             safe_withdrawal_rate=data.safe_withdrawal_rate,
@@ -126,6 +143,9 @@ class FireScenarioService:
 
         prev = _snapshot(row, exclude=AUDIT_EXCLUDED_FIELDS)
 
+        if "member_id" in data.model_fields_set:
+            await self._assert_member_in_household(ctx, data.member_id)
+            row.member_id = data.member_id
         if data.name is not None:
             row.name = data.name
         if data.target_annual_spend is not None:
@@ -261,6 +281,12 @@ class FireScenarioService:
         )
         return result.scalar_one_or_none()
 
+    async def _get_member_dob(self, member_id: uuid.UUID) -> date | None:
+        result = await self.session.execute(
+            select(HouseholdMember.date_of_birth).where(HouseholdMember.id == member_id)
+        )
+        return result.scalar_one_or_none()
+
     async def project(
         self,
         ctx: VisibilityContext,
@@ -272,7 +298,10 @@ class FireScenarioService:
         if from_year is None:
             from_year = datetime.now(UTC).year
 
-        dob = await self._get_primary_member_dob(ctx)
+        if row.member_id is not None:
+            dob = await self._get_member_dob(row.member_id)
+        else:
+            dob = await self._get_primary_member_dob(ctx)
 
         scenario = FireScenarioDataclass(
             id=row.id,

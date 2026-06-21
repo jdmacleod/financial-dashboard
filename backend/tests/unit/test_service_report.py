@@ -243,22 +243,45 @@ async def test_liability_with_debt_record(
     assert report.series[0].total_liabilities == Decimal("298000")
 
 
-async def test_liability_credit_card_with_snapshot(
+async def test_liability_credit_card_uses_transaction_sum(
     db_session: AsyncSession,
     household: Household,
     primary_member: HouseholdMember,
     primary_user: User,
 ) -> None:
+    # Credit card balances come from transaction sums, not snapshots.
     ctx = _ctx(household, primary_member, primary_user)
     account = await _make_account(db_session, ctx, "credit_card", "Visa")
-    # Credit card balance typically stored as negative
-    await _add_snapshot(db_session, account.id, date(2025, 1, 31), Decimal("-500"))
+    # Purchases are negative; balance owed = abs(running sum).
+    await _add_transaction(db_session, account.id, date(2025, 1, 10), Decimal("-300"))
+    await _add_transaction(db_session, account.id, date(2025, 1, 20), Decimal("-200"))
 
     svc = ReportService(db_session)
     report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 1, 31))
 
     assert len(report.series) == 1
     assert report.series[0].total_liabilities == Decimal("500")
+    assert report.series[0].total_assets == Decimal("0")
+
+
+async def test_liability_heloc_uses_transaction_sum(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    # HELOC balances come from running transaction sums, matching credit_card behaviour.
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "heloc", "Chase HELOC")
+    # Draws are negative; the abs() of the sum is reported as the liability.
+    await _add_transaction(db_session, account.id, date(2025, 1, 5), Decimal("-20000"))
+    await _add_transaction(db_session, account.id, date(2025, 1, 15), Decimal("-5000"))
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 1, 31))
+
+    assert len(report.series) == 1
+    assert report.series[0].total_liabilities == Decimal("25000")
     assert report.series[0].total_assets == Decimal("0")
 
 

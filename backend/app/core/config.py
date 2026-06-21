@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import Any
 
 from pydantic.fields import FieldInfo
@@ -9,6 +10,11 @@ from pydantic_settings import (
     PydanticBaseSettingsSource,
     SettingsConfigDict,
 )
+
+# Resolve .env relative to this file so Settings() works regardless of CWD.
+# In Docker, env vars arrive via docker-compose env_file so this path need
+# not exist there — pydantic-settings silently ignores a missing env_file.
+_ENV_FILE = Path(__file__).resolve().parents[3] / ".env"
 
 
 class _CsvFallbackMixin:
@@ -32,7 +38,7 @@ class _CsvDotEnvSource(_CsvFallbackMixin, DotEnvSettingsSource):
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=str(_ENV_FILE), extra="ignore")
 
     database_url: str
     redis_url: str

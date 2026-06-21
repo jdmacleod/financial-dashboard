@@ -5,7 +5,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import JSON, DateTime, Numeric, SmallInteger, String
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Numeric, SmallInteger, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -14,9 +14,21 @@ from app.db.base import Base
 
 class FireScenario(Base):
     __tablename__ = "fire_scenarios"
+    __table_args__ = (
+        Index(
+            "idx_fire_scenarios_member",
+            "member_id",
+            postgresql_where=text("member_id IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     household_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    member_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("household_members.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
     target_annual_spend: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     safe_withdrawal_rate: Mapped[Decimal] = mapped_column(

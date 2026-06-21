@@ -36,6 +36,7 @@ class IncomeStream(BaseModel):
 
 class FireScenarioCreate(BaseModel):
     name: str = Field(max_length=100)
+    member_id: uuid.UUID | None = None
     target_annual_spend: Decimal = Field(ge=0)
     safe_withdrawal_rate: Decimal = Field(
         default=Decimal("0.04"), ge=Decimal("0.01"), le=Decimal("0.20")
@@ -52,6 +53,7 @@ class FireScenarioCreate(BaseModel):
 
 class FireScenarioUpdate(BaseModel):
     name: str | None = Field(default=None, max_length=100)
+    member_id: uuid.UUID | None = None
     target_annual_spend: Decimal | None = Field(default=None, ge=0)
     safe_withdrawal_rate: Decimal | None = None
     expected_annual_return: Decimal | None = None
@@ -66,6 +68,7 @@ class FireScenarioResponse(BaseModel):
 
     id: uuid.UUID
     household_id: uuid.UUID
+    member_id: uuid.UUID | None
     name: str
     target_annual_spend: Decimal
     safe_withdrawal_rate: Decimal

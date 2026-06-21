@@ -307,6 +307,51 @@ async def test_project_returns_projections(
     assert result.summary.fire_number > Decimal(0)
 
 
+async def test_create_fire_scenario_with_member_id(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """member_id is persisted on FireScenario and returned in the response."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    svc = FireScenarioService(db_session)
+
+    scenario = await svc.create(
+        ctx,
+        FireScenarioCreate(
+            name="Member FIRE",
+            target_annual_spend=Decimal("50000"),
+            member_id=primary_member.id,
+        ),
+    )
+
+    assert scenario.member_id == primary_member.id
+
+
+async def test_update_fire_scenario_member_id(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """member_id can be set and cleared via update."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    svc = FireScenarioService(db_session)
+
+    created = await svc.create(
+        ctx,
+        FireScenarioCreate(name="Household FIRE", target_annual_spend=Decimal("60000")),
+    )
+    assert created.member_id is None
+
+    with_member = await svc.update(ctx, created.id, FireScenarioUpdate(member_id=primary_member.id))
+    assert with_member.member_id == primary_member.id
+
+    cleared = await svc.update(ctx, created.id, FireScenarioUpdate(member_id=None))
+    assert cleared.member_id is None
+
+
 async def test_scenario_forbidden_for_dependent(
     db_session: AsyncSession,
     household: Household,
@@ -332,3 +377,51 @@ async def test_scenario_forbidden_for_dependent(
             FireScenarioCreate(name="Forbidden", target_annual_spend=Decimal("50000")),
         )
     assert exc_info.value.status_code == 403
+
+
+async def test_create_fire_scenario_with_foreign_member_raises_404(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """_assert_member_in_household raises 404 when member_id does not belong to the household."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    svc = FireScenarioService(db_session)
+
+    foreign_member_id = uuid.uuid4()  # random UUID — not in this household
+
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.create(
+            ctx,
+            FireScenarioCreate(
+                name="Foreign Member FIRE",
+                target_annual_spend=Decimal("50000"),
+                member_id=foreign_member_id,
+            ),
+        )
+    assert exc_info.value.status_code == 404
+    assert "Member not found" in exc_info.value.detail
+
+
+async def test_update_fire_scenario_with_foreign_member_raises_404(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """_assert_member_in_household raises 404 on update when member_id is from another household."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    svc = FireScenarioService(db_session)
+
+    created = await svc.create(
+        ctx,
+        FireScenarioCreate(name="Valid Scenario", target_annual_spend=Decimal("50000")),
+    )
+
+    foreign_member_id = uuid.uuid4()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.update(ctx, created.id, FireScenarioUpdate(member_id=foreign_member_id))
+    assert exc_info.value.status_code == 404
+    assert "Member not found" in exc_info.value.detail

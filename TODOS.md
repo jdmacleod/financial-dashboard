@@ -1,5 +1,19 @@
 # TODOS
 
+### WeasyPrint macOS system dependency (P0 — pre-existing test failure)
+
+**What:** `tests/integration/test_phase_5.py::test_pdf_summary_masks_account_number_to_last_four` fails on macOS because WeasyPrint requires `libgobject-2.0-0` (part of GLib/GTK), which is not available in the macOS dev environment. The test passes in Docker (Linux).
+
+**Why:** WeasyPrint's PDF rendering pipeline depends on Cairo/GLib native libraries that ship on Linux but not macOS without Homebrew. The test is skipped in CI but surfaces locally.
+
+**Fix:** Either install `brew install gobject-introspection` (plus `pango`, `gdk-pixbuf`) on the dev machine, or add a `pytest.mark.skipif(sys.platform == "darwin", reason="WeasyPrint requires Linux GLib")` decorator to this test.
+
+**Priority:** P0 — blocks local pytest from reporting a clean run. Does not affect CI or Docker.
+
+**Noticed on:** feat/phase-7-demo-households (2026-06-20). Pre-existing failure unrelated to branch changes.
+
+---
+
 ### WCAG 2.1 AA accessibility audit — HearthLedger v1 (Post-Phase 7)
 
 **What:** Run a full WCAG 2.1 AA audit across all HearthLedger pages: color contrast ratios (4.5:1 body text, 3:1 large text), screen reader label completeness, keyboard navigation order, and focus indicator visibility.

@@ -68,6 +68,7 @@ LIABILITY_BUCKET = {
     "personal_loan": "other_liabilities",
     "student_loan": "other_liabilities",
     "other_liability": "other_liabilities",
+    "heloc": "other_liabilities",
 }
 ASSET_TYPES = frozenset(ASSET_BUCKET)
 LIABILITY_TYPES = frozenset(LIABILITY_BUCKET)
@@ -172,10 +173,18 @@ class ReportService:
             return Decimal("0")
         return Decimal("0")
 
-    async def _liability_value_at(self, account: Account, as_of: date) -> Decimal:
-        if account.account_type == "credit_card":
-            snap = await self._snapshot_balance_at(account.id, as_of)
-            return abs(snap) if snap is not None else Decimal("0")
+    async def _liability_value_at(
+        self,
+        account: Account,
+        as_of: date,
+        txn_sums: dict[uuid.UUID, Decimal] | None = None,
+    ) -> Decimal:
+        if account.account_type in ("credit_card", "heloc"):
+            # Transaction-based liabilities: balance comes from running transaction sum.
+            if txn_sums is not None:
+                return abs(txn_sums.get(account.id, Decimal("0")))
+            txn = await self._running_txn_balance_at(account.id, as_of)
+            return abs(txn)
         debt_balance = await self._debt_balance(account.id)
         if debt_balance is not None:
             return abs(debt_balance)
@@ -188,6 +197,7 @@ class ReportService:
         as_of: date,
         property_values: dict[uuid.UUID, Decimal] | None = None,
         pension_values: dict[uuid.UUID, Decimal] | None = None,
+        txn_sums: dict[uuid.UUID, Decimal] | None = None,
     ) -> NetWorthPoint:
         breakdown = {key: Decimal("0") for key in BREAKDOWN_KEYS}
         total_assets = Decimal("0")
@@ -198,7 +208,7 @@ class ReportService:
                 breakdown[ASSET_BUCKET[account.account_type]] += value
                 total_assets += value
             elif account.account_type in LIABILITY_TYPES:
-                value = await self._liability_value_at(account, as_of)
+                value = await self._liability_value_at(account, as_of, txn_sums)
                 breakdown[LIABILITY_BUCKET[account.account_type]] -= value
                 total_liabilities += value
         return NetWorthPoint(
@@ -260,6 +270,10 @@ class ReportService:
             if p.monthly_benefit_estimate
         }
 
+        # Pre-identify transaction-based liability accounts (credit_card, heloc).
+        # Sums are batched per date point: 1 query/point instead of N_accounts/point.
+        txn_liability_ids = [a.id for a in accounts if a.account_type in ("credit_card", "heloc")]
+
         series = []
         for as_of in month_ends:
             if account_to_prop_id:
@@ -272,8 +286,23 @@ class ReportService:
                 }
             else:
                 property_values = {}
+
+            txn_sums: dict[uuid.UUID, Decimal] | None = None
+            if txn_liability_ids:
+                txn_result = await self.session.execute(
+                    select(Transaction.account_id, func.sum(Transaction.amount))
+                    .where(
+                        Transaction.account_id.in_(txn_liability_ids),
+                        Transaction.transaction_date <= as_of,
+                    )
+                    .group_by(Transaction.account_id)
+                )
+                txn_sums = {acc_id: Decimal(str(total)) for acc_id, total in txn_result.all()}
+
             series.append(
-                await self._net_worth_point(accounts, as_of, property_values, pension_values)
+                await self._net_worth_point(
+                    accounts, as_of, property_values, pension_values, txn_sums
+                )
             )
         pension_annotations = await self._pension_annotations(ctx, accounts)
         return NetWorthReport(

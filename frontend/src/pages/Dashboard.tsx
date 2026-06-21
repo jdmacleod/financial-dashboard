@@ -259,6 +259,7 @@ export default function Dashboard() {
             "personal_loan",
             "student_loan",
             "other_liability",
+            "heloc",
           ].includes(a.account_type),
       )
       .sort((a, b) => Number(b.current_balance) - Number(a.current_balance))
@@ -691,10 +692,7 @@ export default function Dashboard() {
                     </div>
                     {(a.institution_name || a.account_number_last4) && (
                       <div style={{ fontSize: "10px", color: "var(--muted)" }}>
-                        {[
-                          a.institution_name,
-                          formatMaskedAccountNumber(a.account_number_last4),
-                        ]
+                        {[a.institution_name, formatMaskedAccountNumber(a.account_number_last4)]
                           .filter(Boolean)
                           .join(" · ")}
                       </div>
