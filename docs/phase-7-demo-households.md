@@ -321,14 +321,16 @@ def compute_snapshots(
 ## Execution
 
 ```bash
-# From the project root — uv resolves dependencies from backend/pyproject.toml:
-uv run --directory backend python scripts/seed_demo_data.py --household all
+# Standard: run via docker-compose exec (PostgreSQL is only accessible inside
+# the Docker network — hostname "db" does not resolve outside it):
+docker-compose exec backend python scripts/seed_demo_data.py --household all
 
 # Single-household demo instance:
-uv run --directory backend python scripts/seed_demo_data.py --household 1
+docker-compose exec backend python scripts/seed_demo_data.py --household 1
 
-# Alternatively, from inside the backend/ directory:
-uv run python scripts/seed_demo_data.py --household all
+# Local dev only (requires a local PostgreSQL and DATABASE_URL pointing to
+# localhost instead of "db"):
+uv run --directory backend python scripts/seed_demo_data.py --household all
 ```
 
 The script prints a summary table with computed net worth per household as a

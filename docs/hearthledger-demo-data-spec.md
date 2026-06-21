@@ -36,14 +36,16 @@ backend/
 ### Execution
 
 ```bash
-# From the project root — uv resolves dependencies from backend/pyproject.toml:
+# Standard: run via docker-compose exec (PostgreSQL is only accessible inside
+# the Docker network — hostname "db" does not resolve outside it):
+docker-compose exec backend python scripts/seed_demo_data.py --household all
+
+# Generate a single household (for single-household production demo):
+docker-compose exec backend python scripts/seed_demo_data.py --household 1
+
+# Local dev only (requires a local PostgreSQL and DATABASE_URL pointing to
+# localhost instead of "db"):
 uv run --directory backend python scripts/seed_demo_data.py --household all
-
-# Generate a single household (for single-household production demo)
-uv run --directory backend python scripts/seed_demo_data.py --household 1
-
-# Alternatively, from inside the backend/ directory:
-uv run python scripts/seed_demo_data.py --household all
 ```
 
 The `--household all` flag acknowledges that the production architecture is single-household-per-installation; this mode is explicitly for demo/test environments only.
