@@ -59,6 +59,25 @@ Open `http://localhost` and complete the setup wizard (household name, your name
 
 See [docs/getting-started.md](docs/getting-started.md) for the full walkthrough.
 
+## Try it with demo data
+
+Once the stack is running, load three pre-built households — 30 months of
+realistic transactions, budgets, FIRE scenarios, and real estate:
+
+```bash
+docker-compose exec backend python scripts/seed_demo_data.py --household all
+```
+
+Open `http://localhost` and sign in. Password is `HearthDemo1!` for all demo accounts:
+
+| Household             | Email                       | Net Worth |
+| --------------------- | --------------------------- | --------- |
+| Chen-Nakamura (TX)    | wei@chen-nakamura.local     | ~$899K    |
+| Okonkwo-Rivera (IL)   | darius@okonkwo-rivera.local | ~$3.4M    |
+| Whitfield-Torres (LA) | ben@whitfield-torres.local  | ~$9.5M    |
+
+See [docs/demo-quickstart.md](docs/demo-quickstart.md) for all six credentials and what each household exercises.
+
 ## Stack
 
 | Layer           | Technology                                                                      |
@@ -73,6 +92,7 @@ See [docs/getting-started.md](docs/getting-started.md) for the full walkthrough.
 ## Documentation
 
 - [Getting Started](docs/getting-started.md) — install, configure, first run
+- [Demo Quickstart](docs/demo-quickstart.md) — seed demo data and explore with sample households
 - [User Guide](docs/user-guide.md) — all features
 - [API Reference](docs/api-reference.md) — REST API
 - [Security](docs/security.md) — auth, encryption, audit log

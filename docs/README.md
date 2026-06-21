@@ -8,6 +8,7 @@ tracking system.
 | File                         | Purpose                                                             |
 | ---------------------------- | ------------------------------------------------------------------- |
 | `docs/getting-started.md`    | Install, configure, and run HearthLedger for the first time         |
+| `docs/demo-quickstart.md`    | Seed demo data and log in with the three sample households          |
 | `docs/user-guide.md`         | Complete guide to every feature                                     |
 | `docs/howto-add-accounts.md` | How to add accounts across all five category groups                 |
 | `docs/api-reference.md`      | REST API reference — all endpoints, parameters, and response shapes |
