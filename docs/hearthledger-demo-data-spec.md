@@ -36,11 +36,14 @@ backend/
 ### Execution
 
 ```bash
-# Generate all three (for a multi-household demo/test instance)
-python backend/scripts/seed_demo_data.py --household all
+# From the project root — uv resolves dependencies from backend/pyproject.toml:
+uv run --directory backend python scripts/seed_demo_data.py --household all
 
 # Generate a single household (for single-household production demo)
-python backend/scripts/seed_demo_data.py --household 1
+uv run --directory backend python scripts/seed_demo_data.py --household 1
+
+# Alternatively, from inside the backend/ directory:
+uv run python scripts/seed_demo_data.py --household all
 ```
 
 The `--household all` flag acknowledges that the production architecture is single-household-per-installation; this mode is explicitly for demo/test environments only.

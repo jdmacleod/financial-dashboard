@@ -321,11 +321,14 @@ def compute_snapshots(
 ## Execution
 
 ```bash
-# Inside the running backend container or venv:
-python backend/scripts/seed_demo_data.py --household all
+# From the project root — uv resolves dependencies from backend/pyproject.toml:
+uv run --directory backend python scripts/seed_demo_data.py --household all
 
 # Single-household demo instance:
-python backend/scripts/seed_demo_data.py --household 1
+uv run --directory backend python scripts/seed_demo_data.py --household 1
+
+# Alternatively, from inside the backend/ directory:
+uv run python scripts/seed_demo_data.py --household all
 ```
 
 The script prints a summary table with computed net worth per household as a
