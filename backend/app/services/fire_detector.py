@@ -268,9 +268,7 @@ class FireInputDetector:
         # Transaction-based liabilities (credit_card, heloc) have no snapshots;
         # their balance is the running sum of transactions (typically negative).
         txn_liability_ids = [
-            a.id
-            for a in net_worth_accounts
-            if a.account_type in _TRANSACTION_BASED_LIABILITY_TYPES
+            a.id for a in net_worth_accounts if a.account_type in _TRANSACTION_BASED_LIABILITY_TYPES
         ]
         if txn_liability_ids:
             txn_result = await self.session.execute(

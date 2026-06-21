@@ -39,7 +39,7 @@ except Exception:
 
 _skip_weasyprint = pytest.mark.skipif(
     not _WEASYPRINT_AVAILABLE,
-    reason="WeasyPrint requires libgobject-2.0 (not available on this system — run tests inside Docker)",
+    reason="WeasyPrint requires libgobject-2.0 (unavailable outside Docker)",
 )
 
 

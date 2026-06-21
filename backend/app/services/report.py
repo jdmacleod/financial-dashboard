@@ -272,9 +272,7 @@ class ReportService:
 
         # Pre-identify transaction-based liability accounts (credit_card, heloc).
         # Sums are batched per date point: 1 query/point instead of N_accounts/point.
-        txn_liability_ids = [
-            a.id for a in accounts if a.account_type in ("credit_card", "heloc")
-        ]
+        txn_liability_ids = [a.id for a in accounts if a.account_type in ("credit_card", "heloc")]
 
         series = []
         for as_of in month_ends:
@@ -302,7 +300,9 @@ class ReportService:
                 txn_sums = {acc_id: Decimal(str(total)) for acc_id, total in txn_result.all()}
 
             series.append(
-                await self._net_worth_point(accounts, as_of, property_values, pension_values, txn_sums)
+                await self._net_worth_point(
+                    accounts, as_of, property_values, pension_values, txn_sums
+                )
             )
         pension_annotations = await self._pension_annotations(ctx, accounts)
         return NetWorthReport(

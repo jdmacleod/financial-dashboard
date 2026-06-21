@@ -71,9 +71,7 @@ class FireScenarioService:
             )
         )
         if result.scalar_one_or_none() is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Member not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
 
     async def _get_row(self, ctx: VisibilityContext, scenario_id: uuid.UUID) -> FireScenarioModel:
         result = await self.session.execute(

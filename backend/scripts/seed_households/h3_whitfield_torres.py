@@ -45,7 +45,9 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
 
     # ── Members ───────────────────────────────────────────────────────────────
     ben = make_member(hid, "Benjamin Whitfield", "primary", date_of_birth=date(1972, 3, 22))
-    gabriela = make_member(hid, "Gabriela Torres-Whitfield", "partner", date_of_birth=date(1975, 8, 11))
+    gabriela = make_member(
+        hid, "Gabriela Torres-Whitfield", "partner", date_of_birth=date(1975, 8, 11)
+    )
     sophia = make_member(hid, "Sophia Whitfield", "dependent")
     ethan = make_member(hid, "Ethan Torres-Whitfield", "dependent")
     session.add_all([ben, gabriela, sophia, ethan])

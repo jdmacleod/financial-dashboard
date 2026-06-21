@@ -25,9 +25,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from seed_households import h1_chen_nakamura, h2_okonkwo_rivera, h3_whitfield_torres
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.base import AsyncSessionLocal
 
