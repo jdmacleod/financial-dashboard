@@ -367,3 +367,66 @@ async def test_detect_pension_start_year_from_eligibility_age(
     assert len(pension_streams) == 1
     # start_year = current_year + max(0, 67 - 65) = current_year + 2
     assert pension_streams[0].start_year == date.today().year + 2
+
+
+async def test_detect_net_worth_includes_heloc_as_liability(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """HELOC balance (from transaction sum) reduces net worth in _net_worth()."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+
+    # Asset: checking account with snapshot
+    checking = await _make_account(db_session, ctx, account_type="checking", nickname="Checking")
+    snap = AccountSnapshot(
+        account_id=checking.id,
+        snapshot_date=date(2025, 6, 30),
+        balance=Decimal("50000"),
+        source="manual",
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(snap)
+
+    # Liability: HELOC — no snapshot, balance comes from transaction sum
+    heloc = await _make_account(db_session, ctx, account_type="heloc", nickname="Chase HELOC")
+    # Two draws on the HELOC, both negative (money flows out of HELOC to the borrower)
+    await _make_transaction(db_session, heloc.id, "-30000", date(2025, 1, 1))
+    await _make_transaction(db_session, heloc.id, "-5000", date(2025, 3, 1))
+
+    await db_session.flush()
+
+    detector = FireInputDetector(db_session)
+    result = await detector.detect(ctx, trailing_months=12)
+
+    # net worth = 50_000 (checking snapshot) + (-35_000) (heloc txn sum) = 15_000
+    assert result.current_net_worth == Decimal("15000")
+
+
+async def test_detect_net_worth_all_snapshot_accounts_no_heloc(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """When there are no transaction-based liabilities the snapshot path still works correctly."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+
+    brokerage = await _make_account(
+        db_session, ctx, account_type="investment_brokerage", nickname="Brokerage"
+    )
+    snap = AccountSnapshot(
+        account_id=brokerage.id,
+        snapshot_date=date(2025, 6, 30),
+        balance=Decimal("100000"),
+        source="manual",
+        created_at=datetime.now(UTC),
+    )
+    db_session.add(snap)
+    await db_session.flush()
+
+    detector = FireInputDetector(db_session)
+    result = await detector.detect(ctx, trailing_months=12)
+
+    assert result.current_net_worth == Decimal("100000")

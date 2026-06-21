@@ -264,6 +264,27 @@ async def test_liability_credit_card_uses_transaction_sum(
     assert report.series[0].total_assets == Decimal("0")
 
 
+async def test_liability_heloc_uses_transaction_sum(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    # HELOC balances come from running transaction sums, matching credit_card behaviour.
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "heloc", "Chase HELOC")
+    # Draws are negative; the abs() of the sum is reported as the liability.
+    await _add_transaction(db_session, account.id, date(2025, 1, 5), Decimal("-20000"))
+    await _add_transaction(db_session, account.id, date(2025, 1, 15), Decimal("-5000"))
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 1, 31))
+
+    assert len(report.series) == 1
+    assert report.series[0].total_liabilities == Decimal("25000")
+    assert report.series[0].total_assets == Decimal("0")
+
+
 async def test_liability_without_snapshot_or_debt(
     db_session: AsyncSession,
     household: Household,
