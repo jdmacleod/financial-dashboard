@@ -27,6 +27,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from seed_households import h1_chen_nakamura, h2_okonkwo_rivera, h3_whitfield_torres
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from sqlalchemy import text
+
 from app.db.base import AsyncSessionLocal
 
 _SEEDERS = {
@@ -71,9 +73,22 @@ async def _seed_one(
     return result
 
 
+async def _has_existing_households(session: AsyncSession) -> bool:
+    result = await session.execute(text("SELECT 1 FROM households LIMIT 1"))
+    return result.scalar_one_or_none() is not None
+
+
 async def main(household_arg: str) -> None:
     _banner()
     t0 = time.perf_counter()
+
+    async with AsyncSessionLocal() as session:
+        if await _has_existing_households(session):
+            print(
+                "Error: database already contains households. "
+                "Drop existing data or use a fresh database before re-seeding."
+            )
+            sys.exit(1)
 
     if household_arg == "all":
         to_seed = [1, 2, 3]

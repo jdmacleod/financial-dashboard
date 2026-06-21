@@ -283,6 +283,12 @@ class FireScenarioService:
         )
         return result.scalar_one_or_none()
 
+    async def _get_member_dob(self, member_id: uuid.UUID) -> date | None:
+        result = await self.session.execute(
+            select(HouseholdMember.date_of_birth).where(HouseholdMember.id == member_id)
+        )
+        return result.scalar_one_or_none()
+
     async def project(
         self,
         ctx: VisibilityContext,
@@ -294,7 +300,10 @@ class FireScenarioService:
         if from_year is None:
             from_year = datetime.now(UTC).year
 
-        dob = await self._get_primary_member_dob(ctx)
+        if row.member_id is not None:
+            dob = await self._get_member_dob(row.member_id)
+        else:
+            dob = await self._get_primary_member_dob(ctx)
 
         scenario = FireScenarioDataclass(
             id=row.id,

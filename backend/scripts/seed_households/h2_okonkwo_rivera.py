@@ -44,8 +44,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     hid = hh.id
 
     # ── Members ───────────────────────────────────────────────────────────────
-    darius = make_member(hid, "Darius Okonkwo", "primary")
-    carmen = make_member(hid, "Carmen Rivera-Okonkwo", "partner")
+    darius = make_member(hid, "Darius Okonkwo", "primary", date_of_birth=date(1979, 11, 8))
+    carmen = make_member(hid, "Carmen Rivera-Okonkwo", "partner", date_of_birth=date(1981, 7, 15))
     emma = make_member(hid, "Emma Okonkwo", "dependent")
     noah = make_member(hid, "Noah Okonkwo", "dependent")
     session.add_all([darius, carmen, emma, noah])
@@ -72,7 +72,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     savings2 = acc("savings", "Savings", "Chase", "6712")
     savings3 = acc("savings", "Online Savings", "Ally Bank", "3881")
     d_401k = acc("retirement_401k", "401(k)", "Fidelity NetBenefits", "4405", owner=darius.id)
-    c_403b = acc("retirement_401k", "403(b)", "TIAA", "7723", owner=carmen.id)
+    c_403b = acc("retirement_403b", "403(b)", "TIAA", "7723", owner=carmen.id)
     d_roth = acc("retirement_roth_ira", "Roth IRA", "Fidelity", "8834", owner=darius.id)
     c_roth = acc("retirement_roth_ira", "Roth IRA", "Vanguard", "9921", owner=carmen.id)
     brokerage = acc("investment_brokerage", "Joint Brokerage", "Charles Schwab", "2267")
@@ -669,6 +669,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "start_year": 2044,
             "end_year": None,
             "growth_rate_annual": 0.00,
+            "is_pre_retirement": False,
         },
         {
             "id": str(uuid.uuid4()),
@@ -678,6 +679,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "start_year": 2045,
             "end_year": None,
             "growth_rate_annual": 0.025,
+            "is_pre_retirement": False,
         },
         {
             "id": str(uuid.uuid4()),
@@ -687,6 +689,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "start_year": 2047,
             "end_year": None,
             "growth_rate_annual": 0.025,
+            "is_pre_retirement": False,
         },
     ]
     session.add(
@@ -738,6 +741,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "start_year": 2044,
             "end_year": None,
             "growth_rate_annual": 0.00,
+            "is_pre_retirement": False,
         },
         {
             "id": str(uuid.uuid4()),
@@ -747,6 +751,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "start_year": 2045,
             "end_year": None,
             "growth_rate_annual": 0.025,
+            "is_pre_retirement": False,
         },
         {
             "id": str(uuid.uuid4()),
@@ -756,6 +761,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "start_year": 2047,
             "end_year": None,
             "growth_rate_annual": 0.025,
+            "is_pre_retirement": False,
         },
     ]
     session.add(

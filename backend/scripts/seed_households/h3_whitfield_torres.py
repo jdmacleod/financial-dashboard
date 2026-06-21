@@ -44,8 +44,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     hid = hh.id
 
     # ── Members ───────────────────────────────────────────────────────────────
-    ben = make_member(hid, "Benjamin Whitfield", "primary")
-    gabriela = make_member(hid, "Gabriela Torres-Whitfield", "partner")
+    ben = make_member(hid, "Benjamin Whitfield", "primary", date_of_birth=date(1972, 3, 22))
+    gabriela = make_member(hid, "Gabriela Torres-Whitfield", "partner", date_of_birth=date(1975, 8, 11))
     sophia = make_member(hid, "Sophia Whitfield", "dependent")
     ethan = make_member(hid, "Ethan Torres-Whitfield", "dependent")
     session.add_all([ben, gabriela, sophia, ethan])
@@ -944,6 +944,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "start_year": 2042,
             "end_year": None,
             "growth_rate_annual": 0.025,
+            "is_pre_retirement": False,
         },
         {
             "id": str(uuid.uuid4()),
@@ -953,6 +954,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "start_year": 2044,
             "end_year": None,
             "growth_rate_annual": 0.025,
+            "is_pre_retirement": False,
         },
     ]
     session.add(
@@ -995,6 +997,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "start_year": 2042,
             "end_year": None,
             "growth_rate_annual": 0.025,
+            "is_pre_retirement": False,
         },
         {
             "id": str(uuid.uuid4()),
@@ -1004,6 +1007,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "start_year": 2044,
             "end_year": None,
             "growth_rate_annual": 0.025,
+            "is_pre_retirement": False,
         },
     ]
     session.add(

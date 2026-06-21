@@ -42,8 +42,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     hid = hh.id
 
     # ── Members ───────────────────────────────────────────────────────────────
-    wei = make_member(hid, "Wei Chen", "primary")
-    priya = make_member(hid, "Priya Nakamura", "partner")
+    wei = make_member(hid, "Wei Chen", "primary", date_of_birth=date(1982, 4, 15))
+    priya = make_member(hid, "Priya Nakamura", "partner", date_of_birth=date(1984, 9, 23))
     session.add_all([wei, priya])
 
     # ── Users ─────────────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     checking = acc("checking", "Primary Checking", "Dell Credit Union", "4821")
     savings = acc("savings", "High-Yield Savings", "Marcus by Goldman Sachs", "9312")
     wei_401k = acc("retirement_401k", "Dell 401(k)", "Fidelity NetBenefits", "7704", owner=wei.id)
-    priya_403b = acc("retirement_401k", "St. David's 403(b)", "Vanguard", "8831", owner=priya.id)
+    priya_403b = acc("retirement_403b", "St. David's 403(b)", "Vanguard", "8831", owner=priya.id)
     wei_roth = acc("retirement_roth_ira", "Roth IRA", "Fidelity", "2267", owner=wei.id)
     priya_roth = acc("retirement_roth_ira", "Roth IRA", "Vanguard", "3349", owner=priya.id)
     brokerage = acc("investment_brokerage", "Joint Brokerage", "Fidelity", "5513")

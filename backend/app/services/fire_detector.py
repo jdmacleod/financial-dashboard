@@ -275,7 +275,8 @@ class FireInputDetector:
         if txn_liability_ids:
             txn_result = await self.session.execute(
                 select(func.sum(Transaction.amount)).where(
-                    Transaction.account_id.in_(txn_liability_ids)
+                    Transaction.account_id.in_(txn_liability_ids),
+                    Transaction.transaction_date <= date.today(),
                 )
             )
             txn_total = txn_result.scalar_one_or_none()

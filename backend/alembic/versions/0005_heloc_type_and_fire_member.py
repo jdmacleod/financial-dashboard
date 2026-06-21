@@ -64,4 +64,3 @@ def downgrade() -> None:
             ALTER COLUMN account_type TYPE account_type
             USING account_type::account_type
     """)
-    op.execute("GRANT USAGE ON TYPE account_type TO hearthledger_app")

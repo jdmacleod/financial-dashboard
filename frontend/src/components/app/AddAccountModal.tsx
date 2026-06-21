@@ -29,8 +29,8 @@ const ALL_LIABILITY_TYPES: AccountType[] = [
   "auto_loan",
   "personal_loan",
   "student_loan",
-  "other_liability",
   "heloc",
+  "other_liability",
 ]
 
 const createSchema = z
