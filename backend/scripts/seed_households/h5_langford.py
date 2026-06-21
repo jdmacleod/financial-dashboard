@@ -421,13 +421,13 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             add(tx(checking.id, clamp_day(y, m, 15), -D("3200.00"),
                    "State Farm — Highlands NC", cat["home_insurance"]))
 
-        # Property taxes — Sarasota (June, December)
+        # Property taxes — Sarasota primary residence (June, December)
         if m == 6:
             add(tx(checking.id, clamp_day(y, m, 28), -D("17500.00"),
-                   "Sarasota County Tax Collector", cat["rental_property_tax"]))
+                   "Sarasota County Tax Collector", cat["home_property_tax"]))
         if m == 12:
             add(tx(checking.id, clamp_day(y, m, 20), -D("17500.00"),
-                   "Sarasota County Tax Collector", cat["rental_property_tax"]))
+                   "Sarasota County Tax Collector", cat["home_property_tax"]))
 
         # Property taxes — Highlands NC (July, December)
         if m == 7:

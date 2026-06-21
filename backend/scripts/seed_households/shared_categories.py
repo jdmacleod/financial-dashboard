@@ -40,6 +40,7 @@ _DEFS: list[tuple[str, str, str | None, bool]] = [
     ("home_maintenance", "Home Maintenance & Repairs", "housing", False),
     ("lawn_garden", "Lawn & Garden", "housing", False),
     ("cleaning_services", "Cleaning Services", "housing", False),
+    ("home_property_tax", "Home Property Taxes", "housing", False),
     ("rent", "Rent", "housing", False),
     ("renters_insurance", "Renters Insurance", "housing", False),
     # ── Utilities ─────────────────────────────────────────────────────────────

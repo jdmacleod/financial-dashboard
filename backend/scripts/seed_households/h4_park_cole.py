@@ -45,8 +45,8 @@ _HONDA_FINAL_MONTH = date(2025, 8, 1)
 _HONDA_FINAL_PAYMENT = D("251.72")  # balance + one month interest
 
 # Zoe Student Loan payment increases after Honda payoff.
-# From Sep 2025: $675 → $775/mo (cascaded $500 extra).
-_ZOE_STUDENT_INCREASE_MONTH = date(2025, 9, 1)
+# From Oct 2025: $675 → $775/mo (cascaded $500 extra).
+_ZOE_STUDENT_INCREASE_MONTH = date(2025, 10, 1)
 
 # Third paycheck months (same each year for simplicity).
 _ZOE_THIRD_PAYCHECK_MONTHS = {3, 8, 11}   # March, August, November
@@ -289,15 +289,6 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         cv("subscriptions",
            ["Amazon Prime", "NYT", "Xbox Game Pass"], 32, 32, 1, 1)
 
-        # Fixed on Chase Freedom
-        chase_txns.append(tx(chase_cc.id, clamp_day(y, m, 8), -D("124.00"),
-                             "Progressive Auto Insurance", cat["auto_insurance"], memo="chase_skip"))
-
-        # Remove the auto insurance duplicate (we charged it to checking above)
-        # Actually per spec: auto_insurance ($124.00) is from Checking. Chase gets other spend.
-        # Remove the chase auto_insurance line just added:
-        chase_txns.pop()  # remove the erroneous auto insurance we just added
-
         if rng.random() < 0.6:
             cv("car_maintenance", ["Jiffy Lube", "Midas", "Firestone"], 60, 220, 0, 1)
         if rng.random() < 0.35:
@@ -345,10 +336,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         if m == 1:
             apple_txns.append(tx(apple_cc.id, clamp_day(y, m, 15), -D("200.00"),
                                  "IKEA Nashville", cat["home_goods"]))
-        if m == 5:
-            av("fitness", ["ClassPass", "Planet Fitness"], 58, 58, 1, 1)
-        else:
-            av("fitness", ["ClassPass", "Planet Fitness"], 58, 58, 1, 1)
+        av("fitness", ["ClassPass", "Planet Fitness"], 58, 58, 1, 1)
 
         add(*chase_txns)
         add(*apple_txns)
