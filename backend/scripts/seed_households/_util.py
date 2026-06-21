@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import calendar
+import os
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
@@ -32,7 +33,8 @@ _pwd_ctx = CryptContext(schemes=["bcrypt"])
 DEMO_HASH: str = _pwd_ctx.hash("HearthDemo1!")
 
 DATE_START = date(2024, 1, 1)
-DATE_END = date(2026, 6, 20)
+_DATE_END_ENV = os.getenv("SEED_DATE_END")
+DATE_END: date = date.fromisoformat(_DATE_END_ENV) if _DATE_END_ENV else date(2026, 6, 21)
 
 # Investment account types (balance from snapshots)
 SNAPSHOT_TYPES = frozenset(
@@ -90,6 +92,15 @@ def rand_date(year: int, month: int, rng: random.Random, avoid_sunday: bool = Fa
             continue
         return dt
     return clamp_day(year, month, 15)
+
+
+def third_wednesday(year: int, month: int) -> date:
+    """Return the 3rd Wednesday of the given month, clamped to DATE_END."""
+    d = date(year, month, 1)
+    days_until_wed = (2 - d.weekday()) % 7
+    first_wed = d + timedelta(days=days_until_wed)
+    third_wed = first_wed + timedelta(weeks=2)
+    return min(third_wed, DATE_END)
 
 
 def friday_dates(year: int, month: int) -> list[date]:

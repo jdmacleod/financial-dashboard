@@ -6,10 +6,15 @@ Usage:
     python scripts/seed_demo_data.py --household 1
     python scripts/seed_demo_data.py --household 2
     python scripts/seed_demo_data.py --household 3
+    python scripts/seed_demo_data.py --household 4
+    python scripts/seed_demo_data.py --household 5
     python scripts/seed_demo_data.py --household all
 
 The --household all mode is for demo/test environments only.
 Production installs should seed a single household.
+
+Seeding is additive: running --household 4 on a database that already has
+households 1-3 will only add household 4, leaving existing data intact.
 """
 
 from __future__ import annotations
@@ -24,7 +29,13 @@ from pathlib import Path
 # Allow running from project root: python scripts/seed_demo_data.py
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from seed_households import h1_chen_nakamura, h2_okonkwo_rivera, h3_whitfield_torres
+from seed_households import (
+    h1_chen_nakamura,
+    h2_okonkwo_rivera,
+    h3_whitfield_torres,
+    h4_park_cole,
+    h5_langford,
+)
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,6 +45,8 @@ _SEEDERS = {
     1: h1_chen_nakamura.seed,
     2: h2_okonkwo_rivera.seed,
     3: h3_whitfield_torres.seed,
+    4: h4_park_cole.seed,
+    5: h5_langford.seed,
 }
 
 
@@ -72,8 +85,19 @@ async def _seed_one(
     return result
 
 
-async def _has_existing_households(session: AsyncSession) -> bool:
-    result = await session.execute(text("SELECT 1 FROM households LIMIT 1"))
+_HOUSEHOLD_NAMES = {
+    1: "Chen-Nakamura Household",
+    2: "Okonkwo-Rivera Household",
+    3: "Whitfield-Torres Household",
+    4: "Park-Cole Household",
+    5: "Langford Household",
+}
+
+
+async def _household_exists(session: AsyncSession, name: str) -> bool:
+    result = await session.execute(
+        text("SELECT 1 FROM households WHERE name = :name LIMIT 1"), {"name": name}
+    )
     return result.scalar_one_or_none() is not None
 
 
@@ -81,28 +105,25 @@ async def main(household_arg: str) -> None:
     _banner()
     t0 = time.perf_counter()
 
-    async with AsyncSessionLocal() as session:
-        if await _has_existing_households(session):
-            print(
-                "Error: database already contains households. "
-                "Drop existing data or use a fresh database before re-seeding."
-            )
-            sys.exit(1)
-
     if household_arg == "all":
-        to_seed = [1, 2, 3]
+        to_seed = [1, 2, 3, 4, 5]
     else:
         n = int(household_arg)
         if n not in _SEEDERS:
-            print(f"Error: --household must be 1, 2, 3, or all. Got: {household_arg}")
+            print(f"Error: --household must be 1-5 or all. Got: {household_arg}")
             sys.exit(1)
         to_seed = [n]
 
     results: list[dict] = []
 
-    async with AsyncSessionLocal() as session, session.begin():
-        rng = random.Random(42)
-        for num in to_seed:
+    for num in to_seed:
+        name = _HOUSEHOLD_NAMES[num]
+        async with AsyncSessionLocal() as session:
+            if await _household_exists(session, name):
+                print(f"  → Household {num} ({name}) already exists, skipping.")
+                continue
+        async with AsyncSessionLocal() as session, session.begin():
+            rng = random.Random(42 + num)
             result = await _seed_one(session, num, rng)
             results.append(result)
 
@@ -115,8 +136,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--household",
         required=True,
-        choices=["1", "2", "3", "all"],
-        help="Which household(s) to seed",
+        choices=["1", "2", "3", "4", "5", "all"],
+        help="Which household(s) to seed (additive — skips already-seeded households)",
     )
     args = parser.parse_args()
     asyncio.run(main(args.household))

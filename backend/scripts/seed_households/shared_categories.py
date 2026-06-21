@@ -23,6 +23,7 @@ _DEFS: list[tuple[str, str, str | None, bool]] = [
     ("investment_income", "Investment Income", None, True),
     ("dividends", "Dividends", "investment_income", True),
     ("capital_gains", "Capital Gains", "investment_income", True),
+    ("rmd_distribution", "Required Minimum Distribution", "investment_income", True),
     ("rental_income", "Rental Income", None, True),
     ("residential_rental", "Residential Rental", "rental_income", True),
     ("short_term_rental", "Short-Term Rental", "rental_income", True),
@@ -30,6 +31,8 @@ _DEFS: list[tuple[str, str, str | None, bool]] = [
     ("tax_refund", "Tax Refund", "other_income", True),
     ("gifts_received", "Gifts Received", "other_income", True),
     ("misc_income", "Miscellaneous", "other_income", True),
+    ("social_security_income", "Social Security", "other_income", True),
+    ("pension_income", "Pension Income", "other_income", True),
     # ── Housing ───────────────────────────────────────────────────────────────
     ("housing", "Housing", None, False),
     ("hoa_fees", "HOA Fees", "housing", False),
@@ -37,6 +40,8 @@ _DEFS: list[tuple[str, str, str | None, bool]] = [
     ("home_maintenance", "Home Maintenance & Repairs", "housing", False),
     ("lawn_garden", "Lawn & Garden", "housing", False),
     ("cleaning_services", "Cleaning Services", "housing", False),
+    ("rent", "Rent", "housing", False),
+    ("renters_insurance", "Renters Insurance", "housing", False),
     # ── Utilities ─────────────────────────────────────────────────────────────
     ("utilities", "Utilities", None, False),
     ("electric", "Electric", "utilities", False),
@@ -68,6 +73,10 @@ _DEFS: list[tuple[str, str, str | None, bool]] = [
     ("pharmacy", "Prescriptions & Pharmacy", "healthcare", False),
     ("fitness", "Fitness & Gym", "healthcare", False),
     ("therapy", "Mental Health / Therapy", "healthcare", False),
+    ("medicare_part_b", "Medicare Part B", "healthcare", False),
+    ("medicare_part_d", "Medicare Part D", "healthcare", False),
+    ("medigap_supplement", "Medigap Supplement", "healthcare", False),
+    ("aca_premium", "ACA Marketplace Premium", "healthcare", False),
     # ── Education ─────────────────────────────────────────────────────────────
     ("education", "Education & Childcare", None, False),
     ("tuition", "Tuition & School Fees", "education", False),
