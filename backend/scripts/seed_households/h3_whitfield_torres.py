@@ -55,6 +55,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     user_sophia = make_user(sophia.id, "sophia@whitfield-torres.local")
     user_ethan = make_user(ethan.id, "ethan@whitfield-torres.local")
     session.add_all([user_ben, user_gabriela, user_sophia, user_ethan])
+    await session.flush()  # household/member/user rows must be in DB before accounts reference them
 
     # ── Categories ────────────────────────────────────────────────────────────
     cat = await seed_categories(session, hid)
@@ -98,6 +99,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     palm_springs = acc("real_estate", "Palm Springs Vacation Rental", "—", None)
 
     # ── Access grants for Sophia ───────────────────────────────────────────────
+    await session.flush()  # accounts must exist before account_access_grants FK check
     for granted_acc in (jpm_chk, jpm_sav, joint_brok):
         session.add(make_access_grant(granted_acc.id, ben.id, sophia.id, user_ben.id))
 
@@ -111,6 +113,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         linked_mortgage_id=jpm_mort.id,
     )
     session.add(prop_brentwood)
+    await session.flush()  # real_estate_properties must exist before property_valuations FK check
     for val_date, val_amt in [
         (date(2024, 1, 1), D("3750000.00")),
         (date(2024, 7, 1), D("3850000.00")),
@@ -130,6 +133,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         linked_mortgage_id=wf_mort.id,
     )
     session.add(prop_silver)
+    await session.flush()  # real_estate_properties must exist before property_valuations FK check
     for val_date, val_amt in [
         (date(2024, 1, 1), D("1240000.00")),
         (date(2024, 7, 1), D("1280000.00")),
@@ -149,6 +153,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         linked_mortgage_id=ld_mort.id,
     )
     session.add(prop_ps)
+    await session.flush()  # real_estate_properties must exist before property_valuations FK check
     for val_date, val_amt in [
         (date(2024, 1, 1), D("1040000.00")),
         (date(2024, 7, 1), D("1020000.00")),

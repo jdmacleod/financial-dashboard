@@ -55,6 +55,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     user_emma = make_user(emma.id, "emma@okonkwo-rivera.local")
     user_noah = make_user(noah.id, "noah@okonkwo-rivera.local")
     session.add_all([user_darius, user_carmen, user_emma, user_noah])
+    await session.flush()  # household/member/user rows must be in DB before accounts reference them
 
     # ── Categories ────────────────────────────────────────────────────────────
     cat = await seed_categories(session, hid)
@@ -88,6 +89,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     condo_re = acc("real_estate", "Evanston Rental Condo", "—", None)
 
     # ── Access grant: Carmen views Darius's 401k ──────────────────────────────
+    await session.flush()  # accounts must exist before account_access_grants FK check
     session.add(make_access_grant(d_401k.id, darius.id, carmen.id, user_darius.id))
 
     # ── Real estate ───────────────────────────────────────────────────────────
@@ -100,6 +102,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         linked_mortgage_id=mortgage1.id,
     )
     session.add(prop_home)
+    await session.flush()  # real_estate_properties must exist before property_valuations FK check
     for val_date, val_amt in [
         (date(2024, 1, 1), D("1138000.00")),
         (date(2024, 7, 1), D("1162000.00")),
@@ -119,6 +122,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         linked_mortgage_id=mortgage2.id,
     )
     session.add(prop_condo)
+    await session.flush()  # real_estate_properties must exist before property_valuations FK check
     for val_date, val_amt in [
         (date(2024, 1, 1), D("445000.00")),
         (date(2024, 7, 1), D("460000.00")),
