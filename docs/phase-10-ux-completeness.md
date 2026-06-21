@@ -90,5 +90,5 @@ Fix: `VERSION` updated to `0.9.2.1` to match the package files.
    `/assets`.
 6. The header "+ Add account" button on the Accounts page still opens
    `AddAccountModal` with the full `ACCOUNTS_PAGE_TYPES` list.
-7. `cat VERSION` returns `0.9.2.1` (matches `backend/pyproject.toml` and
+7. `cat VERSION` returns `0.9.3.0` (matches `backend/pyproject.toml` and
    `frontend/package.json`).
