@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { Link } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { useQuery, useQueries } from "@tanstack/react-query"
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { accountsApi } from "@/api/accounts"
@@ -510,8 +510,11 @@ function DetailPanel({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+type AddFilter = "banking" | "liabilities" | null
+
 export default function Accounts() {
   const isPrimary = useAuth((s) => s.role === "primary")
+  const navigate = useNavigate()
   const {
     data: accounts,
     isLoading,
@@ -524,6 +527,7 @@ export default function Accounts() {
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showAdd, setShowAdd] = useState(false)
+  const [addFilter, setAddFilter] = useState<AddFilter>(null)
   const [archivingAccount, setArchivingAccount] = useState<AccountResponse | null>(null)
   const [editingAccount, setEditingAccount] = useState<AccountResponse | null>(null)
 
@@ -568,6 +572,20 @@ export default function Accounts() {
   }
   if (error) {
     return <div style={{ padding: "32px", color: "var(--liab)" }}>Failed to load accounts.</div>
+  }
+
+  const categoryAddHandlers: Record<CategoryName, () => void> = {
+    "Banking & Cash": () => {
+      setAddFilter("banking")
+      setShowAdd(true)
+    },
+    Retirement: () => navigate({ to: "/reports/retirement" }),
+    Investments: () => navigate({ to: "/reports/investments" }),
+    "Real estate": () => navigate({ to: "/assets" }),
+    Liabilities: () => {
+      setAddFilter("liabilities")
+      setShowAdd(true)
+    },
   }
 
   const categoryOrder: CategoryName[] = [
@@ -649,7 +667,7 @@ export default function Accounts() {
                 accounts={groups[name]}
                 selectedId={selectedId}
                 onSelect={(a) => setSelectedId(a.id === selectedId ? null : a.id)}
-                onAdd={() => setShowAdd(true)}
+                onAdd={categoryAddHandlers[name]}
               />
             ))
           )}
@@ -667,7 +685,19 @@ export default function Accounts() {
       </div>
 
       {showAdd && (
-        <AddAccountModal allowedTypes={ACCOUNTS_PAGE_TYPES} onClose={() => setShowAdd(false)} />
+        <AddAccountModal
+          allowedTypes={
+            addFilter === "banking"
+              ? BANKING_TYPES
+              : addFilter === "liabilities"
+                ? LIABILITY_TYPES
+                : ACCOUNTS_PAGE_TYPES
+          }
+          onClose={() => {
+            setShowAdd(false)
+            setAddFilter(null)
+          }}
+        />
       )}
       {archivingAccount && (
         <ArchiveAccountModal

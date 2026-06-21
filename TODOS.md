@@ -1,19 +1,5 @@
 # TODOS
 
-### WeasyPrint macOS system dependency (P0 — pre-existing test failure)
-
-**What:** `tests/integration/test_phase_5.py::test_pdf_summary_masks_account_number_to_last_four` fails on macOS because WeasyPrint requires `libgobject-2.0-0` (part of GLib/GTK), which is not available in the macOS dev environment. The test passes in Docker (Linux).
-
-**Why:** WeasyPrint's PDF rendering pipeline depends on Cairo/GLib native libraries that ship on Linux but not macOS without Homebrew. The test is skipped in CI but surfaces locally.
-
-**Fix:** Either install `brew install gobject-introspection` (plus `pango`, `gdk-pixbuf`) on the dev machine, or add a `pytest.mark.skipif(sys.platform == "darwin", reason="WeasyPrint requires Linux GLib")` decorator to this test.
-
-**Priority:** P0 — blocks local pytest from reporting a clean run. Does not affect CI or Docker.
-
-**Noticed on:** feat/phase-7-demo-households (2026-06-20). Pre-existing failure unrelated to branch changes.
-
----
-
 ### WCAG 2.1 AA accessibility audit — HearthLedger v1 (Post-Phase 7)
 
 **What:** Run a full WCAG 2.1 AA audit across all HearthLedger pages: color contrast ratios (4.5:1 body text, 3:1 large text), screen reader label completeness, keyboard navigation order, and focus indicator visibility.
@@ -27,33 +13,6 @@
 **Context:** Found during Phase 7 design review. Basic a11y specs now in plan (design decision 14). Full WCAG audit deferred to avoid blocking Phase 7 implementation.
 
 **Depends on:** Phase 7 implementation complete.
-
----
-
----
-
-### AddAccountModal type filtering on Assets page (deferred from Phase 8 F6)
-
-**What:** After F3 narrows the Accounts list to transaction-based types, users can still
-add real estate, pension, or investment accounts via the AddAccountModal on the Accounts
-page. After creation, those accounts won't appear in the Accounts list — they'll be in
-Assets. A user who doesn't know to check Assets may think their account wasn't created.
-
-**Why:** The UX creates a silent "where did my account go?" moment. The fix requires
-either (a) extracting AddAccountModal into a shared component with an `allowedAssetTypes`
-prop so each page can control the type list, or (b) adding a post-creation banner/redirect
-that guides the user to Assets.
-
-**Pros:** Eliminates a confusing UX gap. Makes the Accounts/Assets mental model consistent.
-
-**Cons:** Requires extracting AddAccountModal into a shared component (a clean but
-non-trivial refactor) OR adding post-creation navigation logic.
-
-**Context:** Explicitly deferred in Phase 8 design doc (F6 decision). Current behavior:
-AddAccountModal uses the full ASSET_TYPES list, but the Accounts page list filter uses
-the narrowed DISPLAY_ASSET_TYPES. Both are defined inside Accounts.tsx.
-
-**Depends on:** Phase 8 F2+F3 complete.
 
 ---
 
@@ -101,6 +60,14 @@ approximation to the user.
 ---
 
 ## Completed
+
+### Context-aware category add buttons on Accounts page (Phase 8 F6)
+
+**Completed:** v0.9.3.0 (2026-06-20) — Per-category "+" buttons on the Accounts page now use context-aware handlers: Banking & Cash opens the add modal filtered to banking types, Liabilities opens it filtered to liability types, and Retirement/Investments/Real estate navigate to their dedicated pages. Previously all "+" buttons opened the same modal, which showed no options for Retirement/Investment/Real estate categories.
+
+### WeasyPrint macOS test skip
+
+**Completed:** v0.9.2.0 (2026-06-20) — `test_phase_5.py` uses `ctypes.util.find_library("gobject-2.0")` to auto-detect library availability and marks PDF tests with `pytest.mark.skipif` when the library is absent. No manual platform flag needed.
 
 ### Fix RealEstateService.update() nullable pattern
 

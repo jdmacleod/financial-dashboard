@@ -4,10 +4,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 import Accounts from "@/pages/Accounts"
 
+const mockNavigate = vi.fn()
+
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, ...props }: React.PropsWithChildren<{ to: string; params?: unknown }>) => (
     <a href={String(props.to)}>{children}</a>
   ),
+  useNavigate: () => mockNavigate,
 }))
 
 vi.mock("@/hooks/useAuth", () => ({
@@ -78,8 +81,8 @@ vi.mock("@/api/accounts", () => ({
 }))
 
 vi.mock("@/components/app/AddAccountModal", () => ({
-  default: ({ onClose }: { onClose: () => void }) => (
-    <div data-testid="add-account-modal">
+  default: ({ onClose, allowedTypes }: { onClose: () => void; allowedTypes?: string[] }) => (
+    <div data-testid="add-account-modal" data-allowed-types={(allowedTypes ?? []).join(",")}>
       <button onClick={onClose}>Close</button>
     </div>
   ),
@@ -115,6 +118,7 @@ function renderAccounts() {
 describe("Accounts — split-panel ledger", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    mockNavigate.mockReset()
     // Restore default mock implementations that may have been overridden by individual tests
     const { accountsApi: mock } = await import("@/api/accounts")
     ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue(mockAccounts)
@@ -349,5 +353,118 @@ describe("Accounts — split-panel ledger", () => {
     await waitFor(() => screen.getByText("View transactions →"))
     expect(screen.queryByText("Edit")).not.toBeInTheDocument()
     expect(screen.queryByText("Archive")).not.toBeInTheDocument()
+  })
+
+  it("Banking & Cash + opens modal filtered to banking types only", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Banking & Cash"))
+    await user.click(screen.getByRole("button", { name: "Add Banking & Cash account" }))
+    const modal = screen.getByTestId("add-account-modal")
+    expect(modal).toBeInTheDocument()
+    const types = modal.getAttribute("data-allowed-types") ?? ""
+    expect(types).toContain("checking")
+    expect(types).toContain("savings")
+    expect(types).not.toContain("credit_card")
+    expect(types).not.toContain("retirement")
+  })
+
+  it("Liabilities + opens modal filtered to liability types only", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Liabilities"))
+    await user.click(screen.getByRole("button", { name: "Add Liabilities account" }))
+    const modal = screen.getByTestId("add-account-modal")
+    expect(modal).toBeInTheDocument()
+    const types = modal.getAttribute("data-allowed-types") ?? ""
+    expect(types).toContain("credit_card")
+    expect(types).toContain("mortgage")
+    expect(types).not.toContain("checking")
+    expect(types).not.toContain("savings")
+  })
+
+  it("Retirement + navigates to /reports/retirement without opening modal", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Retirement"))
+    await user.click(screen.getByRole("button", { name: "Add Retirement account" }))
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/reports/retirement" })
+    expect(screen.queryByTestId("add-account-modal")).not.toBeInTheDocument()
+  })
+
+  it("Investments + navigates to /reports/investments without opening modal", async () => {
+    const { accountsApi: mock } = await import("@/api/accounts")
+    ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([
+      ...mockAccounts,
+      {
+        id: "a5",
+        nickname: "Fidelity Brokerage",
+        account_type: "investment_brokerage",
+        owner_member_id: "m1",
+        institution_name: "Fidelity",
+        account_number_last4: "4444",
+        include_in_net_worth: true,
+        is_active: true,
+        current_balance: "25000.00",
+        balance_as_of: "2026-06-01",
+        notes: null,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-06-01T00:00:00Z",
+      },
+    ])
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Investments"))
+    await user.click(screen.getByRole("button", { name: "Add Investments account" }))
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/reports/investments" })
+    expect(screen.queryByTestId("add-account-modal")).not.toBeInTheDocument()
+  })
+
+  it("Real estate + navigates to /assets without opening modal", async () => {
+    const { accountsApi: mock } = await import("@/api/accounts")
+    ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([
+      ...mockAccounts,
+      {
+        id: "a4",
+        nickname: "Main Home",
+        account_type: "real_estate",
+        owner_member_id: "m1",
+        institution_name: null,
+        account_number_last4: null,
+        include_in_net_worth: true,
+        is_active: true,
+        current_balance: "450000.00",
+        balance_as_of: "2026-06-01",
+        notes: null,
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-06-01T00:00:00Z",
+      },
+    ])
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Real estate"))
+    await user.click(screen.getByRole("button", { name: "Add Real estate account" }))
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/assets" })
+    expect(screen.queryByTestId("add-account-modal")).not.toBeInTheDocument()
+  })
+
+  it("closing the add modal resets addFilter so the header button uses full ACCOUNTS_PAGE_TYPES", async () => {
+    const user = userEvent.setup()
+    renderAccounts()
+    await waitFor(() => screen.getByText("Banking & Cash"))
+    // Open via category button (banking filter)
+    await user.click(screen.getByRole("button", { name: "Add Banking & Cash account" }))
+    const modal1 = screen.getByTestId("add-account-modal")
+    const types1 = modal1.getAttribute("data-allowed-types") ?? ""
+    expect(types1).not.toContain("credit_card")
+    // Close modal
+    await user.click(screen.getByText("Close"))
+    expect(screen.queryByTestId("add-account-modal")).not.toBeInTheDocument()
+    // Re-open via header button (should use ACCOUNTS_PAGE_TYPES — includes both banking and liability types)
+    await user.click(screen.getByText("+ Add account"))
+    const modal2 = screen.getByTestId("add-account-modal")
+    const types2 = modal2.getAttribute("data-allowed-types") ?? ""
+    expect(types2).toContain("checking")
+    expect(types2).toContain("credit_card")
   })
 })
