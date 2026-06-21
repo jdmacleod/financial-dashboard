@@ -3,6 +3,22 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.2.1] - 2026-06-20
+
+### Fixed
+
+- **ORM model drift** — `FireScenario.member_id` was missing its `ForeignKey('household_members.id', ondelete='SET NULL')` declaration and `__table_args__` partial index, causing Alembic autogenerate to see drift versus migration 0005.
+- **FIRE projection DOB** — `FireScenarioService.project()` always used the primary member's date of birth even when `member_id` was set; it now looks up the attributed member's DOB and falls back to the primary member only when `member_id` is null.
+- **net_worth() N+1 queries** — `net_worth()` series loop issued one SQL query per transaction-based account (credit_card/heloc) per date point; refactored to batch all such sums in one query per date point via `txn_sums` dict passed through `_net_worth_point` → `_liability_value_at`.
+- **fire_detector net worth date cap** — `_net_worth()` transaction sum for credit_card/heloc had no upper date bound; added `Transaction.transaction_date <= date.today()` so future-dated transactions are excluded.
+- **Migration 0005 downgrade** — spurious `GRANT USAGE ON TYPE account_type TO hearthledger_app` was included in `downgrade()`; removed.
+- **Demo seeds — 403(b) account type** — H1 Priya Nakamura and H2 Carmen Rivera's 403(b) accounts were seeded as `retirement_401k`; corrected to `retirement_403b`.
+- **Demo seeds — member date of birth** — All three households were seeded without `date_of_birth` on primary/partner members, causing FIRE `fire_age` to always be null; added realistic DOBs to all six members.
+- **Demo seeds — income stream type** — H2 and H3 pension/social_security income streams lacked `is_pre_retirement: False`; added so the projector correctly counts them as post-retirement income (reducing withdrawals, not pre-retirement savings).
+- **Demo seeds — idempotency** — `seed_demo_data.py` would crash with an opaque `UniqueViolation` on re-run; replaced with an explicit guard that exits with a readable error if households already exist.
+- **Heloc ordering in account type lists** — `AddAccountModal.tsx` and `Accounts.tsx` had `heloc` listed after the `other_liability` catch-all; moved before it so the catch-all remains last.
+- **fire.ts API types** — `member_id` was missing from `fireApi.create()` and `fireApi.update()` typed parameter shapes, preventing the frontend from passing attribution through the typed client.
+
 ## [0.9.2.0] - 2026-06-20
 
 ### Added
