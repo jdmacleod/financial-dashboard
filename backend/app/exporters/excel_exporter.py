@@ -89,6 +89,7 @@ async def _fetch_net_worth_series(
         "personal_loan",
         "student_loan",
         "other_liability",
+        "heloc",
     }
     series: list[tuple[date, Decimal, Decimal]] = []
     y, m = from_date.year, from_date.month

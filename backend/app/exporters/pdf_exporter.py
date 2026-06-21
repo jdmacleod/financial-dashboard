@@ -44,6 +44,7 @@ _TXN_DISPLAY_TYPES: frozenset[str] = frozenset(
         "student_loan",
         "other_asset",
         "other_liability",
+        "heloc",
     }
 )
 

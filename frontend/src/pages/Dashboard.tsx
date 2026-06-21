@@ -259,6 +259,7 @@ export default function Dashboard() {
             "personal_loan",
             "student_loan",
             "other_liability",
+            "heloc",
           ].includes(a.account_type),
       )
       .sort((a, b) => Number(b.current_balance) - Number(a.current_balance))

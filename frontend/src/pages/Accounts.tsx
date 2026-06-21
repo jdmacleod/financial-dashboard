@@ -24,6 +24,7 @@ const LIABILITY_TYPES: AccountType[] = [
   "personal_loan",
   "student_loan",
   "other_liability",
+  "heloc",
 ]
 
 const ACCOUNTS_PAGE_TYPES: AccountType[] = [
@@ -36,6 +37,7 @@ const ACCOUNTS_PAGE_TYPES: AccountType[] = [
   "personal_loan",
   "student_loan",
   "other_liability",
+  "heloc",
 ]
 
 type CategoryName = "Banking & Cash" | "Retirement" | "Investments" | "Real estate" | "Liabilities"

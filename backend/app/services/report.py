@@ -68,6 +68,7 @@ LIABILITY_BUCKET = {
     "personal_loan": "other_liabilities",
     "student_loan": "other_liabilities",
     "other_liability": "other_liabilities",
+    "heloc": "other_liabilities",
 }
 ASSET_TYPES = frozenset(ASSET_BUCKET)
 LIABILITY_TYPES = frozenset(LIABILITY_BUCKET)
@@ -173,9 +174,10 @@ class ReportService:
         return Decimal("0")
 
     async def _liability_value_at(self, account: Account, as_of: date) -> Decimal:
-        if account.account_type == "credit_card":
-            snap = await self._snapshot_balance_at(account.id, as_of)
-            return abs(snap) if snap is not None else Decimal("0")
+        if account.account_type in ("credit_card", "heloc"):
+            # Transaction-based liabilities: balance comes from running transaction sum.
+            txn = await self._running_txn_balance_at(account.id, as_of)
+            return abs(txn)
         debt_balance = await self._debt_balance(account.id)
         if debt_balance is not None:
             return abs(debt_balance)

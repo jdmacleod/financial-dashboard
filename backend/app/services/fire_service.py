@@ -59,6 +59,22 @@ class FireScenarioService:
         if not ctx.can_write:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
+    async def _assert_member_in_household(
+        self, ctx: VisibilityContext, member_id: uuid.UUID | None
+    ) -> None:
+        if member_id is None:
+            return
+        result = await self.session.execute(
+            select(HouseholdMember.id).where(
+                HouseholdMember.id == member_id,
+                HouseholdMember.household_id == ctx.household_id,
+            )
+        )
+        if result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Member not found"
+            )
+
     async def _get_row(self, ctx: VisibilityContext, scenario_id: uuid.UUID) -> FireScenarioModel:
         result = await self.session.execute(
             select(FireScenarioModel).where(
@@ -84,6 +100,7 @@ class FireScenarioService:
         self, ctx: VisibilityContext, data: FireScenarioCreate
     ) -> FireScenarioResponse:
         self._assert_writable(ctx)
+        await self._assert_member_in_household(ctx, data.member_id)
         now = datetime.now(UTC)
         row = FireScenarioModel(
             household_id=ctx.household_id,
@@ -129,6 +146,7 @@ class FireScenarioService:
         prev = _snapshot(row, exclude=AUDIT_EXCLUDED_FIELDS)
 
         if "member_id" in data.model_fields_set:
+            await self._assert_member_in_household(ctx, data.member_id)
             row.member_id = data.member_id
         if data.name is not None:
             row.name = data.name

@@ -54,8 +54,12 @@ _LIABILITY_TYPES = frozenset(
         "personal_loan",
         "student_loan",
         "other_liability",
+        "heloc",
     }
 )
+
+# Account types whose balance is the running sum of transactions (no snapshots).
+_TRANSACTION_BASED_LIABILITY_TYPES = frozenset({"credit_card", "heloc"})
 
 
 def _map_category_to_stream_type(name: str) -> IncomeStreamType:
@@ -214,43 +218,71 @@ class FireInputDetector:
         return Decimal(str(total)) if total is not None else Decimal(0)
 
     async def _net_worth(self, ctx: VisibilityContext) -> Decimal:
-        """Compute current net worth from latest account snapshots."""
+        """Compute current net worth from latest account snapshots and transaction sums."""
         accounts = await self.account_repo.get_visible(ctx)
-        account_ids = [a.id for a in accounts if a.include_in_net_worth]
-        if not account_ids:
+        net_worth_accounts = [a for a in accounts if a.include_in_net_worth]
+        if not net_worth_accounts:
             return Decimal(0)
 
-        latest_date_subq = (
-            select(
-                AccountSnapshot.account_id,
-                func.max(AccountSnapshot.snapshot_date).label("max_date"),
-            )
-            .where(AccountSnapshot.account_id.in_(account_ids))
-            .group_by(AccountSnapshot.account_id)
-            .subquery()
-        )
-
-        result = await self.session.execute(
-            select(Account.account_type, func.sum(AccountSnapshot.balance))
-            .join(
-                latest_date_subq,
-                (AccountSnapshot.account_id == latest_date_subq.c.account_id)
-                & (AccountSnapshot.snapshot_date == latest_date_subq.c.max_date),
-            )
-            .join(Account, Account.id == AccountSnapshot.account_id)
-            .where(AccountSnapshot.account_id.in_(account_ids))
-            .group_by(Account.account_type)
-        )
+        # Snapshot-based accounts (most types).
+        snapshot_ids = [
+            a.id
+            for a in net_worth_accounts
+            if a.account_type not in _TRANSACTION_BASED_LIABILITY_TYPES
+        ]
 
         net_worth = Decimal(0)
-        for account_type, total in result.all():
-            if total is None:
-                continue
-            val = Decimal(str(total))
-            if account_type in _ASSET_TYPES:
-                net_worth += val
-            elif account_type in _LIABILITY_TYPES:
-                net_worth -= val
+
+        if snapshot_ids:
+            latest_date_subq = (
+                select(
+                    AccountSnapshot.account_id,
+                    func.max(AccountSnapshot.snapshot_date).label("max_date"),
+                )
+                .where(AccountSnapshot.account_id.in_(snapshot_ids))
+                .group_by(AccountSnapshot.account_id)
+                .subquery()
+            )
+
+            result = await self.session.execute(
+                select(Account.account_type, func.sum(AccountSnapshot.balance))
+                .join(
+                    latest_date_subq,
+                    (AccountSnapshot.account_id == latest_date_subq.c.account_id)
+                    & (AccountSnapshot.snapshot_date == latest_date_subq.c.max_date),
+                )
+                .join(Account, Account.id == AccountSnapshot.account_id)
+                .where(AccountSnapshot.account_id.in_(snapshot_ids))
+                .group_by(Account.account_type)
+            )
+
+            for account_type, total in result.all():
+                if total is None:
+                    continue
+                val = Decimal(str(total))
+                if account_type in _ASSET_TYPES:
+                    net_worth += val
+                elif account_type in _LIABILITY_TYPES:
+                    net_worth -= val
+
+        # Transaction-based liabilities (credit_card, heloc) have no snapshots;
+        # their balance is the running sum of transactions (typically negative).
+        txn_liability_ids = [
+            a.id
+            for a in net_worth_accounts
+            if a.account_type in _TRANSACTION_BASED_LIABILITY_TYPES
+        ]
+        if txn_liability_ids:
+            txn_result = await self.session.execute(
+                select(func.sum(Transaction.amount)).where(
+                    Transaction.account_id.in_(txn_liability_ids)
+                )
+            )
+            txn_total = txn_result.scalar_one_or_none()
+            if txn_total is not None:
+                # Running balance for liabilities is already negative; add directly.
+                net_worth += Decimal(str(txn_total))
+
         return net_worth
 
     async def _detect_pension_streams(
