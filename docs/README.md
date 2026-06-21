@@ -28,8 +28,12 @@ architectural rules, and coding conventions that apply to every phase.
 | `docs/phase-3-analysis.md`       | Reports, dashboards, budget vs actuals, property P&L, audit log UI         |
 | `docs/phase-4-fire-and-debt.md`  | FIRE modeling, income streams, debt payoff projections                     |
 | `docs/phase-5-exports.md`        | PDF and Excel exports, executor re-auth gate                               |
-| `docs/phase-6-polish.md`         | Backup UI, valuation management, dark mode, dashboard customization        |
-| `docs/test-plan.md`              | Prioritized test list to reach ≥90% coverage; infra gaps to close first    |
+| `docs/phase-6-polish.md`              | Backup UI, valuation management, dark mode, dashboard customization                       |
+| `docs/phase-7-demo-households.md`     | Demo seed script — three fictitious households (HELOC, FIRE member attribution)           |
+| `docs/phase-8-accounts-assets.md`     | Accounts/Assets restructure — dedicated pages, pension PV, real estate balances           |
+| `docs/phase-9-wealth-dashboard.md`    | Wealth dashboard full UI redesign — 7 tabs, design tokens, EditAccountModal               |
+| `docs/phase-10-ux-completeness.md`    | Context-aware add buttons on Accounts page, VERSION drift fix                             |
+| `docs/test-plan.md`                   | Prioritized test list to reach ≥90% coverage; infra gaps to close first                  |
 
 ## Design amendments (incorporated into spec above)
 
@@ -50,6 +54,9 @@ criteria that must pass before the next phase begins.
 ```
 Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 5 → Phase 6
 Infra     Auth      Txns      Analysis   FIRE       Exports    Polish
+
+Phase 7 → Phase 8 → Phase 9  → Phase 10
+Demo      Assets    Dashboard   UX polish
 ```
 
 ## Key decisions (v1 scope)
