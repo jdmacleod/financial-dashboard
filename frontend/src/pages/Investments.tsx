@@ -1,5 +1,6 @@
 import { useMemo } from "react"
 import { useQuery, useQueries } from "@tanstack/react-query"
+import { useRouterState } from "@tanstack/react-router"
 import {
   LineChart,
   Line,
@@ -9,17 +10,32 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts"
+import { subDays, subYears, startOfYear, format } from "date-fns"
 import { accountsApi } from "@/api/accounts"
 import { snapshotsApi } from "@/api/snapshots"
 import { BROKERAGE_ACCOUNT_TYPES } from "@/lib/accountTypes"
 import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
 import type { AccountResponse } from "@/api/types"
 
+type Range = "ytd" | "1y" | "all"
+
+function useRange(): Range {
+  const search = useRouterState({ select: (s) => s.location.search })
+  return (new URLSearchParams(search).get("range") as Range) ?? "ytd"
+}
+
+function rangeFrom(range: Range): string {
+  const today = new Date()
+  if (range === "1y") return format(subDays(today, 365), "yyyy-MM-dd")
+  if (range === "all") return format(subYears(today, 10), "yyyy-MM-dd")
+  return format(startOfYear(today), "yyyy-MM-dd")
+}
+
 const ACCENT = "#6c97c4"
 
 // ── Account card with snapshot history ───────────────────────────────────────
 
-function InvestmentCard({ account }: { account: AccountResponse }) {
+function InvestmentCard({ account, from }: { account: AccountResponse; from: string }) {
   const { data: snapshots } = useQuery({
     queryKey: ["snapshots", account.id],
     queryFn: () => snapshotsApi.list(account.id),
@@ -29,10 +45,11 @@ function InvestmentCard({ account }: { account: AccountResponse }) {
   const chartData = useMemo(
     () =>
       (snapshots ?? [])
+        .filter((s) => s.snapshot_date >= from)
         .slice()
         .sort((a, b) => a.snapshot_date.localeCompare(b.snapshot_date))
         .map((s) => ({ date: s.snapshot_date.slice(0, 7), balance: Number(s.balance) })),
-    [snapshots],
+    [snapshots, from],
   )
 
   const change = useMemo(() => {
@@ -185,6 +202,9 @@ function InvestmentCard({ account }: { account: AccountResponse }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Investments() {
+  const range = useRange()
+  const from = rangeFrom(range)
+
   const {
     data: accounts,
     isLoading,
@@ -308,7 +328,7 @@ export default function Investments() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {investmentAccounts.map((a) => (
-            <InvestmentCard key={a.id} account={a} />
+            <InvestmentCard key={a.id} account={a} from={from} />
           ))}
         </div>
       )}

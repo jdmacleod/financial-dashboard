@@ -3,6 +3,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 import Investments from "@/pages/Investments"
 
+vi.mock("@tanstack/react-router", () => ({
+  useRouterState: (opts: { select: (s: { location: { search: string } }) => unknown }) =>
+    opts.select({ location: { search: "" } }),
+}))
+
 vi.mock("@/api/snapshots", () => ({
   snapshotsApi: {
     list: vi.fn(() => Promise.resolve([])),

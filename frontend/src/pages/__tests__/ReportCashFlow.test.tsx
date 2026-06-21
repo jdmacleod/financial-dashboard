@@ -52,6 +52,12 @@ const mockSpending = {
   ],
 }
 
+const mockUseRouterState = vi.fn(() => "")
+vi.mock("@tanstack/react-router", () => ({
+  useRouterState: (opts: { select: (s: { location: { search: string } }) => unknown }) =>
+    opts.select({ location: { search: mockUseRouterState() as string } }),
+}))
+
 vi.mock("@/api/reports", () => ({
   reportsApi: {
     cashFlow: vi.fn(() => Promise.resolve(mockCashFlow)),
@@ -73,6 +79,7 @@ function renderPage() {
 describe("ReportCashFlow — Phase 7 redesign", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUseRouterState.mockReturnValue("")
   })
 
   it("renders page heading", () => {
@@ -153,25 +160,42 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
     })
   })
 
-  it("renders 6m/12m/24m period toggle buttons", () => {
-    renderPage()
-    expect(screen.getByRole("button", { name: "6m" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "12m" })).toBeInTheDocument()
-    expect(screen.getByRole("button", { name: "24m" })).toBeInTheDocument()
-  })
-
   it("renders month/quarter group-by buttons", () => {
     renderPage()
     expect(screen.getByRole("button", { name: "month" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "quarter" })).toBeInTheDocument()
   })
 
-  it("calls cashFlow API again when period toggle is changed", async () => {
+  it("does not render the old 6m/12m/24m period buttons", () => {
+    renderPage()
+    expect(screen.queryByRole("button", { name: "6m" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "12m" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "24m" })).not.toBeInTheDocument()
+  })
+
+  it("calls cashFlow API with quarter groupBy when group-by toggle is changed", async () => {
     const user = userEvent.setup()
     const { reportsApi: mock } = await import("@/api/reports")
     renderPage()
     await waitFor(() => screen.getByText("Total income"))
-    await user.click(screen.getByRole("button", { name: "6m" }))
-    expect(mock.cashFlow).toHaveBeenCalledWith(expect.any(String), expect.any(String), "month")
+    await user.click(screen.getByRole("button", { name: "quarter" }))
+    expect(mock.cashFlow).toHaveBeenCalledWith(expect.any(String), expect.any(String), "quarter")
+  })
+
+  it("uses the URL range param to set the date range", async () => {
+    mockUseRouterState.mockReturnValue("?range=1y")
+    const { reportsApi: mock } = await import("@/api/reports")
+    renderPage()
+    await waitFor(() => screen.getByText("Total income"))
+    // With range=1y, cashFlow should be called with a from date ~365 days ago
+    const [fromArg] = (mock.cashFlow as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      string,
+      string,
+    ]
+    const fromDate = new Date(fromArg)
+    const oneYearAgo = new Date()
+    oneYearAgo.setDate(oneYearAgo.getDate() - 365)
+    expect(Math.abs(fromDate.getTime() - oneYearAgo.getTime())).toBeLessThan(2 * 24 * 60 * 60 * 1000)
   })
 })

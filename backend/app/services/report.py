@@ -189,7 +189,15 @@ class ReportService:
         if debt_balance is not None:
             return abs(debt_balance)
         snap = await self._snapshot_balance_at(account.id, as_of)
-        return abs(snap) if snap is not None else Decimal("0")
+        if snap is not None:
+            return abs(snap)
+        # No Debt record and no Snapshot — fall back to running transaction sum.
+        # Handles accounts whose balance was established via imported transactions
+        # rather than a structured Debt record (e.g. a mortgage imported from CSV).
+        if txn_sums is not None:
+            return abs(txn_sums.get(account.id, Decimal("0")))
+        txn = await self._running_txn_balance_at(account.id, as_of)
+        return abs(txn)
 
     async def _net_worth_point(
         self,
@@ -270,9 +278,10 @@ class ReportService:
             if p.monthly_benefit_estimate
         }
 
-        # Pre-identify transaction-based liability accounts (credit_card, heloc).
-        # Sums are batched per date point: 1 query/point instead of N_accounts/point.
-        txn_liability_ids = [a.id for a in accounts if a.account_type in ("credit_card", "heloc")]
+        # Batch transaction sums for ALL liability accounts per date point.
+        # credit_card/heloc use them directly; mortgage/loan/etc. fall back to them
+        # when no Debt record or AccountSnapshot exists.
+        txn_liability_ids = [a.id for a in accounts if a.account_type in LIABILITY_TYPES]
 
         series = []
         for as_of in month_ends:

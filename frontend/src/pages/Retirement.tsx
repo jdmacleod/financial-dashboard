@@ -5,6 +5,8 @@
 
 import { useMemo } from "react"
 import { useQuery, useQueries } from "@tanstack/react-query"
+import { useRouterState } from "@tanstack/react-router"
+import { subDays, subYears, startOfYear, format } from "date-fns"
 import { accountsApi } from "@/api/accounts"
 import { snapshotsApi } from "@/api/snapshots"
 import { ACCOUNT_LABELS } from "@/lib/accountLabels"
@@ -12,6 +14,20 @@ import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
 import type { AccountResponse, AccountType } from "@/api/types"
 
 const GOLD = "#d9b96a"
+
+type Range = "ytd" | "1y" | "all"
+
+function useRange(): Range {
+  const search = useRouterState({ select: (s) => s.location.search })
+  return (new URLSearchParams(search).get("range") as Range) ?? "ytd"
+}
+
+function rangeFrom(range: Range): string {
+  const today = new Date()
+  if (range === "1y") return format(subDays(today, 365), "yyyy-MM-dd")
+  if (range === "all") return format(subYears(today, 10), "yyyy-MM-dd")
+  return format(startOfYear(today), "yyyy-MM-dd")
+}
 
 // Tax treatment groupings
 const TAX_DEFERRED: AccountType[] = ["retirement_401k", "retirement_403b", "retirement_ira"]
@@ -28,7 +44,7 @@ const GROUP_DESCRIPTIONS: Record<TaxGroup, string> = {
 
 // ── Balance change from 2 most recent snapshots ───────────────────────────────
 
-function useBalanceChange(accountId: string): string | null {
+function useBalanceChange(accountId: string, from: string): string | null {
   const { data: snapshots } = useQuery({
     queryKey: ["snapshots", accountId],
     queryFn: () => snapshotsApi.list(accountId),
@@ -40,17 +56,20 @@ function useBalanceChange(accountId: string): string | null {
       (a, b) => new Date(b.snapshot_date).getTime() - new Date(a.snapshot_date).getTime(),
     )
     const latest = Number(sorted[0].balance)
-    const prev = Number(sorted[1].balance)
-    if (prev === 0) return null
-    const pct = ((latest - prev) / Math.abs(prev)) * 100
+    // Baseline: last snapshot at or before the range start (= end of prior period).
+    // Falls back to oldest available when all snapshots are after `from`.
+    const baseline = sorted.find((s) => s.snapshot_date <= from) ?? sorted[sorted.length - 1]
+    const baselineBalance = Number(baseline.balance)
+    if (baselineBalance === 0) return null
+    const pct = ((latest - baselineBalance) / Math.abs(baselineBalance)) * 100
     return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`
-  }, [snapshots])
+  }, [snapshots, from])
 }
 
 // ── Account row ───────────────────────────────────────────────────────────────
 
-function RetirementRow({ account }: { account: AccountResponse }) {
-  const change = useBalanceChange(account.id)
+function RetirementRow({ account, from }: { account: AccountResponse; from: string }) {
+  const change = useBalanceChange(account.id, from)
 
   return (
     <div
@@ -108,7 +127,15 @@ function RetirementRow({ account }: { account: AccountResponse }) {
 
 // ── Tax group section ─────────────────────────────────────────────────────────
 
-function TaxGroupSection({ name, accounts }: { name: TaxGroup; accounts: AccountResponse[] }) {
+function TaxGroupSection({
+  name,
+  accounts,
+  from,
+}: {
+  name: TaxGroup
+  accounts: AccountResponse[]
+  from: string
+}) {
   if (accounts.length === 0) return null
   const subtotal = accounts.reduce((s, a) => s + Number(a.current_balance ?? 0), 0)
 
@@ -145,7 +172,7 @@ function TaxGroupSection({ name, accounts }: { name: TaxGroup; accounts: Account
       {/* Account rows */}
       <div>
         {accounts.map((a) => (
-          <RetirementRow key={a.id} account={a} />
+          <RetirementRow key={a.id} account={a} from={from} />
         ))}
       </div>
     </div>
@@ -155,6 +182,9 @@ function TaxGroupSection({ name, accounts }: { name: TaxGroup; accounts: Account
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Retirement() {
+  const range = useRange()
+  const from = rangeFrom(range)
+
   const {
     data: accounts,
     isLoading,
@@ -304,9 +334,9 @@ export default function Retirement() {
       {/* Tax group sections */}
       {hasAny ? (
         <>
-          <TaxGroupSection name="Tax-deferred" accounts={taxDeferred} />
-          <TaxGroupSection name="Tax-free" accounts={taxFree} />
-          <TaxGroupSection name="Guaranteed" accounts={guaranteed} />
+          <TaxGroupSection name="Tax-deferred" accounts={taxDeferred} from={from} />
+          <TaxGroupSection name="Tax-free" accounts={taxFree} from={from} />
+          <TaxGroupSection name="Guaranteed" accounts={guaranteed} from={from} />
         </>
       ) : (
         <div

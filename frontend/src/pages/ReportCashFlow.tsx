@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { useRouterState } from "@tanstack/react-router"
 import {
   BarChart,
   Bar,
@@ -10,11 +11,26 @@ import {
   CartesianGrid,
   Cell,
 } from "recharts"
+import { subDays, subYears, startOfYear } from "date-fns"
 import { reportsApi } from "@/api/reports"
 import { formatCurrency } from "@/lib/formatters"
-import { lastNMonthsRange } from "@/lib/dateRange"
+import { toIso } from "@/lib/dateRange"
 
 type GroupBy = "month" | "quarter"
+type Range = "ytd" | "1y" | "all"
+
+function useRange(): Range {
+  const search = useRouterState({ select: (s) => s.location.search })
+  return (new URLSearchParams(search).get("range") as Range) ?? "ytd"
+}
+
+function rangeToDateParams(range: Range): { from: string; to: string } {
+  const today = new Date()
+  const to = toIso(today)
+  if (range === "1y") return { from: toIso(subDays(today, 365)), to }
+  if (range === "all") return { from: toIso(subYears(today, 10)), to }
+  return { from: toIso(startOfYear(today)), to }
+}
 
 // ── KPI card ─────────────────────────────────────────────────────────────────
 
@@ -105,19 +121,19 @@ function CategoryBar({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ReportCashFlow() {
-  const [months, setMonths] = useState(12)
   const [groupBy, setGroupBy] = useState<GroupBy>("month")
 
-  const range = lastNMonthsRange(months)
+  const range = useRange()
+  const dateRange = rangeToDateParams(range)
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["reports", "cash-flow", range, groupBy],
-    queryFn: () => reportsApi.cashFlow(range.from, range.to, groupBy),
+    queryKey: ["reports", "cash-flow", dateRange.from, dateRange.to, groupBy],
+    queryFn: () => reportsApi.cashFlow(dateRange.from, dateRange.to, groupBy),
   })
 
   const { data: spending } = useQuery({
-    queryKey: ["reports", "spending-by-category", range],
-    queryFn: () => reportsApi.spendingByCategory(range.from, range.to),
+    queryKey: ["reports", "spending-by-category", dateRange.from, dateRange.to],
+    queryFn: () => reportsApi.spendingByCategory(dateRange.from, dateRange.to),
     staleTime: 30_000,
   })
 
@@ -150,57 +166,27 @@ export default function ReportCashFlow() {
         </h1>
       </div>
 
-      {/* Period controls */}
-      <div
-        style={{
-          display: "flex",
-          gap: "8px",
-          alignItems: "center",
-          marginBottom: "16px",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ display: "flex", gap: "4px" }}>
-          {[6, 12, 24].map((m) => (
-            <button
-              key={m}
-              onClick={() => setMonths(m)}
-              style={{
-                padding: "4px 12px",
-                borderRadius: "20px",
-                fontSize: "12px",
-                fontWeight: 500,
-                border: `1px solid ${months === m ? "transparent" : "var(--bd)"}`,
-                background: months === m ? "var(--toggle-on-bg)" : "transparent",
-                color: months === m ? "var(--toggle-on-text)" : "var(--muted)",
-                cursor: "pointer",
-              }}
-            >
-              {m}m
-            </button>
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: "4px" }}>
-          {(["month", "quarter"] as GroupBy[]).map((g) => (
-            <button
-              key={g}
-              onClick={() => setGroupBy(g)}
-              style={{
-                padding: "4px 12px",
-                borderRadius: "20px",
-                fontSize: "12px",
-                fontWeight: 500,
-                border: `1px solid ${groupBy === g ? "transparent" : "var(--bd)"}`,
-                background: groupBy === g ? "var(--toggle-on-bg)" : "transparent",
-                color: groupBy === g ? "var(--toggle-on-text)" : "var(--muted)",
-                cursor: "pointer",
-                textTransform: "capitalize",
-              }}
-            >
-              {g}
-            </button>
-          ))}
-        </div>
+      {/* Group-by control — date range is driven by the global YTD / 1Y / All toggle */}
+      <div style={{ display: "flex", gap: "4px", marginBottom: "16px" }}>
+        {(["month", "quarter"] as GroupBy[]).map((g) => (
+          <button
+            key={g}
+            onClick={() => setGroupBy(g)}
+            style={{
+              padding: "4px 12px",
+              borderRadius: "20px",
+              fontSize: "12px",
+              fontWeight: 500,
+              border: `1px solid ${groupBy === g ? "transparent" : "var(--bd)"}`,
+              background: groupBy === g ? "var(--toggle-on-bg)" : "transparent",
+              color: groupBy === g ? "var(--toggle-on-text)" : "var(--muted)",
+              cursor: "pointer",
+              textTransform: "capitalize",
+            }}
+          >
+            {g}
+          </button>
+        ))}
       </div>
 
       {isLoading && (

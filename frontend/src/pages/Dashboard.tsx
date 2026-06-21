@@ -30,18 +30,13 @@ function useRange(): Range {
   return (new URLSearchParams(search).get("range") as Range) ?? "ytd"
 }
 
-function rangeToDateParams(
-  range: Range,
-  householdCreatedAt: string | null,
-): { from: string; to: string } {
+function rangeToDateParams(range: Range): { from: string; to: string } {
   const today = new Date()
   const to = toIso(today)
   if (range === "1y") return { from: toIso(subDays(today, 365)), to }
-  if (range === "all") {
-    const from = householdCreatedAt ? householdCreatedAt.slice(0, 10) : toIso(subYears(today, 10))
-    return { from, to }
-  }
-  // ytd
+  // "all" uses a 10-year lookback so all historical data is included regardless of
+  // when the household DB record was created (seeder run date ≠ history start date).
+  if (range === "all") return { from: toIso(subYears(today, 10)), to }
   return { from: toIso(startOfYear(today)), to }
 }
 
@@ -163,17 +158,7 @@ export default function Dashboard() {
   const range = useRange()
   const { householdName, isLoading: userLoading } = useCurrentUser()
 
-  // We read household created_at separately for "all" range
-  const { data: household } = useQuery({
-    queryKey: ["household"],
-    queryFn: async () => {
-      const { householdApi } = await import("@/api/household")
-      return householdApi.get()
-    },
-    staleTime: 5 * 60_000,
-  })
-
-  const dateParams = rangeToDateParams(range, household?.created_at ?? null)
+  const dateParams = rangeToDateParams(range)
 
   const { data: dash, isLoading: dashLoading } = useQuery({
     queryKey: ["dashboard"],
@@ -283,8 +268,8 @@ export default function Dashboard() {
     const b = nwReport?.current?.breakdown
     if (!b) return []
     return [
-      { name: "Mortgage", value: Number(b.mortgage) },
-      { name: "Other", value: Number(b.other_liabilities) },
+      { name: "Mortgage", value: Math.abs(Number(b.mortgage)) },
+      { name: "Other", value: Math.abs(Number(b.other_liabilities)) },
     ].filter((d) => d.value > 0)
   }, [nwReport])
 
