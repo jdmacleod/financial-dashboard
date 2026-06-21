@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react"
-import { Link } from "@tanstack/react-router"
+import { Link, useRouterState } from "@tanstack/react-router"
 import { useQuery, useQueries } from "@tanstack/react-query"
+import { subDays, subYears, startOfYear, format } from "date-fns"
 import { accountsApi } from "@/api/accounts"
 import { propertiesApi } from "@/api/properties"
 import { PROPERTY_TYPE_LABELS } from "@/lib/accountLabels"
@@ -13,19 +14,31 @@ import type { AccountResponse, AccountType } from "@/api/types"
 const BRONZE = "#a9743f"
 const ASSETS_PAGE_TYPES: AccountType[] = ["real_estate"]
 
-// Compute YoY delta from a list of valuations (sorted or unsorted)
-function yoyDelta(
+type Range = "ytd" | "1y" | "all"
+
+function useRange(): Range {
+  const search = useRouterState({ select: (s) => s.location.search })
+  return (new URLSearchParams(search).get("range") as Range) ?? "ytd"
+}
+
+function rangeFrom(range: Range): string {
+  const today = new Date()
+  if (range === "1y") return format(subDays(today, 365), "yyyy-MM-dd")
+  if (range === "all") return format(subYears(today, 10), "yyyy-MM-dd")
+  return format(startOfYear(today), "yyyy-MM-dd")
+}
+
+// Compute delta from the range's start to the latest valuation
+function valuationDelta(
   valuations: { valuation_date: string; estimated_value: string }[],
+  from: string,
 ): { pct: number; isPositive: boolean } | null {
   if (valuations.length < 2) return null
   const sorted = [...valuations].sort((a, b) => b.valuation_date.localeCompare(a.valuation_date))
   const latest = Number(sorted[0].estimated_value)
-  const oneYearAgo = new Date()
-  oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
-  // Find the valuation closest to 1 year ago
-  const pastValuation =
-    sorted.find((v) => new Date(v.valuation_date) <= oneYearAgo) ?? sorted[sorted.length - 1]
-  const past = Number(pastValuation.estimated_value)
+  const baseline =
+    sorted.find((v) => v.valuation_date <= from) ?? sorted[sorted.length - 1]
+  const past = Number(baseline.estimated_value)
   if (past === 0) return null
   const pct = ((latest - past) / Math.abs(past)) * 100
   return { pct, isPositive: pct >= 0 }
@@ -33,7 +46,7 @@ function yoyDelta(
 
 // ── Property card ─────────────────────────────────────────────────────────────
 
-function PropertyCard({ account }: { account: AccountResponse }) {
+function PropertyCard({ account, from }: { account: AccountResponse; from: string }) {
   const isPrimary = useAuth((s) => s.role === "primary")
   const [archiving, setArchiving] = useState(false)
 
@@ -57,7 +70,7 @@ function PropertyCard({ account }: { account: AccountResponse }) {
     staleTime: 60_000,
   })
 
-  const delta = useMemo(() => yoyDelta(valuations ?? []), [valuations])
+  const delta = useMemo(() => valuationDelta(valuations ?? [], from), [valuations, from])
 
   const propertyValue = property?.current_estimated_value
     ? Number(property.current_estimated_value)
@@ -128,7 +141,7 @@ function PropertyCard({ account }: { account: AccountResponse }) {
                   }}
                 >
                   {delta.isPositive ? "+" : ""}
-                  {delta.pct.toFixed(1)}% YoY
+                  {delta.pct.toFixed(1)}%
                 </div>
               )}
             </div>
@@ -222,6 +235,8 @@ function PropertyCard({ account }: { account: AccountResponse }) {
 
 export default function Assets() {
   const isPrimary = useAuth((s) => s.role === "primary")
+  const range = useRange()
+  const from = rangeFrom(range)
   const {
     data: accounts,
     isLoading,
@@ -380,7 +395,7 @@ export default function Assets() {
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {realEstateAccounts.map((a) => (
-            <PropertyCard key={a.id} account={a} />
+            <PropertyCard key={a.id} account={a} from={from} />
           ))}
         </div>
       )}

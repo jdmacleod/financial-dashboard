@@ -18,7 +18,6 @@ import {
 import { useRouterState } from "@tanstack/react-router"
 import { reportsApi } from "@/api/reports"
 import { accountsApi } from "@/api/accounts"
-import { useCurrentUser } from "@/hooks/useCurrentUser"
 import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
 import { toIso } from "@/lib/dateRange"
 import { startOfYear, subYears, subDays } from "date-fns"
@@ -156,8 +155,6 @@ function compactCurrency(n: number): string {
 
 export default function Dashboard() {
   const range = useRange()
-  const { householdName, isLoading: userLoading } = useCurrentUser()
-
   const dateParams = rangeToDateParams(range)
 
   const { data: dash, isLoading: dashLoading } = useQuery({
@@ -273,7 +270,7 @@ export default function Dashboard() {
     ].filter((d) => d.value > 0)
   }, [nwReport])
 
-  const isLoading = dashLoading || userLoading
+  const isLoading = dashLoading
   if (isLoading && !dash) {
     return (
       <div
@@ -309,7 +306,7 @@ export default function Dashboard() {
         aria-level={1}
         style={{ fontSize: "22px", fontWeight: 700, color: "var(--text)", margin: 0 }}
       >
-        {householdName ?? "Dashboard"}
+        Overview
       </h1>
 
       {/* KPI row */}

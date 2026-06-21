@@ -58,11 +58,12 @@ function InvestmentCard({ account, from }: { account: AccountResponse; from: str
       (a, b) => new Date(b.snapshot_date).getTime() - new Date(a.snapshot_date).getTime(),
     )
     const latest = Number(sorted[0].balance)
-    const prev = Number(sorted[1].balance)
-    if (prev === 0) return null
-    const pct = ((latest - prev) / Math.abs(prev)) * 100
+    const baseline = sorted.find((s) => s.snapshot_date <= from) ?? sorted[sorted.length - 1]
+    const baselineBalance = Number(baseline.balance)
+    if (baselineBalance === 0) return null
+    const pct = ((latest - baselineBalance) / Math.abs(baselineBalance)) * 100
     return { pct, isPositive: pct >= 0 }
-  }, [snapshots])
+  }, [snapshots, from])
 
   const lastUpdated = account.balance_as_of
     ? new Date(account.balance_as_of).toLocaleDateString("en-US", {
@@ -125,7 +126,7 @@ function InvestmentCard({ account, from }: { account: AccountResponse; from: str
                 }}
               >
                 {change.isPositive ? "+" : ""}
-                {change.pct.toFixed(1)}% vs prev
+                {change.pct.toFixed(1)}%
               </div>
             )}
             {lastUpdated && (

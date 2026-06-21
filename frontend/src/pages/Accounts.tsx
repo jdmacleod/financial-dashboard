@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react"
-import { Link, useNavigate } from "@tanstack/react-router"
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router"
 import { useQuery, useQueries } from "@tanstack/react-query"
+import { subDays, subYears, startOfYear, format } from "date-fns"
 import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { accountsApi } from "@/api/accounts"
 import { snapshotsApi } from "@/api/snapshots"
@@ -69,8 +70,22 @@ function groupSubtotal(accounts: AccountResponse[]): number {
   return accounts.reduce((s, a) => s + Number(a.current_balance ?? 0), 0)
 }
 
-// Balance change from 2 most recent snapshots
-function useBalanceChange(accountId: string): string | null {
+type Range = "ytd" | "1y" | "all"
+
+function useRange(): Range {
+  const search = useRouterState({ select: (s) => s.location.search })
+  return (new URLSearchParams(search).get("range") as Range) ?? "ytd"
+}
+
+function rangeFrom(range: Range): string {
+  const today = new Date()
+  if (range === "1y") return format(subDays(today, 365), "yyyy-MM-dd")
+  if (range === "all") return format(subYears(today, 10), "yyyy-MM-dd")
+  return format(startOfYear(today), "yyyy-MM-dd")
+}
+
+// Balance change from the range's start to the latest snapshot
+function useBalanceChange(accountId: string, from: string): string | null {
   const { data: snapshots } = useQuery({
     queryKey: ["snapshots", accountId],
     queryFn: () => snapshotsApi.list(accountId),
@@ -82,11 +97,12 @@ function useBalanceChange(accountId: string): string | null {
       (a, b) => new Date(b.snapshot_date).getTime() - new Date(a.snapshot_date).getTime(),
     )
     const latest = Number(sorted[0].balance)
-    const prev = Number(sorted[1].balance)
-    if (prev === 0) return null
-    const pct = ((latest - prev) / Math.abs(prev)) * 100
+    const baseline = sorted.find((s) => s.snapshot_date <= from) ?? sorted[sorted.length - 1]
+    const baselineBalance = Number(baseline.balance)
+    if (baselineBalance === 0) return null
+    const pct = ((latest - baselineBalance) / Math.abs(baselineBalance)) * 100
     return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`
-  }, [snapshots])
+  }, [snapshots, from])
 }
 
 // ── Account row ───────────────────────────────────────────────────────────────
@@ -96,13 +112,15 @@ function AccountRow({
   category,
   selected,
   onSelect,
+  from,
 }: {
   account: AccountResponse
   category: CategoryName
   selected: boolean
   onSelect: () => void
+  from: string
 }) {
-  const change = useBalanceChange(account.id)
+  const change = useBalanceChange(account.id, from)
   const dot = ACCOUNT_CATEGORY_COLORS[category] ?? "var(--muted)"
   const isLiability = LIABILITY_TYPES.includes(account.account_type)
 
@@ -190,12 +208,14 @@ function CategoryGroup({
   selectedId,
   onSelect,
   onAdd,
+  from,
 }: {
   name: CategoryName
   accounts: AccountResponse[]
   selectedId: string | null
   onSelect: (a: AccountResponse) => void
   onAdd: () => void
+  from: string
 }) {
   const isPrimary = useAuth((s) => s.role === "primary")
   if (accounts.length === 0) return null
@@ -271,6 +291,7 @@ function CategoryGroup({
             category={name}
             selected={selectedId === a.id}
             onSelect={() => onSelect(a)}
+            from={from}
           />
         ))}
       </div>
@@ -285,11 +306,13 @@ function DetailPanel({
   category,
   onArchive,
   onEdit,
+  from,
 }: {
   account: AccountResponse
   category: CategoryName
   onArchive: () => void
   onEdit: () => void
+  from: string
 }) {
   const isPrimary = useAuth((s) => s.role === "primary")
   const isLiability = LIABILITY_TYPES.includes(account.account_type)
@@ -318,11 +341,12 @@ function DetailPanel({
       (a, b) => new Date(b.snapshot_date).getTime() - new Date(a.snapshot_date).getTime(),
     )
     const latest = Number(sorted[0].balance)
-    const prev = Number(sorted[1].balance)
-    if (prev === 0) return null
-    const pct = ((latest - prev) / Math.abs(prev)) * 100
+    const baseline = sorted.find((s) => s.snapshot_date <= from) ?? sorted[sorted.length - 1]
+    const baselineBalance = Number(baseline.balance)
+    if (baselineBalance === 0) return null
+    const pct = ((latest - baselineBalance) / Math.abs(baselineBalance)) * 100
     return `${pct >= 0 ? "+" : ""}${pct.toFixed(1)}%`
-  }, [snapshots])
+  }, [snapshots, from])
 
   const lastUpdated = account.balance_as_of
     ? new Date(account.balance_as_of).toLocaleDateString("en-US", {
@@ -394,7 +418,7 @@ function DetailPanel({
               marginTop: "4px",
             }}
           >
-            {change} vs previous snapshot
+            {change}
           </div>
         )}
         {lastUpdated && (
@@ -515,6 +539,8 @@ type AddFilter = "banking" | "liabilities" | null
 export default function Accounts() {
   const isPrimary = useAuth((s) => s.role === "primary")
   const navigate = useNavigate()
+  const range = useRange()
+  const from = rangeFrom(range)
   const {
     data: accounts,
     isLoading,
@@ -668,6 +694,7 @@ export default function Accounts() {
                 selectedId={selectedId}
                 onSelect={(a) => setSelectedId(a.id === selectedId ? null : a.id)}
                 onAdd={categoryAddHandlers[name]}
+                from={from}
               />
             ))
           )}
@@ -680,6 +707,7 @@ export default function Accounts() {
             category={selectedCategory}
             onArchive={() => setArchivingAccount(selectedAccount)}
             onEdit={() => setEditingAccount(selectedAccount)}
+            from={from}
           />
         )}
       </div>

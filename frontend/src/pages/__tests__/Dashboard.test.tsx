@@ -3,37 +3,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 import Dashboard from "@/pages/Dashboard"
 
-vi.mock("@/api/members", () => ({
-  membersApi: {
-    get: vi.fn(() =>
-      Promise.resolve({
-        id: "member-1",
-        household_id: "hh-1",
-        display_name: "Jason MacLeod",
-        role: "primary",
-        date_of_birth: null,
-        is_active: true,
-        settings: {},
-        created_at: "2026-01-01T00:00:00Z",
-        updated_at: "2026-01-01T00:00:00Z",
-      }),
-    ),
-  },
-}))
-
-vi.mock("@/api/household", () => ({
-  householdApi: {
-    get: vi.fn(() =>
-      Promise.resolve({
-        id: "hh-1",
-        name: "MacLeod Household",
-        settings: {},
-        created_at: "2026-01-01T00:00:00Z",
-      }),
-    ),
-  },
-}))
-
 vi.mock("@/api/reports", () => ({
   reportsApi: {
     dashboard: vi.fn(() =>
@@ -176,19 +145,10 @@ describe("Dashboard — Overview tab", () => {
     mockUseRouterState.mockReturnValue("")
   })
 
-  it("shows household name as page heading", async () => {
+  it("shows 'Overview' as page heading", async () => {
     renderDashboard()
     await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "MacLeod Household" })).toBeInTheDocument()
-    })
-  })
-
-  it("falls back to 'Dashboard' when householdName is null", async () => {
-    const { householdApi: mock } = await import("@/api/household")
-    ;(mock.get as ReturnType<typeof vi.fn>).mockResolvedValue(null)
-    renderDashboard()
-    await waitFor(() => {
-      expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument()
+      expect(screen.getByRole("heading", { name: "Overview" })).toBeInTheDocument()
     })
   })
 

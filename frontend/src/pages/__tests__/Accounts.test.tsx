@@ -11,6 +11,8 @@ vi.mock("@tanstack/react-router", () => ({
     <a href={String(props.to)}>{children}</a>
   ),
   useNavigate: () => mockNavigate,
+  useRouterState: (opts: { select: (s: { location: { search: string } }) => unknown }) =>
+    opts.select({ location: { search: "" } }),
 }))
 
 vi.mock("@/hooks/useAuth", () => ({

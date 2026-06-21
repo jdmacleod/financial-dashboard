@@ -8,6 +8,8 @@ vi.mock("@tanstack/react-router", () => ({
   Link: ({ children, ...props }: React.PropsWithChildren<{ to: string; params?: unknown }>) => (
     <a href={String(props.to)}>{children}</a>
   ),
+  useRouterState: (opts: { select: (s: { location: { search: string } }) => unknown }) =>
+    opts.select({ location: { search: "" } }),
 }))
 
 vi.mock("@/hooks/useAuth", () => ({
