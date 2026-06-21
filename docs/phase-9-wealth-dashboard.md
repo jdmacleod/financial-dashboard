@@ -29,20 +29,20 @@ a persistent sidebar, and consistent visual patterns across all tabs.
 
 Tokens defined in the root CSS and consumed across all pages:
 
-| Token | Purpose |
-|---|---|
-| `--bg` | Page background |
-| `--card` | Card surface |
-| `--bd`, `--bd2` | Border colors (default / emphasis) |
-| `--text`, `--text2`, `--text3` | Text hierarchy |
-| `--muted`, `--faint`, `--label` | Secondary text |
-| `--up` | Positive delta (green) |
-| `--liab` | Liability/negative (red-orange) |
-| `--grad`, `--pgrad` | Asset / liability gradient backgrounds |
-| `--accent-bd`, `--pbd` | Gradient card borders |
-| `--toggle-on-bg/text` | Primary action button |
-| `--row-active` | Selected row background |
-| `--track` | Progress bar track |
+| Token                           | Purpose                                |
+| ------------------------------- | -------------------------------------- |
+| `--bg`                          | Page background                        |
+| `--card`                        | Card surface                           |
+| `--bd`, `--bd2`                 | Border colors (default / emphasis)     |
+| `--text`, `--text2`, `--text3`  | Text hierarchy                         |
+| `--muted`, `--faint`, `--label` | Secondary text                         |
+| `--up`                          | Positive delta (green)                 |
+| `--liab`                        | Liability/negative (red-orange)        |
+| `--grad`, `--pgrad`             | Asset / liability gradient backgrounds |
+| `--accent-bd`, `--pbd`          | Gradient card borders                  |
+| `--toggle-on-bg/text`           | Primary action button                  |
+| `--row-active`                  | Selected row background                |
+| `--track`                       | Progress bar track                     |
 
 ---
 

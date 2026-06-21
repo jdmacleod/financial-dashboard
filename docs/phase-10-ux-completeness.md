@@ -34,13 +34,13 @@ know to navigate to `/reports/retirement` or `/assets` to add those accounts.
 
 Each category group's "+" button now triggers a context-aware handler:
 
-| Category | "+" action |
-|---|---|
+| Category       | "+" action                                                                           |
+| -------------- | ------------------------------------------------------------------------------------ |
 | Banking & Cash | Opens `AddAccountModal` filtered to `BANKING_TYPES` (checking, savings, other_asset) |
-| Liabilities | Opens `AddAccountModal` filtered to `LIABILITY_TYPES` |
-| Retirement | Navigates to `/reports/retirement` |
-| Investments | Navigates to `/reports/investments` |
-| Real estate | Navigates to `/assets` |
+| Liabilities    | Opens `AddAccountModal` filtered to `LIABILITY_TYPES`                                |
+| Retirement     | Navigates to `/reports/retirement`                                                   |
+| Investments    | Navigates to `/reports/investments`                                                  |
+| Real estate    | Navigates to `/assets`                                                               |
 
 The header "+ Add account" button on the Accounts page retains its existing
 behavior (opens `AddAccountModal` with `ACCOUNTS_PAGE_TYPES` — all transaction
