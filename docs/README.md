@@ -19,24 +19,24 @@ tracking system.
 Read CLAUDE.md first — it contains the project context, non-negotiable
 architectural rules, and coding conventions that apply to every phase.
 
-| File                               | Purpose                                                                         |
-| ---------------------------------- | ------------------------------------------------------------------------------- |
-| `../CLAUDE.md`                     | Project context, rules, conventions — Claude Code reads this automatically      |
-| `docs/architecture.md`             | System architecture, Docker Compose, nginx routing, RBAC summary                |
-| `docs/data-model.md`               | Complete consolidated database schema (all amendments incorporated)             |
-| `docs/phase-0-infrastructure.md`   | Docker Compose stack, DB init, Alembic baseline migration                       |
-| `docs/phase-1-auth-and-core.md`    | Auth, JWT, members, accounts, RBAC, audit log infrastructure                    |
-| `docs/phase-2-transactions.md`     | Transactions, categories, CSV/OFX import, duplicate detection                   |
-| `docs/phase-3-analysis.md`         | Reports, dashboards, budget vs actuals, property P&L, audit log UI              |
-| `docs/phase-4-fire-and-debt.md`    | FIRE modeling, income streams, debt payoff projections                          |
-| `docs/phase-5-exports.md`          | PDF and Excel exports, executor re-auth gate                                    |
-| `docs/phase-6-polish.md`           | Backup UI, valuation management, dark mode, dashboard customization             |
-| `docs/phase-7-demo-households.md`  | Demo seed script — three fictitious households (HELOC, FIRE member attribution) |
-| `docs/phase-8-accounts-assets.md`  | Accounts/Assets restructure — dedicated pages, pension PV, real estate balances |
-| `docs/phase-9-wealth-dashboard.md` | Wealth dashboard full UI redesign — 7 tabs, design tokens, EditAccountModal     |
-| `docs/phase-10-ux-completeness.md`    | Context-aware add buttons on Accounts page, VERSION drift fix                   |
+| File                                     | Purpose                                                                                                               |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `../CLAUDE.md`                           | Project context, rules, conventions — Claude Code reads this automatically                                            |
+| `docs/architecture.md`                   | System architecture, Docker Compose, nginx routing, RBAC summary                                                      |
+| `docs/data-model.md`                     | Complete consolidated database schema (all amendments incorporated)                                                   |
+| `docs/phase-0-infrastructure.md`         | Docker Compose stack, DB init, Alembic baseline migration                                                             |
+| `docs/phase-1-auth-and-core.md`          | Auth, JWT, members, accounts, RBAC, audit log infrastructure                                                          |
+| `docs/phase-2-transactions.md`           | Transactions, categories, CSV/OFX import, duplicate detection                                                         |
+| `docs/phase-3-analysis.md`               | Reports, dashboards, budget vs actuals, property P&L, audit log UI                                                    |
+| `docs/phase-4-fire-and-debt.md`          | FIRE modeling, income streams, debt payoff projections                                                                |
+| `docs/phase-5-exports.md`                | PDF and Excel exports, executor re-auth gate                                                                          |
+| `docs/phase-6-polish.md`                 | Backup UI, valuation management, dark mode, dashboard customization                                                   |
+| `docs/phase-7-demo-households.md`        | Demo seed script — three fictitious households (HELOC, FIRE member attribution)                                       |
+| `docs/phase-8-accounts-assets.md`        | Accounts/Assets restructure — dedicated pages, pension PV, real estate balances                                       |
+| `docs/phase-9-wealth-dashboard.md`       | Wealth dashboard full UI redesign — 7 tabs, design tokens, EditAccountModal                                           |
+| `docs/phase-10-ux-completeness.md`       | Context-aware add buttons on Accounts page, VERSION drift fix                                                         |
 | `docs/phase-11-demo-households-h4-h5.md` | Demo seed script — H4 Park-Cole (Nashville) and H5 Langford (Sarasota), additive seeding guard, SEED_DATE_END env var |
-| `docs/test-plan.md`                   | Prioritized test list to reach ≥90% coverage; infra gaps to close first         |
+| `docs/test-plan.md`                      | Prioritized test list to reach ≥90% coverage; infra gaps to close first                                               |
 
 ## Design amendments (incorporated into spec above)
 

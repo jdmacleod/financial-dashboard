@@ -196,6 +196,8 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
     const fromDate = new Date(fromArg)
     const oneYearAgo = new Date()
     oneYearAgo.setDate(oneYearAgo.getDate() - 365)
-    expect(Math.abs(fromDate.getTime() - oneYearAgo.getTime())).toBeLessThan(2 * 24 * 60 * 60 * 1000)
+    expect(Math.abs(fromDate.getTime() - oneYearAgo.getTime())).toBeLessThan(
+      2 * 24 * 60 * 60 * 1000,
+    )
   })
 })

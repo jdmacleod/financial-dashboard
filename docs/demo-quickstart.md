@@ -157,9 +157,9 @@ What this household demonstrates:
 
 _Retired couple; SS + pension + RMDs + LLC income. Net worth ~$12.9M._
 
-| Role    | Email               | Password     |
-| ------- | ------------------- | ------------ |
-| Primary | bob@langford.local  | HearthDemo1! |
+| Role    | Email                 | Password     |
+| ------- | --------------------- | ------------ |
+| Primary | bob@langford.local    | HearthDemo1! |
 | Partner | maggie@langford.local | HearthDemo1! |
 
 What this household demonstrates:

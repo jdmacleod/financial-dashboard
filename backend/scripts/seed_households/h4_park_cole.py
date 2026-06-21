@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 D = Decimal
 
 # Honda Accord pays off after 19 full $812 payments + 1 final payment.
-# Full payments: Jan 2024 – Jul 2025 (months 1-19)
+# Full payments: Jan 2024 - Jul 2025 (months 1-19)
 # Final payment: Aug 2025 (month 20). Balance going into Aug 2025 ≈ $250.28.
 _HONDA_FINAL_MONTH = date(2025, 8, 1)
 _HONDA_FINAL_PAYMENT = D("251.72")  # balance + one month interest
@@ -49,7 +49,7 @@ _HONDA_FINAL_PAYMENT = D("251.72")  # balance + one month interest
 _ZOE_STUDENT_INCREASE_MONTH = date(2025, 10, 1)
 
 # Third paycheck months (same each year for simplicity).
-_ZOE_THIRD_PAYCHECK_MONTHS = {3, 8, 11}   # March, August, November
+_ZOE_THIRD_PAYCHECK_MONTHS = {3, 8, 11}  # March, August, November
 _MARCUS_THIRD_PAYCHECK_MONTHS = {1, 6, 11}  # January, June, November
 
 
@@ -74,27 +74,28 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
 
     # ── Accounts ──────────────────────────────────────────────────────────────
     def acc(atype, name, inst, last4, *, owner=None, in_nw=True):
-        a = make_account(hid, atype, name, inst, last4, owner_member_id=owner,
-                         include_in_net_worth=in_nw)
+        a = make_account(
+            hid, atype, name, inst, last4, owner_member_id=owner, include_in_net_worth=in_nw
+        )
         session.add(a)
         return a
 
     # Transaction-tracked accounts
-    checking    = acc("checking",           "Joint Checking",          "Ally Bank",              "4492")
-    emerg       = acc("savings",            "Emergency Fund",          "Ally Bank",              "5513")
-    chase_cc    = acc("credit_card",        "Freedom Unlimited",       "Chase",                  "3280")
-    apple_cc    = acc("credit_card",        "Apple Card",              "Goldman Sachs",          "4381", owner=zoe.id)
-    zoe_sl      = acc("student_loan",       "Federal Student Loan",    "MOHELA",                 "5492", owner=zoe.id)
-    marcus_sl   = acc("student_loan",       "Federal Student Loan",    "MOHELA",                 "6503", owner=marcus.id)
-    honda       = acc("auto_loan",          "Honda Accord Auto Loan",  "Tennessee CU",           "7614", owner=marcus.id)
+    checking = acc("checking", "Joint Checking", "Ally Bank", "4492")
+    emerg = acc("savings", "Emergency Fund", "Ally Bank", "5513")
+    chase_cc = acc("credit_card", "Freedom Unlimited", "Chase", "3280")
+    apple_cc = acc("credit_card", "Apple Card", "Goldman Sachs", "4381", owner=zoe.id)
+    zoe_sl = acc("student_loan", "Federal Student Loan", "MOHELA", "5492", owner=zoe.id)
+    marcus_sl = acc("student_loan", "Federal Student Loan", "MOHELA", "6503", owner=marcus.id)
+    honda = acc("auto_loan", "Honda Accord Auto Loan", "Tennessee CU", "7614", owner=marcus.id)
 
     # Snapshot-tracked accounts (balance from build_snapshots; no running-balance needed)
-    house_fund  = acc("investment_brokerage", "House Fund",            "Fidelity",               "6624")
-    zoe_401k    = acc("retirement_401k",    "Roth 401(k)",             "Guideline",              "7735", owner=zoe.id)
-    marcus_401k = acc("retirement_401k",    "401(k)",                  "Fidelity (HCA)",         "8846", owner=marcus.id)
-    zoe_roth    = acc("retirement_roth_ira","Roth IRA",                "Fidelity",               "9957", owner=zoe.id)
-    marcus_roth = acc("retirement_roth_ira","Roth IRA",                "Vanguard",               "1068", owner=marcus.id)
-    zoe_hsa     = acc("hsa",               "HSA",                     "HealthEquity",            "2179", owner=zoe.id)
+    house_fund = acc("investment_brokerage", "House Fund", "Fidelity", "6624")
+    zoe_401k = acc("retirement_401k", "Roth 401(k)", "Guideline", "7735", owner=zoe.id)
+    marcus_401k = acc("retirement_401k", "401(k)", "Fidelity (HCA)", "8846", owner=marcus.id)
+    zoe_roth = acc("retirement_roth_ira", "Roth IRA", "Fidelity", "9957", owner=zoe.id)
+    marcus_roth = acc("retirement_roth_ira", "Roth IRA", "Vanguard", "1068", owner=marcus.id)
+    zoe_hsa = acc("hsa", "HSA", "HealthEquity", "2179", owner=zoe.id)
 
     await session.flush()
 
@@ -103,15 +104,21 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     dips = {oct24: -0.035}
 
     # Zoe Roth 401(k): $390/mo from Guideline payroll; 8.5% annual return
-    z401k_contribs = {last_day_of(y, m): D("390.00")
-                      for ms in all_months() if ms < date(2026, 6, 1)
-                      for y, m in [(ms.year, ms.month)]}
+    z401k_contribs = {
+        last_day_of(y, m): D("390.00")
+        for ms in all_months()
+        if ms < date(2026, 6, 1)
+        for y, m in [(ms.year, ms.month)]
+    }
     session.add_all(build_snapshots(zoe_401k.id, D("14200.00"), z401k_contribs, 0.085, dips))
 
     # Marcus 401(k): $440/mo employee + $293/mo employer match = $733/mo; 8.5%
-    m401k_contribs = {last_day_of(y, m): D("733.00")
-                      for ms in all_months() if ms < date(2026, 6, 1)
-                      for y, m in [(ms.year, ms.month)]}
+    m401k_contribs = {
+        last_day_of(y, m): D("733.00")
+        for ms in all_months()
+        if ms < date(2026, 6, 1)
+        for y, m in [(ms.year, ms.month)]
+    }
     session.add_all(build_snapshots(marcus_401k.id, D("32400.00"), m401k_contribs, 0.085, dips))
 
     # Zoe Roth IRA: $583/mo Jan-Oct, $0 Nov-Dec; 8.5%
@@ -133,27 +140,33 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     session.add_all(build_snapshots(marcus_roth.id, D("5200.00"), mroth_contribs, 0.085, dips))
 
     # Zoe HSA: $358/mo all year; 8.5%
-    hsa_contribs = {last_day_of(y, m): D("358.00")
-                    for ms in all_months() if ms < date(2026, 6, 1)
-                    for y, m in [(ms.year, ms.month)]}
+    hsa_contribs = {
+        last_day_of(y, m): D("358.00")
+        for ms in all_months()
+        if ms < date(2026, 6, 1)
+        for y, m in [(ms.year, ms.month)]
+    }
     session.add_all(build_snapshots(zoe_hsa.id, D("2200.00"), hsa_contribs, 0.085, dips))
 
     # House Fund brokerage: $2,000/mo; 6.5% (conservative 60/40 allocation)
-    hf_contribs = {last_day_of(y, m): D("2000.00")
-                   for ms in all_months() if ms < date(2026, 6, 1)
-                   for y, m in [(ms.year, ms.month)]}
+    hf_contribs = {
+        last_day_of(y, m): D("2000.00")
+        for ms in all_months()
+        if ms < date(2026, 6, 1)
+        for y, m in [(ms.year, ms.month)]
+    }
     session.add_all(build_snapshots(house_fund.id, D("42000.00"), hf_contribs, 0.065, dips))
 
     # ── Transaction generation ────────────────────────────────────────────────
     all_txns: list = []
     running: dict[uuid.UUID, D] = {
-        checking.id:    D("0"),
-        emerg.id:       D("0"),
-        chase_cc.id:    D("0"),
-        apple_cc.id:    D("0"),
-        zoe_sl.id:      D("0"),
-        marcus_sl.id:   D("0"),
-        honda.id:       D("0"),
+        checking.id: D("0"),
+        emerg.id: D("0"),
+        chase_cc.id: D("0"),
+        apple_cc.id: D("0"),
+        zoe_sl.id: D("0"),
+        marcus_sl.id: D("0"),
+        honda.id: D("0"),
     }
 
     def add(*txs):
@@ -172,57 +185,113 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         # ── Income: biweekly paychecks ────────────────────────────────────────
         # Zoe: 7th and 21st of each month ($2,210/check)
         for day in (7, 21):
-            add(tx(checking.id, clamp_day(y, m, day), D("2210.00"),
-                   "DataOps Inc. Payroll", cat["salary"]))
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, day),
+                    D("2210.00"),
+                    "DataOps Inc. Payroll",
+                    cat["salary"],
+                )
+            )
         if m in _ZOE_THIRD_PAYCHECK_MONTHS:
-            add(tx(checking.id, clamp_day(y, m, 14), D("2210.00"),
-                   "DataOps Inc. Payroll", cat["salary"]))
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, 14),
+                    D("2210.00"),
+                    "DataOps Inc. Payroll",
+                    cat["salary"],
+                )
+            )
 
         # Marcus: 1st and 15th of each month ($2,870/check)
         for day in (1, 15):
-            add(tx(checking.id, clamp_day(y, m, day), D("2870.00"),
-                   "HCA Healthcare Payroll", cat["salary"]))
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, day),
+                    D("2870.00"),
+                    "HCA Healthcare Payroll",
+                    cat["salary"],
+                )
+            )
         if m in _MARCUS_THIRD_PAYCHECK_MONTHS:
-            add(tx(checking.id, clamp_day(y, m, 8), D("2870.00"),
-                   "HCA Healthcare Payroll", cat["salary"]))
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, 8),
+                    D("2870.00"),
+                    "HCA Healthcare Payroll",
+                    cat["salary"],
+                )
+            )
 
         # Annual federal tax refund in April
         if m == 4:
-            add(tx(checking.id, clamp_day(y, m, 15), D("1650.00"),
-                   "IRS TREAS 310", cat["tax_refund"]))
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, 15),
+                    D("1650.00"),
+                    "IRS TREAS 310",
+                    cat["tax_refund"],
+                )
+            )
 
         # ── Fixed checking outflows ────────────────────────────────────────────
 
         # Rent
-        add(tx(checking.id, clamp_day(y, m, 1), -D("1875.00"),
-               "4th Ave Partners", cat["rent"]))
+        add(tx(checking.id, clamp_day(y, m, 1), -D("1875.00"), "4th Ave Partners", cat["rent"]))
 
         # Renters insurance (monthly installment)
-        add(tx(checking.id, clamp_day(y, m, 5), -D("22.00"),
-               "State Farm Renters", cat["renters_insurance"]))
+        add(
+            tx(
+                checking.id,
+                clamp_day(y, m, 5),
+                -D("22.00"),
+                "State Farm Renters",
+                cat["renters_insurance"],
+            )
+        )
 
         # Internet
-        add(tx(checking.id, clamp_day(y, m, 10), -D("68.00"),
-               "Comcast Xfinity", cat["internet"]))
+        add(tx(checking.id, clamp_day(y, m, 10), -D("68.00"), "Comcast Xfinity", cat["internet"]))
 
         # Cell phone (T-Mobile 2 lines)
-        add(tx(checking.id, clamp_day(y, m, 10), -D("95.00"),
-               "T-Mobile", cat["cell_phone"]))
+        add(tx(checking.id, clamp_day(y, m, 10), -D("95.00"), "T-Mobile", cat["cell_phone"]))
 
         # Auto insurance (Marcus only has the Honda)
-        add(tx(checking.id, clamp_day(y, m, 12), -D("124.00"),
-               "Progressive Auto Insurance", cat["auto_insurance"]))
+        add(
+            tx(
+                checking.id,
+                clamp_day(y, m, 12),
+                -D("124.00"),
+                "Progressive Auto Insurance",
+                cat["auto_insurance"],
+            )
+        )
 
         # House Fund auto-invest: checking → house_fund brokerage
-        d, c = transfer(checking.id, house_fund.id, clamp_day(y, m, 1),
-                        D("2000.00"), "Fidelity House Fund Auto-Invest",
-                        cat["brokerage_contribution"])
+        d, c = transfer(
+            checking.id,
+            house_fund.id,
+            clamp_day(y, m, 1),
+            D("2000.00"),
+            "Fidelity House Fund Auto-Invest",
+            cat["brokerage_contribution"],
+        )
         add(d, c)
 
         # Monthly savings transfer: checking → emergency fund
-        d, c = transfer(checking.id, emerg.id, clamp_day(y, m, 25),
-                        D("600.00"), "Ally Bank Savings Transfer",
-                        cat["savings_transfer"])
+        d, c = transfer(
+            checking.id,
+            emerg.id,
+            clamp_day(y, m, 25),
+            D("600.00"),
+            "Ally Bank Savings Transfer",
+            cat["savings_transfer"],
+        )
         add(d, c)
 
         # ── Loan payments ─────────────────────────────────────────────────────
@@ -230,64 +299,130 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         # Honda Accord: $812/mo until payoff, then final small payment, then done
         if honda_active:
             if month_start < _HONDA_FINAL_MONTH:
-                d, c = transfer(checking.id, honda.id, clamp_day(y, m, 15),
-                                D("812.00"), "Tennessee CU Auto Loan",
-                                cat["loan_payment"])
+                d, c = transfer(
+                    checking.id,
+                    honda.id,
+                    clamp_day(y, m, 15),
+                    D("812.00"),
+                    "Tennessee CU Auto Loan",
+                    cat["loan_payment"],
+                )
                 add(d, c)
             elif month_start == _HONDA_FINAL_MONTH:
-                d, c = transfer(checking.id, honda.id, clamp_day(y, m, 15),
-                                _HONDA_FINAL_PAYMENT, "Tennessee CU Auto Loan — Final",
-                                cat["loan_payment"])
+                d, c = transfer(
+                    checking.id,
+                    honda.id,
+                    clamp_day(y, m, 15),
+                    _HONDA_FINAL_PAYMENT,
+                    "Tennessee CU Auto Loan — Final",
+                    cat["loan_payment"],
+                )
                 add(d, c)
                 honda_active = False
 
         # Zoe Student Loan: $675/mo → $775/mo after Honda payoff
         zoe_sl_payment = D("775.00") if month_start >= _ZOE_STUDENT_INCREASE_MONTH else D("675.00")
-        d, c = transfer(checking.id, zoe_sl.id, clamp_day(y, m, 20),
-                        zoe_sl_payment, "MOHELA — Zoe Student Loan",
-                        cat["loan_payment"])
+        d, c = transfer(
+            checking.id,
+            zoe_sl.id,
+            clamp_day(y, m, 20),
+            zoe_sl_payment,
+            "MOHELA — Zoe Student Loan",
+            cat["loan_payment"],
+        )
         add(d, c)
 
         # Marcus Student Loan: $182/mo minimum (cascade won't reach within data window)
-        d, c = transfer(checking.id, marcus_sl.id, clamp_day(y, m, 20),
-                        D("182.00"), "MOHELA — Marcus Student Loan",
-                        cat["loan_payment"])
+        d, c = transfer(
+            checking.id,
+            marcus_sl.id,
+            clamp_day(y, m, 20),
+            D("182.00"),
+            "MOHELA — Marcus Student Loan",
+            cat["loan_payment"],
+        )
         add(d, c)
 
-        # ── IRA contributions Jan–Oct each year ───────────────────────────────
+        # ── IRA contributions Jan-Oct each year ───────────────────────────────
         if m <= 10:
-            d, c = transfer(checking.id, zoe_roth.id, clamp_day(y, m, 11),
-                            D("583.00"), "Fidelity — Roth IRA",
-                            cat["ira_contribution"])
+            d, c = transfer(
+                checking.id,
+                zoe_roth.id,
+                clamp_day(y, m, 11),
+                D("583.00"),
+                "Fidelity — Roth IRA",
+                cat["ira_contribution"],
+            )
             add(d, c)
-            d, c = transfer(checking.id, marcus_roth.id, clamp_day(y, m, 12),
-                            D("583.00"), "Vanguard — Roth IRA",
-                            cat["ira_contribution"])
+            d, c = transfer(
+                checking.id,
+                marcus_roth.id,
+                clamp_day(y, m, 12),
+                D("583.00"),
+                "Vanguard — Roth IRA",
+                cat["ira_contribution"],
+            )
             add(d, c)
 
         # ── Chase Freedom variable spending ───────────────────────────────────
         chase_txns: list = []
 
         def cv(slug, merchants, min_t, max_t, min_n, max_n, **kw):
-            txns = gen_variable(chase_cc.id, y, m, cat[slug], merchants,
-                                D(str(min_t)), D(str(max_t)), min_n, max_n, rng, **kw)
+            txns = gen_variable(
+                chase_cc.id,
+                y,
+                m,
+                cat[slug],
+                merchants,
+                D(str(min_t)),
+                D(str(max_t)),
+                min_n,
+                max_n,
+                rng,
+                **kw,
+            )
             chase_txns.extend(txns)
 
-        cv("groceries",
-           ["Kroger", "Whole Foods", "Trader Joe's", "Costco"],
-           480, 580, 5, 8, avoid_sunday=True)
-        cv("restaurants",
-           ["Butcher & Bee", "Biscuit Love", "Rolf & Daughters", "Husk Nashville",
-            "Adele's Nashville", "Lockeland Table"],
-           260, 380, 3, 6)
+        cv(
+            "groceries",
+            ["Kroger", "Whole Foods", "Trader Joe's", "Costco"],
+            480,
+            580,
+            5,
+            8,
+            avoid_sunday=True,
+        )
+        cv(
+            "restaurants",
+            [
+                "Butcher & Bee",
+                "Biscuit Love",
+                "Rolf & Daughters",
+                "Husk Nashville",
+                "Adele's Nashville",
+                "Lockeland Table",
+            ],
+            260,
+            380,
+            3,
+            6,
+        )
         cv("food_delivery", ["DoorDash", "Uber Eats"], 40, 85, 2, 4)
         cv("gas_fuel", ["Circle K", "Mapco", "Shell"], 95, 145, 3, 5)
-        cv("events_tickets",
-           ["Ryman Auditorium", "Bridgestone Arena", "Live Nation Nashville",
-            "Broadway Honky-Tonk"],
-           60, 180, 0, 3)
-        cv("subscriptions",
-           ["Amazon Prime", "NYT", "Xbox Game Pass"], 32, 32, 1, 1)
+        cv(
+            "events_tickets",
+            [
+                "Ryman Auditorium",
+                "Bridgestone Arena",
+                "Live Nation Nashville",
+                "Broadway Honky-Tonk",
+            ],
+            60,
+            180,
+            0,
+            3,
+        )
+        cv("subscriptions", ["Amazon Prime", "NYT", "Xbox Game Pass"], 32, 32, 1, 1)
 
         if rng.random() < 0.6:
             cv("car_maintenance", ["Jiffy Lube", "Midas", "Firestone"], 60, 220, 0, 1)
@@ -298,19 +433,32 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         apple_txns: list = []
 
         def av(slug, merchants, min_t, max_t, min_n, max_n, **kw):
-            txns = gen_variable(apple_cc.id, y, m, cat[slug], merchants,
-                                D(str(min_t)), D(str(max_t)), min_n, max_n, rng, **kw)
+            txns = gen_variable(
+                apple_cc.id,
+                y,
+                m,
+                cat[slug],
+                merchants,
+                D(str(min_t)),
+                D(str(max_t)),
+                min_n,
+                max_n,
+                rng,
+                **kw,
+            )
             apple_txns.extend(txns)
 
-        av("coffee",
-           ["Frothy Monkey", "Steadfast Coffee", "Crema Coffee", "Starbucks"],
-           55, 80, 4, 8)
-        av("streaming",
-           ["Netflix", "Hulu", "Spotify"], 42, 42, 1, 1)
-        av("clothing",
-           ["Target", "Shein", "ThredUp", "ASOS"], 65, 150, 1, 3)
-        av("personal_care",
-           ["Ulta", "CVS Beauty", "Walgreens", "Local Barbershop"], 55, 100, 1, 3)
+        av(
+            "coffee",
+            ["Frothy Monkey", "Steadfast Coffee", "Crema Coffee", "Starbucks"],
+            55,
+            80,
+            4,
+            8,
+        )
+        av("streaming", ["Netflix", "Hulu", "Spotify"], 42, 42, 1, 1)
+        av("clothing", ["Target", "Shein", "ThredUp", "ASOS"], 65, 150, 1, 3)
+        av("personal_care", ["Ulta", "CVS Beauty", "Walgreens", "Local Barbershop"], 55, 100, 1, 3)
         av("pharmacy", ["Walgreens", "CVS Pharmacy"], 20, 55, 1, 2)
         if rng.random() < 0.5:
             av("hobbies", ["Disc Golf Warehouse", "REI", "ThredUp"], 30, 90, 0, 2)
@@ -331,44 +479,64 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         if m == 12:
             cv("gifts_given", ["Amazon", "Target", "Local Nashville Shops"], 400, 700, 2, 5)
         if m == 4:
-            chase_txns.append(tx(chase_cc.id, clamp_day(y, m, 20), -D("65.00"),
-                                 "TurboTax", cat["tax_prep"]))
+            chase_txns.append(
+                tx(chase_cc.id, clamp_day(y, m, 20), -D("65.00"), "TurboTax", cat["tax_prep"])
+            )
         if m == 1:
-            apple_txns.append(tx(apple_cc.id, clamp_day(y, m, 15), -D("200.00"),
-                                 "IKEA Nashville", cat["home_goods"]))
+            apple_txns.append(
+                tx(
+                    apple_cc.id,
+                    clamp_day(y, m, 15),
+                    -D("200.00"),
+                    "IKEA Nashville",
+                    cat["home_goods"],
+                )
+            )
         av("fitness", ["ClassPass", "Planet Fitness"], 58, 58, 1, 1)
 
         add(*chase_txns)
         add(*apple_txns)
 
         # ── CC payments (checking → each CC) ─────────────────────────────────
-        chase_spend = abs(sum(t.amount for t in chase_txns if t.account_id == chase_cc.id
-                              and t.amount < 0))
+        chase_spend = abs(
+            sum(t.amount for t in chase_txns if t.account_id == chase_cc.id and t.amount < 0)
+        )
         if chase_spend > 0:
-            d, c = transfer(checking.id, chase_cc.id, clamp_day(y, m, 27),
-                            chase_spend, "Chase Freedom Statement Payment",
-                            cat["cc_payment"])
+            d, c = transfer(
+                checking.id,
+                chase_cc.id,
+                clamp_day(y, m, 27),
+                chase_spend,
+                "Chase Freedom Statement Payment",
+                cat["cc_payment"],
+            )
             add(d, c)
 
-        apple_spend = abs(sum(t.amount for t in apple_txns if t.account_id == apple_cc.id
-                              and t.amount < 0))
+        apple_spend = abs(
+            sum(t.amount for t in apple_txns if t.account_id == apple_cc.id and t.amount < 0)
+        )
         if apple_spend > 0:
-            d, c = transfer(checking.id, apple_cc.id, clamp_day(y, m, 27),
-                            apple_spend, "Apple Card Statement Payment",
-                            cat["cc_payment"])
+            d, c = transfer(
+                checking.id,
+                apple_cc.id,
+                clamp_day(y, m, 27),
+                apple_spend,
+                "Apple Card Statement Payment",
+                cat["cc_payment"],
+            )
             add(d, c)
 
     # ── Opening balance transactions ───────────────────────────────────────────
     # Target = desired Jun 2026 balance (post-transaction).
     # Opening balance = target - running[acc_id].
     targets: dict[uuid.UUID, D] = {
-        checking.id:   D("9400.00"),
-        emerg.id:      D("35000.00"),
-        chase_cc.id:   D("-2400.00"),
-        apple_cc.id:   D("-1100.00"),
-        zoe_sl.id:     D("-16421.00"),   # estimated Jun 2026 remaining balance
-        marcus_sl.id:  D("-19011.00"),   # estimated Jun 2026 remaining balance
-        honda.id:      D("0.00"),        # paid off Aug 2025
+        checking.id: D("9400.00"),
+        emerg.id: D("35000.00"),
+        chase_cc.id: D("-2400.00"),
+        apple_cc.id: D("-1100.00"),
+        zoe_sl.id: D("-16421.00"),  # estimated Jun 2026 remaining balance
+        marcus_sl.id: D("-19011.00"),  # estimated Jun 2026 remaining balance
+        honda.id: D("0.00"),  # paid off Aug 2025
     }
     for acc_id, target in targets.items():
         needed = target - running[acc_id]
@@ -434,59 +602,80 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     session.add(fire)
 
     # ── Debt records ──────────────────────────────────────────────────────────
-    session.add(make_debt(
-        honda.id, D("18500.00"), D("14800.00"),
-        D("0.0690"), D("312.00"), 60, date(2022, 3, 1),
-    ))
-    session.add(make_debt(
-        zoe_sl.id, D("42000.00"), D("34000.00"),
-        D("0.0550"), D("275.00"), 120, date(2021, 8, 1),
-    ))
-    session.add(make_debt(
-        marcus_sl.id, D("28000.00"), D("22000.00"),
-        D("0.0480"), D("182.00"), 120, date(2019, 6, 1),
-    ))
+    session.add(
+        make_debt(
+            honda.id,
+            D("18500.00"),
+            D("14800.00"),
+            D("0.0690"),
+            D("312.00"),
+            60,
+            date(2022, 3, 1),
+        )
+    )
+    session.add(
+        make_debt(
+            zoe_sl.id,
+            D("42000.00"),
+            D("34000.00"),
+            D("0.0550"),
+            D("275.00"),
+            120,
+            date(2021, 8, 1),
+        )
+    )
+    session.add(
+        make_debt(
+            marcus_sl.id,
+            D("28000.00"),
+            D("22000.00"),
+            D("0.0480"),
+            D("182.00"),
+            120,
+            date(2019, 6, 1),
+        )
+    )
 
     # ── Budgets ───────────────────────────────────────────────────────────────
     budget_rows = [
         # Housing
-        ("rent",              D("1875.00"), date(2024, 1, 1)),
-        ("renters_insurance", D("22.00"),   date(2024, 1, 1)),
+        ("rent", D("1875.00"), date(2024, 1, 1)),
+        ("renters_insurance", D("22.00"), date(2024, 1, 1)),
         # Food & Dining
-        ("groceries",         D("520.00"),  date(2024, 1, 1)),
-        ("groceries",         D("560.00"),  date(2025, 6, 1)),   # food inflation
-        ("restaurants",       D("300.00"),  date(2024, 1, 1)),
-        ("restaurants",       D("340.00"),  date(2025, 1, 1)),   # lifestyle creep
-        ("coffee",            D("65.00"),   date(2024, 1, 1)),
-        ("food_delivery",     D("60.00"),   date(2024, 1, 1)),
+        ("groceries", D("520.00"), date(2024, 1, 1)),
+        ("groceries", D("560.00"), date(2025, 6, 1)),  # food inflation
+        ("restaurants", D("300.00"), date(2024, 1, 1)),
+        ("restaurants", D("340.00"), date(2025, 1, 1)),  # lifestyle creep
+        ("coffee", D("65.00"), date(2024, 1, 1)),
+        ("food_delivery", D("60.00"), date(2024, 1, 1)),
         # Transportation
-        ("gas_fuel",          D("120.00"),  date(2024, 1, 1)),
-        ("auto_insurance",    D("124.00"),  date(2024, 1, 1)),
+        ("gas_fuel", D("120.00"), date(2024, 1, 1)),
+        ("auto_insurance", D("124.00"), date(2024, 1, 1)),
         # Utilities
-        ("internet",          D("68.00"),   date(2024, 1, 1)),
-        ("cell_phone",        D("95.00"),   date(2024, 1, 1)),
-        ("streaming",         D("42.00"),   date(2024, 1, 1)),
+        ("internet", D("68.00"), date(2024, 1, 1)),
+        ("cell_phone", D("95.00"), date(2024, 1, 1)),
+        ("streaming", D("42.00"), date(2024, 1, 1)),
         # Personal & Entertainment
-        ("fitness",           D("58.00"),   date(2024, 1, 1)),
-        ("clothing",          D("90.00"),   date(2024, 1, 1)),
-        ("personal_care",     D("75.00"),   date(2024, 1, 1)),
-        ("subscriptions",     D("32.00"),   date(2024, 1, 1)),
-        ("events_tickets",    D("100.00"),  date(2024, 1, 1)),
-        ("pharmacy",          D("40.00"),   date(2024, 1, 1)),
-        ("travel",            D("150.00"),  date(2024, 1, 1)),
-        ("gifts_given",       D("60.00"),   date(2024, 1, 1)),
+        ("fitness", D("58.00"), date(2024, 1, 1)),
+        ("clothing", D("90.00"), date(2024, 1, 1)),
+        ("personal_care", D("75.00"), date(2024, 1, 1)),
+        ("subscriptions", D("32.00"), date(2024, 1, 1)),
+        ("events_tickets", D("100.00"), date(2024, 1, 1)),
+        ("pharmacy", D("40.00"), date(2024, 1, 1)),
+        ("travel", D("150.00"), date(2024, 1, 1)),
+        ("gifts_given", D("60.00"), date(2024, 1, 1)),
     ]
     for slug, amount, eff_from in budget_rows:
         session.add(make_budget(hid, cat[slug], amount, eff_from))
 
     # ── Summary ───────────────────────────────────────────────────────────────
     snapshot_nw = (
-        D("22400.00")   # Zoe Roth 401k (current)
-        + D("46800.00") # Marcus 401k (current)
-        + D("12200.00") # Zoe Roth IRA (current)
+        D("22400.00")  # Zoe Roth 401k (current)
+        + D("46800.00")  # Marcus 401k (current)
+        + D("12200.00")  # Zoe Roth IRA (current)
         + D("9400.00")  # Marcus Roth IRA (current)
         + D("5200.00")  # Zoe HSA (current)
-        + D("88400.00") # House Fund (current)
+        + D("88400.00")  # House Fund (current)
     )
     tx_nw = sum(targets.values())
 

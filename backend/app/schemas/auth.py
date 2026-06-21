@@ -1,8 +1,9 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 
 class LoginRequest(BaseModel):
-    email: str  # str not EmailStr: login is a DB lookup; EmailStr rejects .local domains used in demo data
+    # str not EmailStr: login is a DB lookup; EmailStr rejects .local domains used in demo data
+    email: str
     password: str
 
 

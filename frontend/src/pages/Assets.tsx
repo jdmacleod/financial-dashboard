@@ -36,8 +36,7 @@ function valuationDelta(
   if (valuations.length < 2) return null
   const sorted = [...valuations].sort((a, b) => b.valuation_date.localeCompare(a.valuation_date))
   const latest = Number(sorted[0].estimated_value)
-  const baseline =
-    sorted.find((v) => v.valuation_date <= from) ?? sorted[sorted.length - 1]
+  const baseline = sorted.find((v) => v.valuation_date <= from) ?? sorted[sorted.length - 1]
   const past = Number(baseline.estimated_value)
   if (past === 0) return null
   const pct = ((latest - past) / Math.abs(past)) * 100
