@@ -1033,7 +1033,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     budget_rows = [
         # Housing
         ("hoa_fees", D("895.00"), date(2024, 1, 1)),
-        ("home_insurance", D("800.00"), date(2024, 1, 1)),
+        # home_insurance: $9,400 (June/Sarasota) + $3,200 (March/Highlands) = $12,600/yr / 12 = $1,050/mo avg
+        ("home_insurance", D("1050.00"), date(2024, 1, 1)),
         ("home_maintenance", D("500.00"), date(2024, 1, 1)),
         ("cleaning_services", D("225.00"), date(2024, 1, 1)),
         ("lawn_garden", D("250.00"), date(2024, 1, 1)),
@@ -1063,8 +1064,10 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("subscriptions", D("80.00"), date(2024, 1, 1)),
         # Financial
         ("life_insurance", D("510.00"), date(2024, 1, 1)),
-        ("advisory_fees", D("1625.00"), date(2024, 1, 1)),  # avg monthly
-        ("tax_prep", D("320.00"), date(2024, 1, 1)),  # avg monthly
+        # advisory_fees: quarterly Q1/Q3=$6,500 + Q2/Q4=$7,000 = $27,000/yr / 12 = $2,250/mo avg
+        ("advisory_fees", D("2250.00"), date(2024, 1, 1)),
+        # tax_prep: $3,800 annual (March CPA bill) / 12 = $316.67/mo avg
+        ("tax_prep", D("320.00"), date(2024, 1, 1)),
     ]
     for slug, amount, eff_from in budget_rows:
         session.add(make_budget(hid, cat[slug], amount, eff_from))
