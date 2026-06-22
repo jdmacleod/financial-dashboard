@@ -34,5 +34,6 @@ class RealEstateProperty(Base):
     property_type: Mapped[str] = mapped_column(
         PROPERTY_TYPE_ENUM, nullable=False, default="primary_residence"
     )
+    ownership_entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

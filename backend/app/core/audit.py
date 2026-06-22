@@ -18,6 +18,8 @@ ENCRYPTED_FIELDS = frozenset(
         "notes_enc",
         "plan_name_enc",
         "administrator_enc",
+        "name_enc",
+        "fund_name_enc",
     }
 )
 

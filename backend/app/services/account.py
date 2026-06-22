@@ -31,6 +31,10 @@ _TRANSACTION_BASED_TYPES: frozenset[str] = frozenset(
         "student_loan",
         "other_asset",
         "other_liability",
+        # Revolving credit lines (migration 0007): balance is the running
+        # transaction sum (draws, interest, paydowns), no amortization schedule.
+        "sbloc",
+        "margin",
     }
 )
 

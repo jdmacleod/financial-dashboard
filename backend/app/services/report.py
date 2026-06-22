@@ -18,6 +18,7 @@ from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
 from app.repositories.budget import BudgetRepository
+from app.repositories.ownership_entity import OwnershipEntityRepository, counts_in_net_worth
 from app.repositories.pension import PensionRepository
 from app.repositories.real_estate import RealEstateRepository
 from app.schemas.report import (
@@ -60,6 +61,11 @@ ASSET_BUCKET = {
     "hsa": "hsa",
     "real_estate": "real_estate",
     "other_asset": "other_assets",
+    # Demo-data extension (migration 0007): snapshot-valued asset accounts.
+    "inherited_ira": "retirement",
+    "treasury": "investment",
+    "private_fund": "other_assets",
+    "life_insurance_cash_value": "other_assets",
 }
 LIABILITY_BUCKET = {
     "mortgage": "mortgage",
@@ -69,6 +75,10 @@ LIABILITY_BUCKET = {
     "student_loan": "other_liabilities",
     "other_liability": "other_liabilities",
     "heloc": "other_liabilities",
+    # Demo-data extension (migration 0007): revolving credit lines. Valued from
+    # the running transaction sum via _liability_value_at's fallback path.
+    "sbloc": "other_liabilities",
+    "margin": "other_liabilities",
 }
 ASSET_TYPES = frozenset(ASSET_BUCKET)
 LIABILITY_TYPES = frozenset(LIABILITY_BUCKET)
@@ -106,9 +116,19 @@ class ReportService:
         self.budget_repo = BudgetRepository(session)
         self.property_repo = RealEstateRepository(session)
         self.pension_repo = PensionRepository(session)
+        self.entity_repo = OwnershipEntityRepository(session)
 
     async def _visible_accounts(self, ctx: VisibilityContext) -> list[Account]:
         return await self.account_repo.get_visible(ctx, is_active=True)
+
+    async def _net_worth_accounts(self, ctx: VisibilityContext) -> list[Account]:
+        """Visible accounts that contribute to personal net worth: respects both
+        the account's include_in_net_worth flag and any ownership entity's
+        counts_in_personal_net_worth flag (ILIT/CRT/DAF-held assets excluded).
+        """
+        accounts = await self._visible_accounts(ctx)
+        entity_map = await self.entity_repo.get_map(ctx.household_id)
+        return [a for a in accounts if counts_in_net_worth(a, entity_map)]
 
     async def _category_map(self, ctx: VisibilityContext) -> dict[uuid.UUID, Category]:
         result = await self.session.execute(
@@ -228,7 +248,7 @@ class ReportService:
         )
 
     async def current_net_worth(self, ctx: VisibilityContext, as_of: date) -> NetWorthPoint:
-        accounts = [a for a in await self._visible_accounts(ctx) if a.include_in_net_worth]
+        accounts = await self._net_worth_accounts(ctx)
         pension_account_ids = [a.id for a in accounts if a.account_type == "pension"]
         pensions = (
             await self.pension_repo.get_by_account_ids(pension_account_ids)
@@ -249,7 +269,7 @@ class ReportService:
         to_date: date,
         interval: Interval = "monthly",
     ) -> NetWorthReport:
-        accounts = [a for a in await self._visible_accounts(ctx) if a.include_in_net_worth]
+        accounts = await self._net_worth_accounts(ctx)
         month_ends = _month_ends(from_date, to_date)
         if interval == "quarterly":
             month_ends = [d for d in month_ends if d.month in (3, 6, 9, 12)]

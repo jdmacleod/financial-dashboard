@@ -15,6 +15,7 @@ from app.db.models.category import Category
 from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
+from app.repositories.ownership_entity import OwnershipEntityRepository, counts_in_net_worth
 from app.repositories.pension import PensionRepository
 from app.schemas.fire import IncomeStream, IncomeStreamType
 
@@ -105,6 +106,7 @@ class FireInputDetector:
         self.session = session
         self.account_repo = AccountRepository(session)
         self.pension_repo = PensionRepository(session)
+        self.entity_repo = OwnershipEntityRepository(session)
 
     async def _sum_by_category(
         self,
@@ -220,7 +222,8 @@ class FireInputDetector:
     async def _net_worth(self, ctx: VisibilityContext) -> Decimal:
         """Compute current net worth from latest account snapshots and transaction sums."""
         accounts = await self.account_repo.get_visible(ctx)
-        net_worth_accounts = [a for a in accounts if a.include_in_net_worth]
+        entity_map = await self.entity_repo.get_map(ctx.household_id)
+        net_worth_accounts = [a for a in accounts if counts_in_net_worth(a, entity_map)]
         if not net_worth_accounts:
             return Decimal(0)
 
