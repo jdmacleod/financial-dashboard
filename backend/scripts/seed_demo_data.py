@@ -4,17 +4,22 @@ HearthLedger demo data seeder.
 
 Usage:
     python scripts/seed_demo_data.py --household 1
-    python scripts/seed_demo_data.py --household 2
-    python scripts/seed_demo_data.py --household 3
-    python scripts/seed_demo_data.py --household 4
-    python scripts/seed_demo_data.py --household 5
     python scripts/seed_demo_data.py --household all
+    python scripts/seed_demo_data.py --household 5 --action delete
+    python scripts/seed_demo_data.py --household 5 --action reset
+    python scripts/seed_demo_data.py --action inspect
+    python scripts/seed_demo_data.py --household 5 --action inspect
+
+Actions:
+    seed    (default) Additive seed — skips already-seeded households.
+    delete  Delete the household and all its data (CASCADE). Prompts for
+            confirmation unless --yes is passed.
+    reset   Delete then immediately reseed. Atomic per household — if the
+            reseed fails, the delete is rolled back. Prompts unless --yes.
+    inspect Read-only summary of current DB state. --household defaults to all.
 
 The --household all mode is for demo/test environments only.
 Production installs should seed a single household.
-
-Seeding is additive: running --household 4 on a database that already has
-households 1-3 will only add household 4, leaving existing data intact.
 """
 
 from __future__ import annotations
@@ -47,6 +52,14 @@ _SEEDERS = {
     3: h3_whitfield_torres.seed,
     4: h4_park_cole.seed,
     5: h5_langford.seed,
+}
+
+_HOUSEHOLD_NAMES = {
+    1: "Chen-Nakamura Household",
+    2: "Okonkwo-Rivera Household",
+    3: "Whitfield-Torres Household",
+    4: "Park-Cole Household",
+    5: "Langford Household",
 }
 
 
@@ -85,15 +98,6 @@ async def _seed_one(
     return result
 
 
-_HOUSEHOLD_NAMES = {
-    1: "Chen-Nakamura Household",
-    2: "Okonkwo-Rivera Household",
-    3: "Whitfield-Torres Household",
-    4: "Park-Cole Household",
-    5: "Langford Household",
-}
-
-
 async def _household_exists(session: AsyncSession, name: str) -> bool:
     result = await session.execute(
         text("SELECT 1 FROM households WHERE name = :name LIMIT 1"), {"name": name}
@@ -101,22 +105,155 @@ async def _household_exists(session: AsyncSession, name: str) -> bool:
     return result.scalar_one_or_none() is not None
 
 
-async def main(household_arg: str) -> None:
+async def _delete_household(session: AsyncSession, name: str) -> bool:
+    """Delete a household by name. Returns True if found and deleted, False if not found.
+
+    ON DELETE CASCADE propagates to all child tables including audit_log.
+    Runs under the DB owner role — the app role cannot delete from audit_log,
+    but the seed script can. This is an accepted exception for dev tooling only.
+    """
+    result = await session.execute(
+        text("DELETE FROM households WHERE name = :name RETURNING id"),
+        {"name": name},
+    )
+    return result.scalar_one_or_none() is not None
+
+
+async def _inspect_household(session: AsyncSession, name: str) -> dict | None:
+    """Return member/account/transaction counts for a household, or None if not seeded."""
+    row = await session.execute(
+        text("""
+            SELECT
+                (SELECT COUNT(*) FROM household_members WHERE household_id = h.id) AS members,
+                (SELECT COUNT(*) FROM accounts      WHERE household_id = h.id) AS accounts,
+                (SELECT COUNT(*) FROM transactions  WHERE household_id = h.id) AS transactions
+            FROM households h
+            WHERE h.name = :name
+        """),
+        {"name": name},
+    )
+    r = row.mappings().one_or_none()
+    if r is None:
+        return None
+    return {
+        "name": name,
+        "members": r["members"],
+        "accounts": r["accounts"],
+        "transactions": r["transactions"],
+    }
+
+
+def _confirm(prompt: str, yes: bool) -> bool:
+    if yes:
+        return True
+    answer = input(f"{prompt} [y/N] ").strip().lower()
+    return answer == "y"
+
+
+def _print_inspect_table(rows: list[tuple[int, str, dict | None]]) -> None:
+    print("\n=== HearthLedger Demo DB State ===\n")
+    header = f"  {'#':<4} {'Name':<25} {'Members':>7} {'Accounts':>8} {'Transactions':>12}  Status"
+    print(header)
+    print("  " + "-" * (len(header) - 2))
+    for num, name, data in rows:
+        short = name.replace(" Household", "")
+        if data is None:
+            print(f"  {num:<4} {short:<25} {'':>7} {'':>8} {'':>12}  NOT SEEDED")
+        else:
+            print(
+                f"  {num:<4} {short:<25} {data['members']:>7,} {data['accounts']:>8,} "
+                f"{data['transactions']:>12,}  SEEDED"
+            )
+    print()
+
+
+async def main(household_arg: str | None, action: str, yes: bool) -> None:
     _banner()
     t0 = time.perf_counter()
 
+    # For inspect, --household defaults to all.
+    if action == "inspect" and household_arg is None:
+        household_arg = "all"
+    elif household_arg is None:
+        print(f"Error: --household is required for --action {action}")
+        sys.exit(1)
+
     if household_arg == "all":
-        to_seed = [1, 2, 3, 4, 5]
+        to_target = [1, 2, 3, 4, 5]
     else:
         n = int(household_arg)
         if n not in _SEEDERS:
             print(f"Error: --household must be 1-5 or all. Got: {household_arg}")
             sys.exit(1)
-        to_seed = [n]
+        to_target = [n]
 
-    results: list[dict] = []
+    # ── inspect ──────────────────────────────────────────────────────────────
+    if action == "inspect":
+        rows: list[tuple[int, str, dict | None]] = []
+        for num in to_target:
+            name = _HOUSEHOLD_NAMES[num]
+            async with AsyncSessionLocal() as session:
+                data = await _inspect_household(session, name)
+            rows.append((num, name, data))
+        _print_inspect_table(rows)
+        return
 
-    for num in to_seed:
+    # ── delete ───────────────────────────────────────────────────────────────
+    if action == "delete":
+        if len(to_target) == 1:
+            num = to_target[0]
+            prompt = f"Delete Household {num} ({_HOUSEHOLD_NAMES[num]})? This cannot be undone."
+        else:
+            prompt = "Delete all 5 demo households? This cannot be undone."
+
+        if not _confirm(prompt, yes):
+            print("Aborted.")
+            return
+
+        for num in to_target:
+            name = _HOUSEHOLD_NAMES[num]
+            async with AsyncSessionLocal() as session, session.begin():
+                deleted = await _delete_household(session, name)
+            if deleted:
+                print(f"  → Deleted Household {num} ({name}).")
+            else:
+                print(f"  → Household {num} ({name}) not found, nothing to delete.")
+        return
+
+    # ── reset ─────────────────────────────────────────────────────────────────
+    if action == "reset":
+        if len(to_target) == 1:
+            num = to_target[0]
+            prompt = f"Delete and reseed Household {num} ({_HOUSEHOLD_NAMES[num]})?"
+        else:
+            prompt = "Delete and reseed all 5 demo households?"
+
+        if not _confirm(prompt, yes):
+            print("Aborted.")
+            return
+
+        results: list[dict] = []
+        for num in to_target:
+            name = _HOUSEHOLD_NAMES[num]
+            # Delete and reseed in one transaction per household. If reseed fails,
+            # the delete is rolled back and the household is restored.
+            async with AsyncSessionLocal() as session, session.begin():
+                deleted = await _delete_household(session, name)
+                if deleted:
+                    print(f"  → Deleted Household {num} ({name}), reseeding...", flush=True)
+                else:
+                    print(f"  → Household {num} ({name}) not found, seeding fresh...", flush=True)
+                rng = random.Random(42 + num)
+                result = await _seed_one(session, num, rng)
+                results.append(result)
+
+        elapsed = time.perf_counter() - t0
+        _print_summary(results, elapsed)
+        return
+
+    # ── seed (default) ────────────────────────────────────────────────────────
+    results = []
+    for num in to_target:
         name = _HOUSEHOLD_NAMES[num]
         async with AsyncSessionLocal() as session:
             if await _household_exists(session, name):
@@ -132,12 +269,36 @@ async def main(household_arg: str) -> None:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Seed HearthLedger with demo household data.")
+    parser = argparse.ArgumentParser(
+        description="Seed, delete, reset, or inspect HearthLedger demo household data.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+examples:
+  seed household 5:          --household 5
+  seed all:                  --household all
+  delete household 5:        --household 5 --action delete
+  delete all (no prompt):    --household all --action delete --yes
+  reset household 5:         --household 5 --action reset
+  inspect all households:    --action inspect
+  inspect household 5:       --household 5 --action inspect
+""",
+    )
     parser.add_argument(
         "--household",
-        required=True,
         choices=["1", "2", "3", "4", "5", "all"],
-        help="Which household(s) to seed (additive — skips already-seeded households)",
+        default=None,
+        help="Which household(s) to target. Required for seed/delete/reset; defaults to 'all' for inspect.",
+    )
+    parser.add_argument(
+        "--action",
+        choices=["seed", "delete", "reset", "inspect"],
+        default="seed",
+        help="Action to perform (default: seed).",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip confirmation prompt for delete/reset.",
     )
     args = parser.parse_args()
-    asyncio.run(main(args.household))
+    asyncio.run(main(args.household, args.action, args.yes))

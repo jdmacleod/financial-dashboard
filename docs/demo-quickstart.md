@@ -177,8 +177,52 @@ What this household demonstrates:
 
 ## Re-seeding
 
-The seed script is idempotent within a fresh database. If you want to start
-over, clear the data and re-seed:
+### Check current state
+
+Before resetting anything, inspect what's in the database:
+
+```bash
+docker-compose exec backend python scripts/seed_demo_data.py --action inspect
+```
+
+Output:
+
+```
+=== HearthLedger Demo DB State ===
+
+  #    Name                      Members  Accounts  Transactions  Status
+  -------------------------------------------------------------------
+  1    Chen-Nakamura                   2        12         3,124  SEEDED
+  2    Okonkwo-Rivera                  4        19         4,871  SEEDED
+  3    Whitfield-Torres                4        25         6,390  SEEDED
+  4    Park-Cole                       2        13         2,241  SEEDED
+  5    Langford                        2        15         2,188  SEEDED
+```
+
+### Reset a single household (targeted)
+
+Delete and immediately re-seed one household without touching the others:
+
+```bash
+docker-compose exec backend python scripts/seed_demo_data.py \
+  --household 5 --action reset
+```
+
+The delete and reseed run in a single transaction — if the reseed fails, the
+delete is rolled back and the household is restored. Add `--yes` to skip the
+confirmation prompt (useful in scripts).
+
+### Delete a household without reseeding
+
+```bash
+docker-compose exec backend python scripts/seed_demo_data.py \
+  --household 5 --action delete
+```
+
+### Full reset (nuclear option)
+
+Use this when you want a completely clean database — for example, after a
+schema migration that changes existing tables.
 
 ```bash
 # Stop the stack
@@ -194,10 +238,6 @@ docker-compose up -d
 # Wait ~30 seconds for migrations, then re-seed
 docker-compose exec backend python scripts/seed_demo_data.py --household all
 ```
-
-Or, to reset just the database without tearing down containers, connect to
-PostgreSQL and truncate the relevant tables — but a full volume reset is
-simpler and avoids foreign-key ordering issues.
 
 ---
 
