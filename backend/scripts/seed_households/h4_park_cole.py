@@ -721,7 +721,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         session.add(make_budget(hid, cat[slug], amount, eff_from))
 
     # ── Summary ───────────────────────────────────────────────────────────────
-    # ReportService-computed net worth as of 2026-06-01 (deterministic seed).
+    # ReportService-computed net worth as of 2026-06-21 (end of seed window).
     return {
         "num": 4,
         "name": "Park-Cole",
@@ -730,7 +730,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "accounts": 13,
         "transactions": len(all_txns),
         "properties": 0,
-        "net_worth": 241_031.0,
+        "net_worth": 246_040.0,
         "fire_scenarios": 1,
         "debt_records": 3,
     }

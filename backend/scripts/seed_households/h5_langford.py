@@ -1190,7 +1190,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "accounts": 17,  # +2: T-bill ladder, whole-life cash value
         "transactions": len(all_txns),
         "properties": 2,
-        "net_worth": 13_371_349.0,  # ReportService-computed as of 2026-06-01
+        "net_worth": 13_327_103.0,  # ReportService-computed as of 2026-06-21
         "fire_scenarios": 2,
         "debt_records": 1,
     }

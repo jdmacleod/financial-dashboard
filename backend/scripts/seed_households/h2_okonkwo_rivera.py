@@ -920,7 +920,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "accounts": 19,
         "transactions": len(all_txns),
         "properties": 2,
-        "net_worth": 3_628_265.0,  # ReportService-computed as of 2026-06-01
+        "net_worth": 3_620_411.0,  # ReportService-computed as of 2026-06-21
         "fire_scenarios": 2,
         "debt_records": 2,
     }

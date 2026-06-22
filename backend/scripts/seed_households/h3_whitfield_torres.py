@@ -1240,7 +1240,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "accounts": 28,  # +3: DAF (held away), SBLOC, wine collection
         "transactions": len(all_txns),
         "properties": 3,
-        "net_worth": 9_971_592.0,  # ReportService-computed as of 2026-06-01
+        "net_worth": 10_019_297.0,  # ReportService-computed as of 2026-06-21
         "fire_scenarios": 2,
         "debt_records": 1,
     }
