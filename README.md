@@ -98,6 +98,7 @@ See [docs/demo-quickstart.md](docs/demo-quickstart.md) for all ten credentials a
 - [User Guide](docs/user-guide.md) — all features
 - [API Reference](docs/api-reference.md) — REST API
 - [Security](docs/security.md) — auth, encryption, audit log
+- [Contributing](CONTRIBUTING.md) — dev setup, pre-commit hooks, running tests
 
 ## License
 

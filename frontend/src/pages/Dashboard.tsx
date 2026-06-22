@@ -18,7 +18,9 @@ import {
 import { useRouterState } from "@tanstack/react-router"
 import { reportsApi } from "@/api/reports"
 import { accountsApi } from "@/api/accounts"
+import { advisoryNotesApi } from "@/api/advisoryNotes"
 import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
+import { ADVISORY_CATEGORY_ORDER, advisoryCategoryMeta } from "@/lib/advisoryCategories"
 import { toIso } from "@/lib/dateRange"
 import { startOfYear, subYears, subDays } from "date-fns"
 
@@ -180,6 +182,23 @@ export default function Dashboard() {
     queryFn: accountsApi.list,
     staleTime: 60_000,
   })
+
+  const { data: advisoryNotes } = useQuery({
+    queryKey: ["advisory-notes"],
+    queryFn: () => advisoryNotesApi.list(),
+    staleTime: 60_000,
+  })
+
+  // Teaser: surface a few notes, emphasis categories (risk / scope) first.
+  const topNotes = useMemo(() => {
+    if (!advisoryNotes) return []
+    const rank = (cat: string) => {
+      const meta = advisoryCategoryMeta(cat)
+      const order = ADVISORY_CATEGORY_ORDER.indexOf(cat)
+      return (meta.emphasis ? 0 : 100) + (order === -1 ? 50 : order)
+    }
+    return [...advisoryNotes].sort((a, b) => rank(a.category) - rank(b.category)).slice(0, 4)
+  }, [advisoryNotes])
 
   // Liquid = sum of checking + savings balances
   const liquid = useMemo(() => {
@@ -691,6 +710,76 @@ export default function Dashboard() {
           )}
         </SectionCard>
       </div>
+
+      {/* Insights teaser */}
+      {topNotes.length > 0 && (
+        <SectionCard style={{ marginTop: "12px" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              marginBottom: "14px",
+            }}
+          >
+            <SectionLabel>Insights</SectionLabel>
+            <Link
+              to="/insights"
+              style={{ fontSize: "11px", color: "var(--label)", textDecoration: "none" }}
+            >
+              View all →
+            </Link>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {topNotes.map((note) => {
+              const meta = advisoryCategoryMeta(note.category)
+              const Icon = meta.Icon
+              return (
+                <Link
+                  key={note.id}
+                  to="/insights"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "9px",
+                    textDecoration: "none",
+                    borderLeft: meta.emphasis
+                      ? `2px solid ${meta.accent}`
+                      : "2px solid transparent",
+                    paddingLeft: "8px",
+                  }}
+                >
+                  <Icon size={14} style={{ color: meta.accent, flexShrink: 0 }} />
+                  <span
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.06em",
+                      color: "var(--faint)",
+                      flexShrink: 0,
+                      width: "92px",
+                    }}
+                  >
+                    {meta.label}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: "12.5px",
+                      color: "var(--text3)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {note.title}
+                  </span>
+                </Link>
+              )
+            })}
+          </div>
+        </SectionCard>
+      )}
     </div>
   )
 }

@@ -111,15 +111,36 @@ async def _household_exists(session: AsyncSession, name: str) -> bool:
 async def _delete_household(session: AsyncSession, name: str) -> bool:
     """Delete a household by name. Returns True if found and deleted, False if not found.
 
-    ON DELETE CASCADE propagates to all child tables including audit_log.
+    ON DELETE CASCADE propagates to most child tables (including audit_log).
     Runs under the DB owner role — the app role cannot delete from audit_log,
     but the seed script can. This is an accepted exception for dev tooling only.
+
+    Exception: account_access_grants references household_members(id) and
+    users(id) without ON DELETE CASCADE — only its account_id FK cascades. So the
+    household cascade would raise a foreign-key violation as soon as it reaches
+    household_members (or users). Delete the household's grants explicitly first.
+    Every grant's account_id points to an account in the same household, so
+    selecting by household covers all of them.
     """
-    result = await session.execute(
-        text("DELETE FROM households WHERE name = :name RETURNING id"),
+    row = await session.execute(
+        text("SELECT id FROM households WHERE name = :name"),
         {"name": name},
     )
-    return result.scalar_one_or_none() is not None
+    household_id = row.scalar_one_or_none()
+    if household_id is None:
+        return False
+    await session.execute(
+        text(
+            "DELETE FROM account_access_grants "
+            "WHERE account_id IN (SELECT id FROM accounts WHERE household_id = :hid)"
+        ),
+        {"hid": household_id},
+    )
+    await session.execute(
+        text("DELETE FROM households WHERE id = :hid"),
+        {"hid": household_id},
+    )
+    return True
 
 
 async def _inspect_household(session: AsyncSession, name: str) -> dict | None:

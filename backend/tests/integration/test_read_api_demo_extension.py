@@ -261,6 +261,79 @@ async def test_list_capital_commitments_decrypts_fund_name(
     assert "fund_name_enc" not in body[0]
 
 
+async def test_estate_exposure_report(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    from datetime import date
+
+    from app.db.models.snapshot import AccountSnapshot
+
+    ilit = OwnershipEntity(
+        household_id=household.id,
+        entity_type="ilit",
+        name_enc=encrypt("Family ILIT"),
+        is_in_taxable_estate=False,
+        counts_in_personal_net_worth=False,
+        created_at=_now(),
+    )
+    db_session.add(ilit)
+    await db_session.flush()
+
+    owned = await _account(db_session, household, "investment_brokerage")
+    sheltered = Account(
+        household_id=household.id,
+        account_type="investment_brokerage",
+        nickname="ILIT brokerage",
+        include_in_net_worth=False,
+        is_active=True,
+        ownership_entity_id=ilit.id,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    db_session.add(sheltered)
+    await db_session.flush()
+    db_session.add_all(
+        [
+            AccountSnapshot(
+                account_id=owned.id,
+                snapshot_date=date(2024, 1, 1),
+                balance=Decimal("18000000"),
+                source="manual",
+                created_at=_now(),
+            ),
+            AccountSnapshot(
+                account_id=sheltered.id,
+                snapshot_date=date(2024, 1, 1),
+                balance=Decimal("6000000"),
+                source="manual",
+                created_at=_now(),
+            ),
+        ]
+    )
+    await db_session.flush()
+
+    resp = await client.get(
+        "/api/v1/reports/estate-exposure?as_of=2026-06-01",
+        headers=auth_headers(primary_user, primary_member, "primary"),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert Decimal(body["gross_taxable_estate"]) == Decimal("18000000")
+    assert Decimal(body["excluded_from_estate"]) == Decimal("6000000")
+    assert body["exemption_holders"] == 1
+    # 18M - 15M = 3M over; 40% = 1.2M.
+    assert Decimal(body["taxable_overage"]) == Decimal("3000000")
+    assert Decimal(body["estimated_federal_estate_tax"]) == Decimal("1200000")
+    # The encrypted entity name is decrypted, never the *_enc column.
+    ilit_row = next(e for e in body["entities"] if e["entity_id"] == str(ilit.id))
+    assert ilit_row["entity_name"] == "Family ILIT"
+    assert ilit_row["is_in_taxable_estate"] is False
+
+
 async def test_endpoints_require_auth(client: AsyncClient) -> None:
     for path in (
         "/advisory-notes",

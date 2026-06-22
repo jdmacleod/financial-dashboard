@@ -712,7 +712,46 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
                 )
             )
 
+    # ── Sandwich generation: recurring support for Carmen's aging mother ────────
+    # Monthly assisted-living top-up plus a periodic medical/dental outlay. This
+    # is a real cash-flow drag layered on top of childcare and private school —
+    # the defining squeeze of the sandwich generation.
+    for month_start in all_months():
+        y, m = month_start.year, month_start.month
+        add(
+            tx(
+                checking1.id,
+                clamp_day(y, m, 3),
+                -D("1450.00"),
+                "Brookdale Senior Living — Mom",
+                cat["eldercare"],
+            )
+        )
+        if m in (4, 10):  # semiannual out-of-pocket medical / dental
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, 16),
+                    -D("900.00"),
+                    "Mom — medical & dental",
+                    cat["eldercare"],
+                )
+            )
+
     # ── Advisory notes ──────────────────────────────────────────────────────────
+    session.add(
+        make_advisory_note(
+            hid,
+            "retirement",
+            "Sandwich-generation cash flow: funding parents and kids at once",
+            "Supporting an aging parent while paying childcare, private school, and 529s competes "
+            "directly with the household's own retirement savings. Treat eldercare as a recurring "
+            "budget line, not an ad-hoc expense, and check whether the support qualifies a parent as a "
+            "tax dependent (medical-expense deductions, dependent-care considerations). Protect "
+            "retirement contributions first — there are loans for college and care, but none for "
+            "retirement.",
+        )
+    )
     session.add(
         make_advisory_note(
             hid,

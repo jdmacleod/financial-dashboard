@@ -119,6 +119,41 @@ class PropertyPnLReport(BaseModel):
     monthly_series: list[PropertyMonthlyPoint]
 
 
+class EstateExposureEntity(BaseModel):
+    """One titling bucket in the estate-exposure report. ``entity_id`` is None
+    for directly-owned assets (no ownership entity), which sit in the taxable
+    estate by default.
+    """
+
+    entity_id: uuid.UUID | None
+    entity_name: str | None
+    entity_type: str | None
+    is_in_taxable_estate: bool
+    assets: Decimal
+    liabilities: Decimal
+    net_value: Decimal
+
+
+class EstateExposureReport(BaseModel):
+    as_of: date
+    # Net value (assets - liabilities) of holdings that sit inside the taxable
+    # estate: directly-owned assets plus revocable-trust-titled assets.
+    gross_taxable_estate: Decimal
+    # Net value held outside the taxable estate (ILIT / irrevocable trust / CRT).
+    excluded_from_estate: Decimal
+    total_net_worth: Decimal
+    exemption_per_person: Decimal
+    # 1 for a single filer, 2 for a married couple (portability), derived from
+    # the count of primary/partner members.
+    exemption_holders: int
+    applicable_exemption: Decimal
+    # max(0, gross_taxable_estate - applicable_exemption).
+    taxable_overage: Decimal
+    estimated_federal_estate_tax: Decimal
+    federal_estate_tax_rate: float
+    entities: list[EstateExposureEntity]
+
+
 class DashboardNetWorth(BaseModel):
     current: Decimal
     change_30d: Decimal

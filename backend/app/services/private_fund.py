@@ -8,12 +8,16 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import AUDIT_EXCLUDED_FIELDS, AuditRepository, _snapshot, audit
-from app.core.encryption import decrypt
+from app.core.encryption import decrypt, encrypt
 from app.core.visibility import VisibilityContext
 from app.db.models.capital_commitment import CapitalCommitment
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
-from app.schemas.capital_commitment import CapitalCommitmentResponse
+from app.schemas.capital_commitment import (
+    CapitalCommitmentCreate,
+    CapitalCommitmentResponse,
+    CapitalCommitmentUpdate,
+)
 
 
 @dataclass
@@ -39,6 +43,19 @@ class PrivateFundService:
         self.audit_repo = AuditRepository(session)
         self.account_repo = AccountRepository(session)
 
+    @staticmethod
+    def to_response(c: CapitalCommitment) -> CapitalCommitmentResponse:
+        return CapitalCommitmentResponse(
+            id=c.id,
+            household_id=c.household_id,
+            fund_name=decrypt(c.fund_name_enc),
+            committed_amount=c.committed_amount,
+            called_to_date=c.called_to_date,
+            nav_account_id=c.nav_account_id,
+            vintage_year=c.vintage_year,
+            created_at=c.created_at,
+        )
+
     async def list_commitments(self, ctx: VisibilityContext) -> list[CapitalCommitmentResponse]:
         """Capital commitments for the household, with fund_name decrypted."""
         result = await self.session.execute(
@@ -46,19 +63,68 @@ class PrivateFundService:
             .where(CapitalCommitment.household_id == ctx.household_id)
             .order_by(CapitalCommitment.vintage_year)
         )
-        return [
-            CapitalCommitmentResponse(
-                id=c.id,
-                household_id=c.household_id,
-                fund_name=decrypt(c.fund_name_enc),
-                committed_amount=c.committed_amount,
-                called_to_date=c.called_to_date,
-                nav_account_id=c.nav_account_id,
-                vintage_year=c.vintage_year,
-                created_at=c.created_at,
-            )
-            for c in result.scalars().all()
-        ]
+        return [self.to_response(c) for c in result.scalars().all()]
+
+    @audit("capital_commitment.created", "capital_commitment")
+    async def create(
+        self, ctx: VisibilityContext, data: CapitalCommitmentCreate
+    ) -> CapitalCommitment:
+        if not ctx.can_write:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+        # NAV account must be visible to this context.
+        await self.account_repo.get_by_id(ctx, data.nav_account_id)
+        commitment = CapitalCommitment(
+            household_id=ctx.household_id,
+            fund_name_enc=encrypt(data.fund_name),
+            committed_amount=data.committed_amount,
+            called_to_date=data.called_to_date,
+            nav_account_id=data.nav_account_id,
+            vintage_year=data.vintage_year,
+            created_at=datetime.now(UTC),
+        )
+        self.session.add(commitment)
+        await self.session.flush()
+        await self.session.refresh(commitment)
+        return commitment
+
+    @audit("capital_commitment.updated", "capital_commitment")
+    async def update(
+        self, ctx: VisibilityContext, commitment_id: uuid.UUID, data: CapitalCommitmentUpdate
+    ) -> CapitalCommitment:
+        if not ctx.can_write:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+        commitment = await self._get_commitment(ctx, commitment_id)
+        # Encrypted fund_name_enc excluded from the audit snapshot (CLAUDE.md #4).
+        self._prev_snapshot = _snapshot(commitment, exclude=AUDIT_EXCLUDED_FIELDS)
+        if data.fund_name is not None:
+            commitment.fund_name_enc = encrypt(data.fund_name)
+        if data.committed_amount is not None:
+            commitment.committed_amount = data.committed_amount
+        if data.called_to_date is not None:
+            commitment.called_to_date = data.called_to_date
+        if data.nav_account_id is not None:
+            await self.account_repo.get_by_id(ctx, data.nav_account_id)
+            commitment.nav_account_id = data.nav_account_id
+        if data.vintage_year is not None:
+            commitment.vintage_year = data.vintage_year
+        await self.session.flush()
+        await self.session.refresh(commitment)
+        return commitment
+
+    async def delete(self, ctx: VisibilityContext, commitment_id: uuid.UUID) -> None:
+        if not ctx.can_write:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+        commitment = await self._get_commitment(ctx, commitment_id)
+        prev = _snapshot(commitment, exclude=AUDIT_EXCLUDED_FIELDS)
+        await self.session.delete(commitment)
+        await self.session.flush()
+        await self.audit_repo.write(
+            ctx=ctx,
+            action="capital_commitment.deleted",
+            entity_type="capital_commitment",
+            entity_id=commitment_id,
+            previous_value=prev,
+        )
 
     async def _get_commitment(
         self, ctx: VisibilityContext, commitment_id: uuid.UUID

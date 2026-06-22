@@ -5,6 +5,7 @@ from decimal import Decimal
 from functools import wraps
 from typing import Any, TypeVar
 
+from sqlalchemy import inspect as sa_inspect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.visibility import VisibilityContext
@@ -36,10 +37,17 @@ def _snapshot(obj: Any, exclude: frozenset[str] = frozenset()) -> dict[str, Any]
     if obj is None:
         return {}
     result: dict[str, Any] = {}
+    mapper = sa_inspect(obj).mapper
     for col in obj.__table__.columns:
         if col.name in exclude:
             continue
-        val = getattr(obj, col.name)
+        # Read through the mapped attribute key, which can differ from the DB
+        # column name (e.g. InsurancePolicy.policy_metadata maps to column
+        # "metadata"). Using col.name directly would collide with SQLAlchemy's
+        # declarative `metadata` attribute. Keep col.name as the snapshot key
+        # for stable audit output.
+        attr = mapper.get_property_by_column(col).key
+        val = getattr(obj, attr)
         if isinstance(val, uuid.UUID):
             val = str(val)
         elif isinstance(val, datetime | date):

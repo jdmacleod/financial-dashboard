@@ -12,6 +12,8 @@ import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
 import AddAccountModal from "@/components/app/AddAccountModal"
 import ArchiveAccountModal from "@/components/app/ArchiveAccountModal"
 import EditAccountModal from "@/components/app/EditAccountModal"
+import { TrustBadge } from "@/components/app/TrustBadge"
+import { useOwnershipEntity } from "@/hooks/useOwnershipEntities"
 import type { AccountResponse, AccountType } from "@/api/types"
 
 // ── Category definitions ──────────────────────────────────────────────────────
@@ -123,6 +125,7 @@ function AccountRow({
   const change = useBalanceChange(account.id, from)
   const dot = ACCOUNT_CATEGORY_COLORS[category] ?? "var(--muted)"
   const isLiability = LIABILITY_TYPES.includes(account.account_type)
+  const entity = useOwnershipEntity(account.ownership_entity_id)
 
   return (
     <button
@@ -173,6 +176,11 @@ function AccountRow({
             .filter(Boolean)
             .join(" · ")}
         </div>
+        {entity && (
+          <div style={{ marginTop: "3px" }}>
+            <TrustBadge name={entity.name} />
+          </div>
+        )}
       </div>
       {/* Balance */}
       <div style={{ textAlign: "right", flexShrink: 0 }}>
@@ -319,6 +327,7 @@ function DetailPanel({
   const grad = isLiability ? "var(--pgrad)" : "var(--grad)"
   const accentBd = isLiability ? "var(--pbd)" : "var(--accent-bd)"
   const dot = ACCOUNT_CATEGORY_COLORS[category] ?? "var(--muted)"
+  const entity = useOwnershipEntity(account.ownership_entity_id)
 
   const { data: snapshots } = useQuery({
     queryKey: ["snapshots", account.id],
@@ -397,6 +406,11 @@ function DetailPanel({
         {account.account_number_last4 && (
           <div style={{ fontSize: "12px", color: "var(--muted)" }}>
             {formatMaskedAccountNumber(account.account_number_last4)}
+          </div>
+        )}
+        {entity && (
+          <div style={{ marginTop: "8px" }}>
+            <TrustBadge name={entity.name} />
           </div>
         )}
         <div

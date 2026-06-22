@@ -40,6 +40,11 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "session"
 asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
+# Run coverage by default so a local `pytest` enforces the same
+# [tool.coverage.report] fail_under gate as CI (`pytest --cov`). When running a
+# subset of tests, coverage will read low and trip the gate — pass `--no-cov`
+# to skip the coverage report for that run.
+addopts = "--cov --cov-report=term-missing"
 
 [tool.coverage.run]
 source = ["app"]

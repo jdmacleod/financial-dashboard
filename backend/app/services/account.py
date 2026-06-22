@@ -56,6 +56,7 @@ def _account_to_response(
         nickname=account.nickname,
         account_type=account.account_type,
         owner_member_id=account.owner_member_id,
+        ownership_entity_id=account.ownership_entity_id,
         institution_name=institution_name,
         account_number_last4=last4,
         include_in_net_worth=account.include_in_net_worth,

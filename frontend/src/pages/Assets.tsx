@@ -9,6 +9,8 @@ import { formatCurrency } from "@/lib/formatters"
 import { useAuth } from "@/hooks/useAuth"
 import AddAccountModal from "@/components/app/AddAccountModal"
 import ArchiveAccountModal from "@/components/app/ArchiveAccountModal"
+import { TrustBadge } from "@/components/app/TrustBadge"
+import { useOwnershipEntity } from "@/hooks/useOwnershipEntities"
 import type { AccountResponse, AccountType } from "@/api/types"
 
 const BRONZE = "#a9743f"
@@ -48,6 +50,7 @@ function valuationDelta(
 function PropertyCard({ account, from }: { account: AccountResponse; from: string }) {
   const isPrimary = useAuth((s) => s.role === "primary")
   const [archiving, setArchiving] = useState(false)
+  const entity = useOwnershipEntity(account.ownership_entity_id)
 
   const { data: property } = useQuery({
     queryKey: ["property-by-account", account.id],
@@ -118,6 +121,11 @@ function PropertyCard({ account, from }: { account: AccountResponse; from: strin
               {property && (
                 <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "2px" }}>
                   {[propertyType, property.address].filter(Boolean).join(" · ")}
+                </div>
+              )}
+              {entity && (
+                <div style={{ marginTop: "6px" }}>
+                  <TrustBadge name={entity.name} />
                 </div>
               )}
               {property?.purchase_date && (

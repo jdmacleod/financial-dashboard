@@ -11,6 +11,7 @@ from app.schemas.report import (
     BudgetVsActualsReport,
     CashFlowReport,
     DashboardResponse,
+    EstateExposureReport,
     NetWorthReport,
     PropertyPnLReport,
     SpendingByCategoryReport,
@@ -76,6 +77,16 @@ async def property_pnl_report(
 ) -> PropertyPnLReport:
     svc = ReportService(session)
     return await svc.property_pnl(ctx, property_id, from_, to)
+
+
+@router.get("/reports/estate-exposure", response_model=EstateExposureReport)
+async def estate_exposure_report(
+    as_of: date = Query(default_factory=date.today),
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> EstateExposureReport:
+    svc = ReportService(session)
+    return await svc.estate_exposure(ctx, as_of)
 
 
 @router.get("/dashboard", response_model=DashboardResponse)

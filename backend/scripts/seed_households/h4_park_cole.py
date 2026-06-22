@@ -1,4 +1,4 @@
-"""Household 4 — Park-Cole (East Nashville, TN). ~$154,500 net worth.
+"""Household 4 — Park-Cole (East Nashville, TN). ~$279,500 net worth.
 
 Members: Zoe Park (primary, b. 1998-05-12) and Marcus Cole (partner, b. 1997-09-03).
 Late-20s dual-income renters. Aggressive debt payoff (avalanche) with 3 simultaneous
@@ -100,6 +100,12 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     zoe_roth = acc("retirement_roth_ira", "Roth IRA", "Fidelity", "9957", owner=zoe.id)
     marcus_roth = acc("retirement_roth_ira", "Roth IRA", "Vanguard", "1068", owner=marcus.id)
     zoe_hsa = acc("hsa", "HSA", "HealthEquity", "2179", owner=zoe.id)
+    # Marcus inherited a modest IRA from his mother (d. 2023); SECURE Act forces a
+    # 10-year drawdown. Small balance exercises the inherited-IRA pattern at the
+    # low end of the wealth range.
+    inherited_ira = acc(
+        "inherited_ira", "Inherited IRA (mother)", "Fidelity", "8867", owner=marcus.id
+    )
 
     await session.flush()
 
@@ -160,6 +166,15 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         for y, m in [(ms.year, ms.month)]
     }
     session.add_all(build_snapshots(house_fund.id, D("42000.00"), hf_contribs, 0.065, dips))
+
+    # Inherited IRA: $36,000 opening, 7% growth, ~$3,600 December RMD each year
+    # (SECURE 10-year drawdown). Withdrawals are modeled as negative contributions
+    # so the snapshot balance reflects the post-distribution value.
+    iira_contribs = {
+        last_day_of(2024, 12): -D("3600.00"),
+        last_day_of(2025, 12): -D("3600.00"),
+    }
+    session.add_all(build_snapshots(inherited_ira.id, D("36000.00"), iira_contribs, 0.07, dips))
 
     # ── Transaction generation ────────────────────────────────────────────────
     all_txns: list = []
@@ -560,6 +575,60 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         )
         add(tx(checking.id, pdate, discount_value, "DataOps ESPP discount", cat["espp_purchase"]))
 
+    # ── Zoe's startup NSO grant (exercise-and-hold a vested tranche) ─────────────
+    # Early DataOps (DTOPS) hire with non-qualified stock options. One vested
+    # tranche is exercised and held; the bargain element is ordinary W-2 income at
+    # exercise (no AMT, unlike ISOs). Shares are illiquid (private company).
+    nso = make_equity_grant(
+        hid,
+        zoe.id,
+        "nso",
+        date(2022, 9, 1),
+        D("6000"),
+        "DTOPS",
+        strike_price=D("2.50"),
+        vesting_schedule={"cliff_months": 12, "cadence": "monthly", "years": 4},
+    )
+    session.add(nso)
+    await session.flush()
+    nso_shares = D("1200")
+    nso_strike = D("2.50")
+    nso_fmv = D("6.50")  # latest 409A valuation
+    nso_income = ((nso_fmv - nso_strike) * nso_shares).quantize(D("0.01"))
+    # Basis after a taxable exercise equals FMV; "purchase" is the lot convention
+    # for exercised options (the ISO tranche in H3 uses the same).
+    nso_lot = make_investment_lot(
+        house_fund.id, "DTOPS", nso_shares, nso_fmv, date(2025, 2, 14), "purchase"
+    )
+    session.add(nso_lot)
+    await session.flush()
+    session.add(
+        make_vesting_event(
+            nso.id, date(2025, 2, 14), nso_shares, nso_fmv, nso_income, resulting_lot_id=nso_lot.id
+        )
+    )
+    add(
+        tx(
+            checking.id,
+            date(2025, 2, 14),
+            nso_income,
+            "DTOPS NSO exercise — W-2 spread",
+            cat["nso_exercise_income"],
+        )
+    )
+
+    # ── Inherited IRA RMDs (cash distribution to checking each December) ─────────
+    for rmd_date in (date(2024, 12, 18), date(2025, 12, 18)):
+        add(
+            tx(
+                checking.id,
+                rmd_date,
+                D("3600.00"),
+                "Fidelity Inherited IRA RMD",
+                cat["inherited_ira_rmd"],
+            )
+        )
+
     # ── Brief unemployment gap (Marcus, Sep-Oct 2024) ───────────────────────────
     # Unemployment benefit partly replaces income; the spend-down is visible in the
     # cash-flow series (ending balances still reconcile to the targets below).
@@ -576,6 +645,32 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "exclude a spouse's income from the payment calculation, lowering the monthly payment. The "
             "tradeoff is MFS bracket treatment and the loss of certain credits/deductions; it pays off "
             "only when the IDR savings exceed the higher joint tax. Re-run the comparison annually.",
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "tax",
+            "Exercising private-company NSOs creates ordinary income with no liquidity",
+            "Exercising non-qualified stock options at a private company makes the bargain element "
+            "(fair market value minus strike) ordinary W-2 income in the exercise year, with payroll "
+            "withholding due — yet the shares cannot be sold to raise that cash. Exercise-and-hold "
+            "therefore needs out-of-pocket cash for both the strike and the tax, and concentrates "
+            "net worth in an illiquid single stock. Weigh an 83(b)-style early exercise while the "
+            "spread is small, and size the position against total savings.",
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "tax",
+            "Inherited IRA: the SECURE Act 10-year drawdown clock",
+            "An IRA inherited from a non-spouse after 2019 must be fully distributed within 10 years; "
+            "if the original owner had begun RMDs, annual distributions are also required in years 1-9. "
+            "Spreading withdrawals evenly across the window usually beats a year-10 lump sum, which can "
+            "spike taxable income into a higher bracket. Coordinate the timing with lower-income years "
+            "(e.g., the unemployment gap) to draw down at a lower marginal rate.",
+            account_id=inherited_ira.id,
         )
     )
     session.add(
@@ -739,10 +834,10 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "name": "Park-Cole",
         "location": "Nashville TN",
         "members": 2,
-        "accounts": 13,
+        "accounts": 14,  # +1: inherited IRA
         "transactions": len(all_txns),
         "properties": 0,
-        "net_worth": 246_040.0,
+        "net_worth": 279_483.0,  # +~$33,443 inherited IRA (May-2026 snapshot)
         "fire_scenarios": 1,
         "debt_records": 3,
     }

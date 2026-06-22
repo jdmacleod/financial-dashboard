@@ -88,6 +88,7 @@ function makeAccount(accountType: AccountResponse["account_type"]): AccountRespo
     nickname: "Test Account",
     account_type: accountType,
     owner_member_id: null,
+    ownership_entity_id: null,
     institution_name: null,
     account_number_last4: null,
     include_in_net_worth: true,

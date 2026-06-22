@@ -56,6 +56,7 @@ export interface AccountResponse {
   nickname: string
   account_type: AccountType
   owner_member_id: string | null
+  ownership_entity_id: string | null
   institution_name: string | null
   account_number_last4: string | null
   include_in_net_worth: boolean
@@ -384,6 +385,30 @@ export interface PropertyPnLReport {
   net_yield_pct: number | null
   expense_breakdown: PropertyExpenseItem[]
   monthly_series: PropertyMonthlyPoint[]
+}
+
+export interface EstateExposureEntity {
+  entity_id: string | null
+  entity_name: string | null
+  entity_type: string | null
+  is_in_taxable_estate: boolean
+  assets: string
+  liabilities: string
+  net_value: string
+}
+
+export interface EstateExposureReport {
+  as_of: string
+  gross_taxable_estate: string
+  excluded_from_estate: string
+  total_net_worth: string
+  exemption_per_person: string
+  exemption_holders: number
+  applicable_exemption: string
+  taxable_overage: string
+  estimated_federal_estate_tax: string
+  federal_estate_tax_rate: number
+  entities: EstateExposureEntity[]
 }
 
 export interface DashboardNetWorth {
