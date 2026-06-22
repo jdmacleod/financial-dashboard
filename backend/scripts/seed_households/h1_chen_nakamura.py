@@ -15,14 +15,19 @@ from seed_households._util import (
     gen_variable,
     last_day_of,
     make_account,
+    make_advisory_note,
     make_budget,
     make_debt,
+    make_equity_grant,
     make_fire_scenario,
     make_household,
+    make_insurance_policy,
+    make_investment_lot,
     make_member,
     make_property,
     make_user,
     make_valuation,
+    make_vesting_event,
     opening_balance_tx,
     transfer,
     tx,
@@ -105,8 +110,13 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         session.add(make_valuation(prop_home.id, val_date, val_amt))
 
     # ── Account snapshots (investment accounts) ────────────────────────────────
-    oct24 = last_day_of(2024, 10)
-    dips_market = {oct24: -0.03}
+    # Q3 2024 market drawdown that recovers through normal growth by mid-2025, so
+    # the net-worth series is non-monotonic (spec C.1).
+    dips_market = {
+        last_day_of(2024, 7): -0.025,
+        last_day_of(2024, 8): -0.035,
+        last_day_of(2024, 9): -0.02,
+    }
 
     ira_contribs: dict[date, D] = {}
     for y in (2024, 2025, 2026):
@@ -433,6 +443,108 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         )
         add(d, c)
 
+    # ── Equity compensation: Wei's Dell ESPP (15% discount, 6-mo lookback) ──────
+    # Contributions accrue each pay period; shares purchase semi-annually and are
+    # sold shortly after, capturing the discount with minimal accumulation.
+    espp = make_equity_grant(
+        hid,
+        wei.id,
+        "espp",
+        date(2024, 1, 1),
+        D("0"),
+        "DELL",
+        espp_discount_pct=D("0.15"),
+        espp_lookback=True,
+    )
+    session.add(espp)
+    await session.flush()  # vesting_event FK references equity_grant
+    for pdate, shares, fmv in [
+        (date(2024, 6, 28), D("120"), D("138.00")),
+        (date(2024, 12, 27), D("130"), D("121.00")),
+        (date(2025, 6, 27), D("128"), D("129.00")),
+        (date(2025, 12, 26), D("126"), D("142.00")),
+    ]:
+        discount_value = (shares * fmv * D("0.15")).quantize(D("0.01"))
+        lot = make_investment_lot(
+            brokerage.id, "DELL", shares, fmv * (D("1") - D("0.15")), pdate, "espp"
+        )
+        session.add(lot)
+        await session.flush()  # vesting_event.resulting_lot_id references investment_lot
+        session.add(
+            make_vesting_event(
+                espp.id, pdate, shares, fmv, discount_value, resulting_lot_id=lot.id
+            )
+        )
+        # The 15% discount shows as supplemental income on the purchase date.
+        add(tx(checking.id, pdate, discount_value, "Dell ESPP discount", cat["espp_purchase"]))
+
+    # ── Insurance: umbrella + Wei's disability ──────────────────────────────────
+    session.add(
+        make_insurance_policy(
+            hid,
+            "umbrella_liability",
+            D("1000000"),
+            D("228"),
+            "annual",
+            metadata={"underlying": ["auto", "home"]},
+        )
+    )
+    session.add(
+        make_insurance_policy(
+            hid,
+            "disability",
+            D("72000"),
+            D("142"),
+            "monthly",
+            insured_member_id=wei.id,
+            metadata={"benefit_period": "to_age_65", "elimination_days": 90},
+        )
+    )
+    for prem_year in (2024, 2025, 2026):
+        add(
+            tx(
+                checking.id,
+                date(prem_year, 3, 15),
+                -D("228.00"),
+                "USAA Umbrella Policy",
+                cat["umbrella_premium"],
+            )
+        )
+    for month_start in all_months():
+        add(
+            tx(
+                checking.id,
+                clamp_day(month_start.year, month_start.month, 6),
+                -D("142.00"),
+                "Guardian Disability",
+                cat["disability_insurance_premium"],
+            )
+        )
+
+    # ── Advisory notes ──────────────────────────────────────────────────────────
+    session.add(
+        make_advisory_note(
+            hid,
+            "insurance",
+            "Umbrella coverage should at least equal net worth",
+            "With net worth approaching $1M, a $1M umbrella liability policy is "
+            "appropriate and inexpensive relative to the protection it provides "
+            "(typically a few hundred dollars per $1M of coverage). Revisit the "
+            "limit as net worth grows past the policy face amount.",
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "concentration",
+            "Sell ESPP shares promptly to avoid employer-stock accumulation",
+            "Selling ESPP shares shortly after each 6-month purchase captures the "
+            "15% discount while avoiding an accidental concentrated position in "
+            "Dell stock. Holding ESPP shares to chase a long-term capital gain "
+            "trades a guaranteed discount for single-stock risk.",
+        )
+    )
+
     # ── Opening balance transactions ───────────────────────────────────────────
     targets = {
         checking.id: D("18200.00"),
@@ -541,17 +653,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         session.add(make_budget(hid, cat[slug], amount, eff_from))
 
     # ── Summary ───────────────────────────────────────────────────────────────
-    net_worth = sum(targets.values()) + D("665000.00")  # RE from valuation
-    # Add snapshot-based account balances
-    net_worth += (
-        D("210400.00")
-        + D("95200.00")
-        + D("48100.00")
-        + D("32200.00")
-        + D("72800.00")
-        + D("13100.00")
-    )
-
+    # ReportService-computed net worth as of 2026-06-01 (deterministic seed).
     return {
         "num": 1,
         "name": "Chen-Nakamura",
@@ -560,7 +662,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "accounts": 12,
         "transactions": len(all_txns),
         "properties": 1,
-        "net_worth": float(net_worth),
+        "net_worth": 998_271.0,
         "fire_scenarios": 1,
         "debt_records": 1,
     }

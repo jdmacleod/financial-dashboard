@@ -128,6 +128,43 @@ _DEFS: list[tuple[str, str, str | None, bool]] = [
     ("between_accounts", "Between Own Accounts", "transfers", False),
     ("mortgage_payment", "Mortgage Payment", "transfers", False),
     ("heloc_payment", "HELOC Payment", "transfers", False),
+    # ── Demo-data extension (Phase B) ───────────────────────────────────────────
+    # Equity-compensation & investment income. No employment_income parent exists,
+    # so equity income is grouped under the top-level income parent; distributions
+    # and trust income under investment_income.
+    ("rsu_vest_income", "RSU Vesting Income", "income", True),
+    ("nso_exercise_income", "NSO Exercise Income", "income", True),
+    ("espp_purchase", "ESPP Purchase Discount", "income", True),
+    ("capital_distribution", "Capital Distribution", "investment_income", True),
+    ("crt_income", "CRT Unitrust Income", "investment_income", True),
+    ("inherited_ira_rmd", "Inherited IRA RMD", "investment_income", True),
+    # QCD: an IRA outflow to charity, credited against the RMD but excluded from
+    # taxable income — modeled as a non-income transfer, never ordinary income.
+    ("qcd_note", "Qualified Charitable Distribution", "transfers", False),
+    # Insurance premiums (new top-level parent; existing insurance lines stay under
+    # their current parents to avoid disrupting H1-H5 history).
+    ("insurance", "Insurance", None, False),
+    ("umbrella_premium", "Umbrella Liability Premium", "insurance", False),
+    ("disability_insurance_premium", "Disability Insurance Premium", "insurance", False),
+    ("ltc_insurance_premium", "Long-Term Care Premium", "insurance", False),
+    ("permanent_life_premium", "Permanent Life Premium", "insurance", False),
+    ("specialty_insurance_premium", "Scheduled / Specialty Premium", "insurance", False),
+    # Interest expense (new top-level parent) — SBLOC / margin interest.
+    ("interest_expense", "Interest Expense", None, False),
+    ("sbloc_interest", "SBLOC Interest", "interest_expense", False),
+    # Education.
+    ("private_school_tuition", "Private School Tuition", "education", False),
+    # Transfers: equity sales, capital flows, trust/charitable funding, gifting.
+    ("equity_sale", "Equity Sale (Diversification)", "transfers", False),
+    ("capital_call", "Capital Call", "transfers", False),
+    ("capital_distribution_transfer", "Capital Distribution (Cash)", "transfers", False),
+    ("sbloc_draw", "SBLOC Draw", "transfers", False),
+    ("daf_contribution", "DAF Contribution", "transfers", False),
+    ("trust_funding", "Trust Funding", "transfers", False),
+    ("gift_to_ilit", "Gift to ILIT", "transfers", False),
+    ("annual_exclusion_gift", "Annual Exclusion Gift", "transfers", False),
+    ("roth_conversion", "Roth Conversion", "transfers", False),
+    ("529_superfund", "529 Superfunding", "transfers", False),
 ]
 
 

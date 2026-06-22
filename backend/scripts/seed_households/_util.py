@@ -14,11 +14,17 @@ from passlib.context import CryptContext
 from app.core.encryption import encrypt
 from app.db.models.access_grant import AccountAccessGrant
 from app.db.models.account import Account
+from app.db.models.advisory_note import AdvisoryNote
 from app.db.models.budget import Budget
+from app.db.models.capital_commitment import CapitalCommitment
 from app.db.models.debt import Debt
+from app.db.models.equity_grant import EquityGrant, VestingEvent
 from app.db.models.fire import FireScenario
 from app.db.models.household import Household
+from app.db.models.insurance_policy import InsurancePolicy
+from app.db.models.investment_lot import InvestmentLot
 from app.db.models.member import HouseholdMember
+from app.db.models.ownership_entity import OwnershipEntity
 from app.db.models.property_valuation import PropertyValuation
 from app.db.models.real_estate import RealEstateProperty
 from app.db.models.snapshot import AccountSnapshot
@@ -165,6 +171,8 @@ def make_account(
     *,
     owner_member_id: uuid.UUID | None = None,
     include_in_net_worth: bool = True,
+    ownership_entity_id: uuid.UUID | None = None,
+    is_revolving: bool = False,
 ) -> Account:
     now = utcnow()
     return Account(
@@ -177,6 +185,8 @@ def make_account(
         account_number_enc=encrypt(last4) if last4 else None,
         include_in_net_worth=include_in_net_worth,
         is_active=True,
+        ownership_entity_id=ownership_entity_id,
+        is_revolving=is_revolving,
         created_at=now,
         updated_at=now,
     )
@@ -189,6 +199,8 @@ def make_property(
     purchase_date: date,
     purchase_price: Decimal,
     linked_mortgage_id: uuid.UUID | None = None,
+    *,
+    ownership_entity_id: uuid.UUID | None = None,
 ) -> RealEstateProperty:
     now = utcnow()
     return RealEstateProperty(
@@ -199,6 +211,7 @@ def make_property(
         purchase_date=purchase_date,
         purchase_price=purchase_price,
         linked_mortgage_account_id=linked_mortgage_id,
+        ownership_entity_id=ownership_entity_id,
         created_at=now,
         updated_at=now,
     )
@@ -300,6 +313,172 @@ def make_access_grant(
         granted_by_user_id=granted_by_user_id,
         access_level="read",
         is_active=True,
+        created_at=utcnow(),
+    )
+
+
+# ── Demo-data extension constructors (migration 0007) ──────────────────────────
+
+
+def make_ownership_entity(
+    household_id: uuid.UUID,
+    entity_type: str,
+    name: str,
+    *,
+    counts_in_net_worth: bool,
+    in_taxable_estate: bool,
+    grantor_member_id: uuid.UUID | None = None,
+) -> OwnershipEntity:
+    return OwnershipEntity(
+        id=uuid.uuid4(),
+        household_id=household_id,
+        entity_type=entity_type,
+        name_enc=encrypt(name),
+        grantor_member_id=grantor_member_id,
+        is_in_taxable_estate=in_taxable_estate,
+        counts_in_personal_net_worth=counts_in_net_worth,
+        created_at=utcnow(),
+    )
+
+
+def make_insurance_policy(
+    household_id: uuid.UUID,
+    policy_type: str,
+    coverage_amount: Decimal,
+    premium_amount: Decimal,
+    premium_cadence: str,
+    *,
+    insured_member_id: uuid.UUID | None = None,
+    owner_ownership_entity_id: uuid.UUID | None = None,
+    cash_value_account_id: uuid.UUID | None = None,
+    metadata: dict | None = None,
+) -> InsurancePolicy:
+    return InsurancePolicy(
+        id=uuid.uuid4(),
+        household_id=household_id,
+        policy_type=policy_type,
+        insured_member_id=insured_member_id,
+        owner_ownership_entity_id=owner_ownership_entity_id,
+        coverage_amount=coverage_amount,
+        premium_amount=premium_amount,
+        premium_cadence=premium_cadence,
+        cash_value_account_id=cash_value_account_id,
+        policy_metadata=metadata or {},
+        created_at=utcnow(),
+    )
+
+
+def make_equity_grant(
+    household_id: uuid.UUID,
+    member_id: uuid.UUID,
+    grant_type: str,
+    grant_date: date,
+    shares_granted: Decimal,
+    ticker: str,
+    *,
+    strike_price: Decimal | None = None,
+    vesting_schedule: dict | None = None,
+    espp_discount_pct: Decimal | None = None,
+    espp_lookback: bool | None = None,
+) -> EquityGrant:
+    return EquityGrant(
+        id=uuid.uuid4(),
+        household_id=household_id,
+        member_id=member_id,
+        grant_type=grant_type,
+        grant_date=grant_date,
+        shares_granted=shares_granted,
+        strike_price=strike_price,
+        ticker=ticker,
+        vesting_schedule=vesting_schedule or {},
+        espp_discount_pct=espp_discount_pct,
+        espp_lookback=espp_lookback,
+        created_at=utcnow(),
+    )
+
+
+def make_investment_lot(
+    account_id: uuid.UUID,
+    ticker: str,
+    shares: Decimal,
+    basis_per_share: Decimal,
+    acquired_date: date,
+    basis_type: str,
+) -> InvestmentLot:
+    return InvestmentLot(
+        id=uuid.uuid4(),
+        account_id=account_id,
+        ticker=ticker,
+        shares=shares,
+        basis_per_share=basis_per_share,
+        acquired_date=acquired_date,
+        basis_type=basis_type,
+        created_at=utcnow(),
+    )
+
+
+def make_vesting_event(
+    equity_grant_id: uuid.UUID,
+    event_date: date,
+    shares_vested: Decimal,
+    fmv_at_event: Decimal,
+    taxable_ordinary_income: Decimal,
+    *,
+    shares_sold_to_cover: Decimal = Decimal("0"),
+    amt_preference_amount: Decimal | None = None,
+    resulting_lot_id: uuid.UUID | None = None,
+) -> VestingEvent:
+    return VestingEvent(
+        id=uuid.uuid4(),
+        equity_grant_id=equity_grant_id,
+        event_date=event_date,
+        shares_vested=shares_vested,
+        fmv_at_event=fmv_at_event,
+        taxable_ordinary_income=taxable_ordinary_income,
+        amt_preference_amount=amt_preference_amount,
+        shares_sold_to_cover=shares_sold_to_cover,
+        resulting_lot_id=resulting_lot_id,
+        created_at=utcnow(),
+    )
+
+
+def make_capital_commitment(
+    household_id: uuid.UUID,
+    fund_name: str,
+    committed_amount: Decimal,
+    called_to_date: Decimal,
+    nav_account_id: uuid.UUID,
+    vintage_year: int,
+) -> CapitalCommitment:
+    return CapitalCommitment(
+        id=uuid.uuid4(),
+        household_id=household_id,
+        fund_name_enc=encrypt(fund_name),
+        committed_amount=committed_amount,
+        called_to_date=called_to_date,
+        nav_account_id=nav_account_id,
+        vintage_year=vintage_year,
+        created_at=utcnow(),
+    )
+
+
+def make_advisory_note(
+    household_id: uuid.UUID,
+    category: str,
+    title: str,
+    body: str,
+    *,
+    account_id: uuid.UUID | None = None,
+    ownership_entity_id: uuid.UUID | None = None,
+) -> AdvisoryNote:
+    return AdvisoryNote(
+        id=uuid.uuid4(),
+        household_id=household_id,
+        account_id=account_id,
+        ownership_entity_id=ownership_entity_id,
+        category=category,
+        title=title,
+        body=body,
         created_at=utcnow(),
     )
 
