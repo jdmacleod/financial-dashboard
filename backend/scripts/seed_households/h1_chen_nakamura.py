@@ -525,7 +525,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("electric", D("155.00"), date(2024, 1, 1)),
         ("internet", D("75.00"), date(2024, 1, 1)),
         ("cell_phone", D("110.00"), date(2024, 1, 1)),
-        ("streaming", D("52.00"), date(2024, 1, 1)),
+        ("streaming", D("42.00"), date(2024, 1, 1)),
         ("auto_insurance", D("186.00"), date(2024, 1, 1)),
         ("fitness", D("89.00"), date(2024, 1, 1)),
         ("clothing", D("120.00"), date(2024, 1, 1)),
@@ -534,7 +534,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("home_maintenance", D("150.00"), date(2024, 1, 1)),
         ("travel", D("400.00"), date(2024, 1, 1)),
         ("gifts_given", D("100.00"), date(2024, 1, 1)),
-        ("subscriptions", D("38.00"), date(2024, 1, 1)),
+        ("subscriptions", D("47.00"), date(2024, 1, 1)),
         ("pharmacy", D("50.00"), date(2024, 1, 1)),
     ]
     for slug, amount, eff_from in budget_rows:
