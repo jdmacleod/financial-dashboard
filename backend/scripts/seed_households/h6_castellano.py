@@ -433,6 +433,15 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "death benefit is in her net worth or her taxable estate — that is the whole point of the "
         "ILIT. Premiums on the ILIT policy are funded by annual Crummey gifts.",
     ))
+    session.add(make_advisory_note(
+        hid, "scope_omission",
+        "Funded irrevocable vehicles beyond the ILIT and CRT are out of scope",
+        "HearthLedger deliberately stops at revocable-trust titling plus the single ILIT and CRT "
+        "modeled here, justified by the $15M federal estate boundary a single filer at ~$18.3M "
+        "actually crosses. Funded GRATs/SLATs/IDGTs, dynasty trusts, family limited partnerships, "
+        "private-placement life insurance, and captive insurance belong to the >$20M family-office "
+        "world and are intentionally not modeled. See docs/scope-boundaries.md.",
+    ))
 
     # ── Summary ───────────────────────────────────────────────────────────────
     # ReportService-computed net worth as of 2026-06-21 (end of seed window) —

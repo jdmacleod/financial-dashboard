@@ -1032,6 +1032,15 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "spoilage, and theft. Re-appraise periodically as the collection appreciates.",
         account_id=wine.id,
     ))
+    session.add(make_advisory_note(
+        hid, "scope_omission",
+        "Family-office structures (PPLI, captive insurance) are out of scope",
+        "Private-placement life insurance (PPLI), captive insurance, and funded irrevocable "
+        "vehicles (GRATs/SLATs/IDGTs, FLPs, dynasty trusts) belong to the >$20M family-office "
+        "world and are intentionally outside HearthLedger's scope. At this level the system models "
+        "revocable-trust titling, equity compensation, concentration, charitable vehicles, and "
+        "SBLOC borrowing — not funded ultra-HNW transfer structures. See docs/scope-boundaries.md.",
+    ))
 
     # ── Opening balance transactions ───────────────────────────────────────────
     targets = {
