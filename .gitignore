@@ -8,6 +8,7 @@ node_modules/
 dist/
 .DS_Store
 *.dump
+docs/*.zip
 *.dump.enc
 .coverage
 .pytest_cache/

@@ -3,6 +3,28 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.10.0.0] - 2026-06-22
+
+### Added
+
+- **Demo-data extension schema (migration 0007)** — seven new tables that the demo dataset could not previously express, wired into the existing visibility, `@audit`, encryption, and net-worth machinery:
+  - `ownership_entity` (trust/titling layer), `insurance_policy`, `equity_grant` + `vesting_event`, `investment_lot` (cost basis), `capital_commitment` (private funds), `advisory_note`.
+  - `account_type` enum extended with `inherited_ira`, `sbloc`, `margin`, `private_fund`, `life_insurance_cash_value`, `treasury`; `accounts` gains `ownership_entity_id` + `is_revolving`; `real_estate_properties` gains `ownership_entity_id`. Reversible downgrade (verified upgrade->downgrade->upgrade round-trip).
+- **Ownership-entity-aware net worth** — `ReportService` and the FIRE input detector exclude assets titled in entities flagged `counts_in_personal_net_worth = false` (ILIT/CRT/DAF-held), while revocable-trust titling stays in net worth. New asset/liability account types added to the net-worth buckets.
+- **Thin `@audit` service methods** — `EquityCompService.record_vesting_event` (atomic lot + income + sell-to-cover transfer), `PrivateFundService.record_capital_call`, `CreditLineService.record_sbloc_draw`/`record_sbloc_interest`. Encrypted `ownership_entity.name_enc` and `capital_commitment.fund_name_enc` are excluded from audit-log payloads.
+- **Demo household H6 Castellano** (Scarsdale, NY) — `--household 6` (or `--household all`) seeds the dataset's only single-member household (~$18.29M net worth): widowed single filer, degenerate RBAC (one principal, zero access grants), revocable trust + ILIT + CRT + DAF, legacy concentrated stock with a 2022 inherited-stepup lot, inherited IRA on the SECURE 10-year clock, private-equity capital commitment with calls, revolving SBLOC, full decumulation income, and combined federal + New York estate-cliff exposure.
+- **Shared taxonomy additions** — equity/investment income categories, `qcd_note` (RMD-satisfying, income-excluded), new `insurance` and `interest_expense` parents with premium/SBLOC leaves, `private_school_tuition`, and transfer categories for equity sales, capital flows, trust/charitable funding, gifting, Roth conversions, and 529 superfunding.
+- **Scope-boundaries documentation** — `~/Documents/hearthledger-spec/docs/scope-boundaries.md` records the ~$20M ceiling and the five intentional omissions; `scope_omission` advisory notes seeded on H3 and H6. New `docs/hearthledger-demo-data-coverage-matrix.md` and `docs/hearthledger-demo-data-implementation-plan.md`.
+
+### Changed
+
+- **Households H1-H5 revised** with equity compensation (ESPP/RSU/ISO), concentration + cost-basis lots, revocable trusts, insurance-as-asset (umbrella/disability/LTC/permanent life), charitable vehicles (DAF/QCD), backdoor and conversion Roth flows, SBLOC borrowing, and 22 advisory notes across the set.
+- **Per-household summary net worth reconciled to `ReportService`** as of end-of-window (2026-06-21). The prior summary literals were hand-estimates that never matched the app's own net-worth report; all six now match exactly. Published figures: H1 ~$1,003,300, H2 ~$3,620,400, H3 ~$10,019,300, H4 ~$246,000, H5 ~$13,327,100, H6 $18,290,000.
+
+### Fixed
+
+- **`frontend/package.json` version drift** — bumped from a stale `0.9.3.0` to track the VERSION file.
+
 ## [0.9.4.0] - 2026-06-21
 
 ### Added

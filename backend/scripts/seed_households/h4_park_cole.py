@@ -21,12 +21,16 @@ from seed_households._util import (
     gen_variable,
     last_day_of,
     make_account,
+    make_advisory_note,
     make_budget,
     make_debt,
+    make_equity_grant,
     make_fire_scenario,
     make_household,
+    make_investment_lot,
     make_member,
     make_user,
+    make_vesting_event,
     opening_balance_tx,
     transfer,
     tx,
@@ -526,6 +530,66 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             )
             add(d, c)
 
+    # ── Zoe's startup ESPP (15% discount, lookback) ─────────────────────────────
+    espp = make_equity_grant(
+        hid,
+        zoe.id,
+        "espp",
+        date(2024, 1, 1),
+        D("0"),
+        "DTOPS",
+        espp_discount_pct=D("0.15"),
+        espp_lookback=True,
+    )
+    session.add(espp)
+    await session.flush()
+    for pdate, shares, fmv in [
+        (date(2024, 6, 28), D("60"), D("24.00")),
+        (date(2024, 12, 27), D("64"), D("21.50")),
+        (date(2025, 6, 27), D("66"), D("27.00")),
+        (date(2025, 12, 26), D("62"), D("29.50")),
+    ]:
+        discount_value = (shares * fmv * D("0.15")).quantize(D("0.01"))
+        lot = make_investment_lot(
+            house_fund.id, "DTOPS", shares, fmv * (D("1") - D("0.15")), pdate, "espp"
+        )
+        session.add(lot)
+        await session.flush()
+        session.add(
+            make_vesting_event(espp.id, pdate, shares, fmv, discount_value, resulting_lot_id=lot.id)
+        )
+        add(tx(checking.id, pdate, discount_value, "DataOps ESPP discount", cat["espp_purchase"]))
+
+    # ── Brief unemployment gap (Marcus, Sep-Oct 2024) ───────────────────────────
+    # Unemployment benefit partly replaces income; the spend-down is visible in the
+    # cash-flow series (ending balances still reconcile to the targets below).
+    for gap_date in (date(2024, 9, 15), date(2024, 10, 15)):
+        add(tx(checking.id, gap_date, D("1800.00"), "TN Unemployment Benefit", cat["misc_income"]))
+
+    # ── Advisory notes ──────────────────────────────────────────────────────────
+    session.add(
+        make_advisory_note(
+            hid,
+            "tax",
+            "Married-filing-separately can lower income-driven student-loan payments",
+            "With federal student loans on income-driven repayment, filing taxes separately (MFS) can "
+            "exclude a spouse's income from the payment calculation, lowering the monthly payment. The "
+            "tradeoff is MFS bracket treatment and the loss of certain credits/deductions; it pays off "
+            "only when the IDR savings exceed the higher joint tax. Re-run the comparison annually.",
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "retirement",
+            "Early-career unemployment gap and the emergency fund",
+            "The 2024 income gap was bridged by the emergency fund and unemployment benefits without "
+            "tapping retirement accounts — preserving compounding and avoiding early-withdrawal "
+            "penalties. Rebuilding the emergency fund to 3-6 months of expenses is the priority once "
+            "income stabilizes.",
+        )
+    )
+
     # ── Opening balance transactions ───────────────────────────────────────────
     # Target = desired Jun 2026 balance (post-transaction).
     # Opening balance = target - running[acc_id].
@@ -669,16 +733,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         session.add(make_budget(hid, cat[slug], amount, eff_from))
 
     # ── Summary ───────────────────────────────────────────────────────────────
-    snapshot_nw = (
-        D("22400.00")  # Zoe Roth 401k (current)
-        + D("46800.00")  # Marcus 401k (current)
-        + D("12200.00")  # Zoe Roth IRA (current)
-        + D("9400.00")  # Marcus Roth IRA (current)
-        + D("5200.00")  # Zoe HSA (current)
-        + D("88400.00")  # House Fund (current)
-    )
-    tx_nw = sum(targets.values())
-
+    # ReportService-computed net worth as of 2026-06-21 (end of seed window).
     return {
         "num": 4,
         "name": "Park-Cole",
@@ -687,7 +742,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "accounts": 13,
         "transactions": len(all_txns),
         "properties": 0,
-        "net_worth": float(snapshot_nw + tx_nw),
+        "net_worth": 246_040.0,
         "fire_scenarios": 1,
         "debt_records": 3,
     }

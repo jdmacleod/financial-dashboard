@@ -40,6 +40,7 @@ from seed_households import (
     h3_whitfield_torres,
     h4_park_cole,
     h5_langford,
+    h6_castellano,
 )
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,6 +53,7 @@ _SEEDERS = {
     3: h3_whitfield_torres.seed,
     4: h4_park_cole.seed,
     5: h5_langford.seed,
+    6: h6_castellano.seed,
 }
 
 _HOUSEHOLD_NAMES = {
@@ -60,6 +62,7 @@ _HOUSEHOLD_NAMES = {
     3: "Whitfield-Torres Household",
     4: "Park-Cole Household",
     5: "Langford Household",
+    6: "Castellano Household",
 }
 
 

@@ -23,15 +23,19 @@ from seed_households._util import (
     gen_variable,
     last_day_of,
     make_account,
+    make_advisory_note,
     make_budget,
     make_debt,
     make_fire_scenario,
     make_household,
+    make_insurance_policy,
     make_member,
+    make_ownership_entity,
     make_property,
     make_user,
     make_valuation,
     opening_balance_tx,
+    snapshot,
     third_wednesday,
     transfer,
     tx,
@@ -860,6 +864,164 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             )
             add(d, c)
 
+    # ── Revocable living trust (titling layer) ──────────────────────────────────
+    # In net worth and in the taxable estate — pure probate-avoidance titling.
+    rev_trust = make_ownership_entity(
+        hid,
+        "revocable_trust",
+        "Langford Family Revocable Trust",
+        counts_in_net_worth=True,
+        in_taxable_estate=True,
+        grantor_member_id=bob.id,
+    )
+    session.add(rev_trust)
+    await session.flush()
+    for titled in (sarasota_re, joint_brok):
+        titled.ownership_entity_id = rev_trust.id
+    prop_sarasota.ownership_entity_id = rev_trust.id
+
+    # ── T-bill ladder / money-market (cash management) ──────────────────────────
+    tbill = acc("treasury", "Treasury / T-Bill Ladder", "Schwab", "5471")
+    await session.flush()
+    session.add(snapshot(tbill.id, last_day_of(2026, 5), D("210000.00")))
+
+    # ── Cash-value permanent life (Bob owns — estate-liquidity provisioning) ─────
+    life_cv = acc(
+        "life_insurance_cash_value", "Whole Life Cash Value", "Northwestern Mutual", "8890"
+    )
+    await session.flush()
+    session.add(snapshot(life_cv.id, last_day_of(2026, 5), D("186000.00")))
+    session.add(
+        make_insurance_policy(
+            hid,
+            "permanent_life",
+            D("1500000"),
+            D("2400"),
+            "quarterly",
+            insured_member_id=bob.id,
+            cash_value_account_id=life_cv.id,
+            metadata={"carrier": "Northwestern Mutual", "purpose": "estate_liquidity"},
+        )
+    )
+
+    # ── Umbrella ($10M) + long-term-care policies ───────────────────────────────
+    session.add(
+        make_insurance_policy(
+            hid,
+            "umbrella_liability",
+            D("10000000"),
+            D("1850"),
+            "annual",
+            metadata={"underlying": ["auto", "home", "vacation_home"]},
+        )
+    )
+    for who in (bob, maggie):
+        session.add(
+            make_insurance_policy(
+                hid,
+                "long_term_care",
+                D("400000"),
+                D("3800"),
+                "annual",
+                insured_member_id=who.id,
+                metadata={"daily_benefit": 350, "inflation_rider": "3pct_compound"},
+            )
+        )
+
+    # Premium transactions (umbrella annual, LTC annual, permanent-life quarterly).
+    for prem_year in (2024, 2025, 2026):
+        add(
+            tx(
+                checking.id,
+                date(prem_year, 2, 12),
+                -D("1850.00"),
+                "Chubb Umbrella Policy",
+                cat["umbrella_premium"],
+            )
+        )
+        if prem_year < 2026:
+            add(
+                tx(
+                    checking.id,
+                    date(prem_year, 9, 20),
+                    -D("7600.00"),
+                    "Mutual of Omaha LTC (both)",
+                    cat["ltc_insurance_premium"],
+                )
+            )
+        for q_month in (3, 6, 9, 12):
+            if date(prem_year, q_month, 1) <= DATE_END:
+                add(
+                    tx(
+                        checking.id,
+                        clamp_day(prem_year, q_month, 14),
+                        -D("2400.00"),
+                        "Northwestern Mutual Whole Life",
+                        cat["permanent_life_premium"],
+                    )
+                )
+
+    # ── Roth-conversion window (2024, pre-RMD) — partial conversions ─────────────
+    # IRA/Roth are snapshot-valued, so these document the conversion cash-flow
+    # without double-counting against the snapshot balances.
+    for conv_month in (3, 7, 11):
+        d, c = transfer(
+            bob_ira.id,
+            bob_roth.id,
+            clamp_day(2024, conv_month, 18),
+            D("40000.00"),
+            "Roth conversion — fill 24% bracket",
+            cat["roth_conversion"],
+        )
+        add(d, c)
+
+    # ── QCD satisfying part of the RMD (excluded from income; not to a DAF) ──────
+    for qcd_year in (2025, 2026):
+        if date(qcd_year, 11, 1) <= DATE_END:
+            add(
+                tx(
+                    bob_ira.id,
+                    clamp_day(qcd_year, 11, 15),
+                    -D("25000.00"),
+                    "QCD — Sarasota Community Foundation",
+                    cat["qcd_note"],
+                )
+            )
+
+    # ── Advisory notes ──────────────────────────────────────────────────────────
+    session.add(
+        make_advisory_note(
+            hid,
+            "retirement",
+            "Roth-conversion window and the IRMAA two-year lookback",
+            "In the low-income years before RMDs begin, partial Roth conversions fill the lower "
+            "brackets and shrink future RMDs. Watch the IRMAA two-year lookback: a conversion in "
+            "year N raises Medicare Part B/D premiums in year N+2, so size conversions against the "
+            "next IRMAA tier, not just the marginal income-tax bracket.",
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "charitable",
+            "QCD satisfies the RMD while staying out of taxable income",
+            "A Qualified Charitable Distribution from the IRA counts toward the year's RMD but is "
+            "excluded from AGI, which also helps manage IRMAA tiers. A QCD must go directly to a "
+            "public charity — it cannot be routed to a donor-advised fund.",
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "insurance",
+            "Permanent life as an estate-liquidity asset; umbrella sizing",
+            "The whole-life cash value is a balance-sheet asset (owned by Bob, in net worth) that can "
+            "fund estate costs without forcing asset sales. Umbrella coverage should at least equal "
+            "net worth; at this level $10M is appropriate given the homes and vacation rental exposure.",
+            account_id=life_cv.id,
+        )
+    )
+
     # ── Opening balance transactions ───────────────────────────────────────────
     targets: dict[uuid.UUID, D] = {
         checking.id: D("62000.00"),
@@ -1078,10 +1240,10 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "name": "Langford",
         "location": "Sarasota FL",
         "members": 2,
-        "accounts": 15,
+        "accounts": 17,  # +2: T-bill ladder, whole-life cash value
         "transactions": len(all_txns),
         "properties": 2,
-        "net_worth": 12856700.0,
+        "net_worth": 13_327_103.0,  # ReportService-computed as of 2026-06-21
         "fire_scenarios": 2,
         "debt_records": 1,
     }

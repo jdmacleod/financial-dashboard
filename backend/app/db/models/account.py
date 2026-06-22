@@ -26,6 +26,13 @@ ACCOUNT_TYPES = (
     "student_loan",
     "other_asset",
     "other_liability",
+    # Demo-data extension (migration 0007)
+    "inherited_ira",
+    "sbloc",
+    "margin",
+    "private_fund",
+    "life_insurance_cash_value",
+    "treasury",
 )
 
 
@@ -45,6 +52,14 @@ class Account(Base):
     routing_number_enc: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     include_in_net_worth: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # When set, the asset is titled in this entity rather than owned
+    # individually/jointly. Net-worth and estate-exposure aggregations respect
+    # the entity's counts_in_personal_net_worth / is_in_taxable_estate flags.
+    ownership_entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    # Revolving borrowing accounts (sbloc, margin) carry a negative balance with
+    # interest accrual but no amortization schedule — the debt-payoff projector
+    # skips an amortization curve for these.
+    is_revolving: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     notes_enc: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
