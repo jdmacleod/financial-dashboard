@@ -37,6 +37,7 @@ import Investments from "@/pages/Investments"
 import Retirement from "@/pages/Retirement"
 import Insights from "@/pages/Insights"
 import Estate from "@/pages/Estate"
+import Insurance from "@/pages/Insurance"
 
 // Root layout — checks auth + setup state
 const rootRoute = createRootRoute({
@@ -239,6 +240,12 @@ const estateRoute = createRoute({
   component: Estate,
 })
 
+const insuranceRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/insurance",
+  component: Insurance,
+})
+
 const routeTree = rootRoute.addChildren([
   loginRoute,
   setupRoute,
@@ -269,6 +276,7 @@ const routeTree = rootRoute.addChildren([
     reportsRetirementRoute,
     insightsRoute,
     estateRoute,
+    insuranceRoute,
   ]),
 ])
 
