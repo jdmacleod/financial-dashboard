@@ -60,8 +60,8 @@ def test_date_end_default_value() -> None:
 
 class TestJitter:
     def test_result_within_range(self) -> None:
-        from decimal import Decimal
         import random
+        from decimal import Decimal
 
         rng = random.Random(42)
         amount = Decimal("100.00")
@@ -70,16 +70,16 @@ class TestJitter:
             assert Decimal("90.00") <= result <= Decimal("110.00")
 
     def test_result_quantized_to_cents(self) -> None:
-        from decimal import Decimal
         import random
+        from decimal import Decimal
 
         rng = random.Random(1)
         result = _util.jitter(Decimal("99.99"), rng, pct=0.05)
         assert result == result.quantize(Decimal("0.01"))
 
     def test_zero_pct_returns_original(self) -> None:
-        from decimal import Decimal
         import random
+        from decimal import Decimal
 
         rng = random.Random(7)
         result = _util.jitter(Decimal("50.00"), rng, pct=0.0)
