@@ -33,6 +33,28 @@ vi.mock("@/api/advisoryNotes", () => ({
   },
 }))
 
+// The Insights page also renders the estate-exposure panel; stub the report so
+// it self-hides (no overage, nothing sheltered) and stays out of these assertions.
+vi.mock("@/api/reports", () => ({
+  reportsApi: {
+    estateExposure: vi.fn(() =>
+      Promise.resolve({
+        as_of: "2026-06-01",
+        gross_taxable_estate: "0",
+        excluded_from_estate: "0",
+        total_net_worth: "0",
+        exemption_per_person: "15000000",
+        exemption_holders: 1,
+        applicable_exemption: "15000000",
+        taxable_overage: "0",
+        estimated_federal_estate_tax: "0",
+        federal_estate_tax_rate: 0.4,
+        entities: [],
+      }),
+    ),
+  },
+}))
+
 function renderPage() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

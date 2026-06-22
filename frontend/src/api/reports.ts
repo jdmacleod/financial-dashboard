@@ -3,6 +3,7 @@ import type {
   BudgetVsActualsReport,
   CashFlowReport,
   DashboardResponse,
+  EstateExposureReport,
   NetWorthReport,
   PropertyPnLReport,
   SpendingByCategoryReport,
@@ -28,6 +29,9 @@ export const reportsApi = {
     api.get<PropertyPnLReport>(
       `/reports/property-pnl?property_id=${propertyId}&from=${from}&to=${to}`,
     ),
+
+  estateExposure: (asOf?: string) =>
+    api.get<EstateExposureReport>(`/reports/estate-exposure${asOf ? `?as_of=${asOf}` : ""}`),
 
   dashboard: () => api.get<DashboardResponse>("/dashboard"),
 }

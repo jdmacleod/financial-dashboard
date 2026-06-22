@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { advisoryNotesApi } from "@/api/advisoryNotes"
+import { EstateExposurePanel } from "@/components/app/EstateExposurePanel"
 import { QueryGuard } from "@/components/app/QueryGuard"
 import { formatDate } from "@/lib/formatters"
 import { ADVISORY_CATEGORY_ORDER, advisoryCategoryMeta } from "@/lib/advisoryCategories"
@@ -65,6 +66,8 @@ export default function Insights() {
       <p className="mb-4 text-sm" style={{ color: "var(--label)" }}>
         Planning notes surfaced from your household's financial structure.
       </p>
+
+      <EstateExposurePanel />
 
       {present.length > 1 && (
         <div className="mb-6 flex flex-wrap gap-2">

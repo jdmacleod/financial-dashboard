@@ -387,6 +387,30 @@ export interface PropertyPnLReport {
   monthly_series: PropertyMonthlyPoint[]
 }
 
+export interface EstateExposureEntity {
+  entity_id: string | null
+  entity_name: string | null
+  entity_type: string | null
+  is_in_taxable_estate: boolean
+  assets: string
+  liabilities: string
+  net_value: string
+}
+
+export interface EstateExposureReport {
+  as_of: string
+  gross_taxable_estate: string
+  excluded_from_estate: string
+  total_net_worth: string
+  exemption_per_person: string
+  exemption_holders: number
+  applicable_exemption: string
+  taxable_overage: string
+  estimated_federal_estate_tax: string
+  federal_estate_tax_rate: number
+  entities: EstateExposureEntity[]
+}
+
 export interface DashboardNetWorth {
   current: string
   change_30d: string

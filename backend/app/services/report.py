@@ -14,6 +14,7 @@ from app.core.visibility import VisibilityContext
 from app.db.models.account import Account
 from app.db.models.category import Category
 from app.db.models.debt import Debt
+from app.db.models.member import HouseholdMember
 from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
@@ -33,6 +34,8 @@ from app.schemas.report import (
     DashboardNetWorth,
     DashboardResponse,
     DashboardSpendingCategory,
+    EstateExposureEntity,
+    EstateExposureReport,
     NetWorthBreakdown,
     NetWorthPoint,
     NetWorthReport,
@@ -48,6 +51,13 @@ from app.schemas.report import (
 Interval = Literal["monthly", "quarterly", "annual"]
 
 PENSION_DISCOUNT_RATE = Decimal("0.04")
+
+# Federal estate-tax parameters. The 2025 OBBBA made the higher unified credit
+# permanent and set the per-decedent exemption at $15,000,000 for 2026 (indexed
+# thereafter); the top marginal rate is 40%. These are intentionally module
+# constants — single-installation, USD-only, no state-tax modelling in v1.
+FEDERAL_ESTATE_EXEMPTION_PER_PERSON = Decimal("15000000")
+FEDERAL_ESTATE_TAX_RATE = Decimal("0.40")
 
 ASSET_BUCKET = {
     "checking": "checking_savings",
@@ -359,6 +369,117 @@ class ReportService:
             for p in pensions
             if p.account_id in account_map
         ]
+
+    # --- Estate exposure -------------------------------------------------
+
+    async def _exemption_holders(self, ctx: VisibilityContext) -> int:
+        """Number of federal estate-tax exemptions the household can apply: one
+        per primary/partner member, capped at two (a married couple shields up
+        to 2x the per-person exemption via portability). At least one.
+        """
+        result = await self.session.execute(
+            select(func.count())
+            .select_from(HouseholdMember)
+            .where(
+                HouseholdMember.household_id == ctx.household_id,
+                HouseholdMember.is_active.is_(True),
+                HouseholdMember.role.in_(("primary", "partner")),
+            )
+        )
+        count = int(result.scalar_one())
+        return max(1, min(count, 2))
+
+    async def estate_exposure(self, ctx: VisibilityContext, as_of: date) -> EstateExposureReport:
+        """Computed federal estate-exposure report.
+
+        Groups every visible active account by its titling (ownership entity, or
+        directly-owned), nets assets against liabilities per bucket, and splits
+        the total into the taxable estate (directly-owned + revocable-trust) vs.
+        holdings removed from the estate (ILIT / irrevocable trust / CRT, where
+        ``is_in_taxable_estate`` is False). The gross taxable estate is compared
+        against the applicable federal exemption to estimate exposure. Unlike
+        net worth, this lens ignores ``include_in_net_worth`` /
+        ``counts_in_personal_net_worth`` — estate inclusion follows legal
+        titling, not display preference.
+        """
+        accounts = await self._visible_accounts(ctx)
+        entity_map = await self.entity_repo.get_map(ctx.household_id)
+
+        # Pre-compute pension PVs so pension accounts value identically to the
+        # net-worth report.
+        pension_account_ids = [a.id for a in accounts if a.account_type == "pension"]
+        pensions = (
+            await self.pension_repo.get_by_account_ids(pension_account_ids)
+            if pension_account_ids
+            else []
+        )
+        pension_values = {
+            p.account_id: p.monthly_benefit_estimate * 12 / PENSION_DISCOUNT_RATE
+            for p in pensions
+            if p.monthly_benefit_estimate
+        }
+
+        # Accumulate assets and liabilities per titling bucket. Key is the
+        # ownership_entity_id, or None for directly-owned holdings.
+        assets: dict[uuid.UUID | None, Decimal] = defaultdict(lambda: Decimal("0"))
+        liabilities: dict[uuid.UUID | None, Decimal] = defaultdict(lambda: Decimal("0"))
+        for account in accounts:
+            bucket = account.ownership_entity_id
+            if account.account_type in ASSET_TYPES:
+                assets[bucket] += await self._asset_value_at(
+                    account, as_of, pension_values=pension_values
+                )
+            elif account.account_type in LIABILITY_TYPES:
+                liabilities[bucket] += await self._liability_value_at(account, as_of)
+
+        bucket_ids: set[uuid.UUID | None] = set(assets) | set(liabilities)
+        entity_rows: list[EstateExposureEntity] = []
+        gross_taxable_estate = Decimal("0")
+        excluded_from_estate = Decimal("0")
+        for bucket in bucket_ids:
+            entity = entity_map.get(bucket) if bucket is not None else None
+            in_estate = (
+                True if bucket is None else (entity.is_in_taxable_estate if entity else True)
+            )
+            asset_total = assets.get(bucket, Decimal("0"))
+            liability_total = liabilities.get(bucket, Decimal("0"))
+            net_value = asset_total - liability_total
+            if in_estate:
+                gross_taxable_estate += net_value
+            else:
+                excluded_from_estate += net_value
+            entity_rows.append(
+                EstateExposureEntity(
+                    entity_id=bucket,
+                    entity_name=decrypt(entity.name_enc) if entity is not None else None,
+                    entity_type=entity.entity_type if entity is not None else None,
+                    is_in_taxable_estate=in_estate,
+                    assets=asset_total,
+                    liabilities=liability_total,
+                    net_value=net_value,
+                )
+            )
+
+        # Directly-owned first, then entity buckets by descending net value.
+        entity_rows.sort(key=lambda r: (r.entity_id is not None, -r.net_value))
+
+        holders = await self._exemption_holders(ctx)
+        applicable_exemption = FEDERAL_ESTATE_EXEMPTION_PER_PERSON * holders
+        taxable_overage = max(Decimal("0"), gross_taxable_estate - applicable_exemption)
+        estimated_tax = taxable_overage * FEDERAL_ESTATE_TAX_RATE
+        return EstateExposureReport(
+            as_of=as_of,
+            gross_taxable_estate=gross_taxable_estate,
+            excluded_from_estate=excluded_from_estate,
+            total_net_worth=gross_taxable_estate + excluded_from_estate,
+            exemption_per_person=FEDERAL_ESTATE_EXEMPTION_PER_PERSON,
+            exemption_holders=holders,
+            applicable_exemption=applicable_exemption,
+            taxable_overage=taxable_overage,
+            estimated_federal_estate_tax=estimated_tax,
+            federal_estate_tax_rate=float(FEDERAL_ESTATE_TAX_RATE),
+            entities=entity_rows,
+        )
 
     # --- Cash flow -------------------------------------------------------
 
