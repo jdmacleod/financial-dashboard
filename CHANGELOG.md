@@ -3,6 +3,26 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.13.0.0] - 2026-06-22
+
+### Added
+
+- **Estate-exposure report.** A new panel on the Insights page shows your gross taxable estate versus the applicable federal exemption (one per primary/partner, capped at two for portability), how much sits over the exemption, the estimated federal estate tax, and a per-titling breakdown of which holdings are inside the estate versus sheltered in an ILIT or irrevocable trust. Backed by a new `GET /reports/estate-exposure` endpoint. The panel hides itself for households with nothing to show.
+- **Manage planning data, not just view it.** Full create / update / delete endpoints for ownership entities (trusts), advisory notes, insurance policies, equity grants, cost-basis lots, and private-fund capital commitments. Encrypted names round-trip correctly and never appear in the audit log; edits are role-gated and audited.
+- **Richer demo households.** Non-qualified stock options and an inherited IRA (Park-Cole), a mega-backdoor Roth overlay (Chen-Nakamura), sandwich-generation eldercare support (Okonkwo-Rivera), and a brokerage margin loan (Whitfield-Torres).
+- **Trust badges** on accounts and properties titled to an ownership entity, so you can see at a glance what's held in a trust.
+- **Insights filters and polish.** Category filter chips with per-category icons, emphasis styling for concentration and scope notes, and a top-notes teaser card on the Dashboard.
+- **Contributor guide.** A new `CONTRIBUTING.md` covering dev setup, the required `pre-commit install`, and an optional pre-push hook that runs the full test suites.
+
+### Changed
+
+- **Advisory notes respect account visibility.** A note anchored to an account is only shown to members who can see that account; household- and trust-level notes remain visible to everyone.
+
+### Fixed
+
+- The audit-log snapshot no longer fails on the insurance policy's `metadata` field, which collided with an internal name.
+- Resetting or deleting demo data no longer fails on account access-grant foreign keys.
+
 ## [0.12.0.0] - 2026-06-22
 
 ### Added
