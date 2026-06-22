@@ -3,6 +3,18 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.0.0] - 2026-06-22
+
+### Added
+
+- **Frontend for the demo-data extension.** The new read endpoints now have UI surfaces, all under a "Planning" nav group:
+  - **Insights page** (`/insights`) — advisory notes grouped by category (Estate, Tax, Concentration, Insurance, Retirement, Charitable, Scope & Omissions).
+  - **Estate & structure page** (`/estate`) — ownership entities (trusts) with plain-language flags for net-worth inclusion and taxable-estate status, plus each entity's anchored advisory notes.
+  - **Insurance page** (`/insurance`) — policies with coverage, premium cadence, and trust-owned / cash-value-in-net-worth flags.
+  - **Investments page panels** — equity grants (with vesting-event counts, vested income, and an AMT flag on held ISO tranches), cost-basis lots (incl. inherited step-up), and private-fund commitments (called-of-committed progress). Each renders only when the household has the data.
+  - **Anchored advisory notes** — a reusable panel surfaces account- or entity-anchored notes inline on the per-account Transactions page and on each Estate entity.
+- **Typed read-API client + response types** for all six demo-data endpoints (advisory notes, ownership entities, insurance policies, equity grants, investment lots, capital commitments).
+
 ## [0.11.0.0] - 2026-06-22
 
 ### Added
