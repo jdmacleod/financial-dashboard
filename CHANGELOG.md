@@ -3,6 +3,22 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.11.0.0] - 2026-06-22
+
+### Added
+
+- **Read API for the demo-data extension tables (Option B read path).** Household-scoped, JWT-visibility-gated read endpoints that surface the new structures in-app:
+  - `GET /api/v1/advisory-notes` — with `?account_id`, `?ownership_entity_id`, `?category` filters.
+  - `GET /api/v1/ownership-entities` — decrypts `name_enc` at read time; ciphertext never leaves the service.
+  - `GET /api/v1/insurance-policies` — exposes policy `metadata`.
+  - `GET /api/v1/equity-grants` (optional `?member_id`) — each grant carries its vesting events embedded.
+  - `GET /api/v1/investment-lots` (optional `?account_id`) — visibility-enforced through `AccountRepository.get_visible`, so a member only sees lots in accounts they can see.
+  - `GET /api/v1/capital-commitments` — decrypts `fund_name_enc` at read time.
+
+### Fixed
+
+- **FIRE detector ignored the demo-extension account types.** `fire_detector.py` now counts `treasury`, `inherited_ira`, and `private_fund` in the portfolio + asset base, `life_insurance_cash_value` as an asset, and `sbloc`/`margin` as revolving liabilities resolved via the transaction-sum path (they carry no snapshots). Net-worth reporting already respected these; FIRE detection (`detected_portfolio_value`, net worth) now does too — correcting H5 and H6 projections.
+
 ## [0.10.0.0] - 2026-06-22
 
 ### Added

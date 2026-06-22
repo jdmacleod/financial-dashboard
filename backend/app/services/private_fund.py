@@ -8,10 +8,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import AUDIT_EXCLUDED_FIELDS, AuditRepository, _snapshot, audit
+from app.core.encryption import decrypt
 from app.core.visibility import VisibilityContext
 from app.db.models.capital_commitment import CapitalCommitment
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
+from app.schemas.capital_commitment import CapitalCommitmentResponse
 
 
 @dataclass
@@ -36,6 +38,27 @@ class PrivateFundService:
         self.session = session
         self.audit_repo = AuditRepository(session)
         self.account_repo = AccountRepository(session)
+
+    async def list_commitments(self, ctx: VisibilityContext) -> list[CapitalCommitmentResponse]:
+        """Capital commitments for the household, with fund_name decrypted."""
+        result = await self.session.execute(
+            select(CapitalCommitment)
+            .where(CapitalCommitment.household_id == ctx.household_id)
+            .order_by(CapitalCommitment.vintage_year)
+        )
+        return [
+            CapitalCommitmentResponse(
+                id=c.id,
+                household_id=c.household_id,
+                fund_name=decrypt(c.fund_name_enc),
+                committed_amount=c.committed_amount,
+                called_to_date=c.called_to_date,
+                nav_account_id=c.nav_account_id,
+                vintage_year=c.vintage_year,
+                created_at=c.created_at,
+            )
+            for c in result.scalars().all()
+        ]
 
     async def _get_commitment(
         self, ctx: VisibilityContext, commitment_id: uuid.UUID

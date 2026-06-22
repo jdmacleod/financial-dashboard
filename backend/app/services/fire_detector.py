@@ -28,6 +28,12 @@ _PORTFOLIO_ACCOUNT_TYPES = frozenset(
         "retirement_roth_ira",
         "pension",
         "hsa",
+        # Demo-data extension (migration 0007): investable portfolio assets.
+        # life_insurance_cash_value is a net-worth asset but not a withdrawal
+        # source, so it stays out of the safe-withdrawal portfolio base.
+        "inherited_ira",
+        "treasury",
+        "private_fund",
     }
 )
 
@@ -44,6 +50,11 @@ _ASSET_TYPES = frozenset(
         "hsa",
         "real_estate",
         "other_asset",
+        # Demo-data extension (migration 0007).
+        "inherited_ira",
+        "treasury",
+        "private_fund",
+        "life_insurance_cash_value",
     }
 )
 
@@ -56,11 +67,16 @@ _LIABILITY_TYPES = frozenset(
         "student_loan",
         "other_liability",
         "heloc",
+        # Demo-data extension (migration 0007): revolving credit lines.
+        "sbloc",
+        "margin",
     }
 )
 
 # Account types whose balance is the running sum of transactions (no snapshots).
-_TRANSACTION_BASED_LIABILITY_TYPES = frozenset({"credit_card", "heloc"})
+# sbloc/margin are revolving and carry no snapshots, so they must resolve via
+# the transaction-sum path (same as credit_card/heloc) or net worth misses them.
+_TRANSACTION_BASED_LIABILITY_TYPES = frozenset({"credit_card", "heloc", "sbloc", "margin"})
 
 
 def _map_category_to_stream_type(name: str) -> IncomeStreamType:
