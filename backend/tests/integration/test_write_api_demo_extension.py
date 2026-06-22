@@ -274,6 +274,53 @@ async def test_equity_grant_crud(
     assert resp.status_code == 204, resp.text
 
 
+async def test_equity_grant_delete_blocked_with_vesting_events(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A grant with recorded vesting events carries posted income/lots, so its
+    delete must be refused with 409 rather than cascade that history away.
+    """
+    from datetime import date
+
+    from app.db.models.equity_grant import EquityGrant, VestingEvent
+
+    grant = EquityGrant(
+        household_id=household.id,
+        member_id=primary_member.id,
+        grant_type="rsu",
+        grant_date=date(2024, 1, 15),
+        shares_granted=Decimal("1000"),
+        ticker="ACME",
+        vesting_schedule={},
+        created_at=_now(),
+    )
+    db_session.add(grant)
+    await db_session.flush()
+    db_session.add(
+        VestingEvent(
+            equity_grant_id=grant.id,
+            event_date=date(2024, 2, 1),
+            shares_vested=Decimal("250"),
+            fmv_at_event=Decimal("30"),
+            taxable_ordinary_income=Decimal("7500"),
+            shares_sold_to_cover=Decimal("0"),
+            created_at=_now(),
+        )
+    )
+    await db_session.flush()
+
+    resp = await client.delete(
+        f"/api/v1/equity-grants/{grant.id}",
+        headers=auth_headers(primary_user, primary_member, "primary"),
+    )
+    assert resp.status_code == 409, resp.text
+    assert "vesting events" in resp.json()["detail"]
+
+
 # --- investment lots ---------------------------------------------------------
 
 
