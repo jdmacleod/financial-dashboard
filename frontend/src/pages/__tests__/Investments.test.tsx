@@ -35,6 +35,18 @@ vi.mock("@/api/accounts", () => ({
   },
 }))
 
+// Demo-data extension panels on the Investments page — empty by default so the
+// existing assertions are unaffected.
+vi.mock("@/api/equityGrants", () => ({
+  equityGrantsApi: { list: vi.fn(() => Promise.resolve([])) },
+}))
+vi.mock("@/api/investmentLots", () => ({
+  investmentLotsApi: { list: vi.fn(() => Promise.resolve([])) },
+}))
+vi.mock("@/api/capitalCommitments", () => ({
+  capitalCommitmentsApi: { list: vi.fn(() => Promise.resolve([])) },
+}))
+
 function renderPage() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },

@@ -13,6 +13,9 @@ import {
 import { subDays, subYears, startOfYear, format } from "date-fns"
 import { accountsApi } from "@/api/accounts"
 import { snapshotsApi } from "@/api/snapshots"
+import { EquityGrantsPanel } from "@/components/app/EquityGrantsPanel"
+import { InvestmentLotsPanel } from "@/components/app/InvestmentLotsPanel"
+import { CapitalCommitmentsPanel } from "@/components/app/CapitalCommitmentsPanel"
 import { BROKERAGE_ACCOUNT_TYPES } from "@/lib/accountTypes"
 import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
 import type { AccountResponse } from "@/api/types"
@@ -333,6 +336,13 @@ export default function Investments() {
           ))}
         </div>
       )}
+
+      {/* Demo-data extension surfaces — each renders nothing when empty. */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginTop: "20px" }}>
+        <EquityGrantsPanel />
+        <InvestmentLotsPanel />
+        <CapitalCommitmentsPanel />
+      </div>
     </div>
   )
 }
