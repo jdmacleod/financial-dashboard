@@ -67,7 +67,7 @@ approximation to the user.
 
 **Why:** H5 Langford's Sarasota primary home is a cash purchase (`linked_mortgage_account_id = null`). The equity display path for properties without a linked mortgage has not been exercised in the test suite. A crash in this code path would affect any user who creates a real estate account without a linked mortgage.
 
-**Depends on:** Phase 11 H4/H5 seed modules merged (this PR).
+**Depends on:** ~~Phase 11 H4/H5 seed modules merged~~ — fulfilled by v0.9.4.0. Ready to implement.
 
 ---
 
