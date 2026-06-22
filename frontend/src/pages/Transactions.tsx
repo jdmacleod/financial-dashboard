@@ -11,6 +11,7 @@ import { ImportModal } from "@/components/app/ImportModal"
 import { AddTransactionModal } from "@/components/app/AddTransactionModal"
 import { EditTransactionModal } from "@/components/app/EditTransactionModal"
 import { HistoryPanel } from "@/components/app/HistoryPanel"
+import { AdvisoryNotesPanel } from "@/components/app/AdvisoryNotesPanel"
 import { formatCurrency, formatDate } from "@/lib/formatters"
 import { INVESTMENT_ACCOUNT_TYPES } from "@/lib/accountTypes"
 import type { CategoryResponse, TransactionResponse } from "@/api/types"
@@ -261,6 +262,10 @@ export default function Transactions() {
             </Link>
           )}
         </div>
+      </div>
+
+      <div className="mb-4">
+        <AdvisoryNotesPanel accountId={accountId} />
       </div>
 
       <div className="flex items-center gap-3 mb-4">

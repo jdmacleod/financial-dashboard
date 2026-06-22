@@ -316,6 +316,9 @@ export function AppLayout() {
           <SidebarNavLink to="/insights" onClick={() => setSidebarOpen(false)}>
             Insights
           </SidebarNavLink>
+          <SidebarNavLink to="/estate" onClick={() => setSidebarOpen(false)}>
+            Estate
+          </SidebarNavLink>
         </div>
       </div>
 
