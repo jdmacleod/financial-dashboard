@@ -182,8 +182,12 @@ async def main(household_arg: str | None, action: str, yes: bool) -> None:
         to_target = sorted(_SEEDERS)
     else:
         n = int(household_arg)
-        if n not in _SEEDERS:  # argparse catches this via choices=; guard is for programmatic callers
-            print(f"Error: --household must be a valid household number or all. Got: {household_arg}")
+        if (
+            n not in _SEEDERS
+        ):  # argparse catches this via choices=; guard is for programmatic callers
+            print(
+                f"Error: --household must be a valid household number or all. Got: {household_arg}"
+            )
             sys.exit(1)
         to_target = [n]
 

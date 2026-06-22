@@ -107,6 +107,7 @@ class TestClampDay:
 class TestGenVariable:
     def _account_id(self):
         import uuid
+
         return uuid.uuid4()
 
     def test_count_zero_returns_empty(self) -> None:
@@ -116,9 +117,16 @@ class TestGenVariable:
         from decimal import Decimal
 
         result = _util.gen_variable(
-            self._account_id(), 2024, 3, None,
-            ["Shop"], Decimal("50.00"), Decimal("100.00"),
-            0, 0, rng,
+            self._account_id(),
+            2024,
+            3,
+            None,
+            ["Shop"],
+            Decimal("50.00"),
+            Decimal("100.00"),
+            0,
+            0,
+            rng,
         )
         assert result == []
 
@@ -128,9 +136,16 @@ class TestGenVariable:
 
         rng = random.Random(42)
         result = _util.gen_variable(
-            self._account_id(), 2024, 3, None,
-            ["Costco"], Decimal("100.00"), Decimal("200.00"),
-            1, 1, rng,
+            self._account_id(),
+            2024,
+            3,
+            None,
+            ["Costco"],
+            Decimal("100.00"),
+            Decimal("200.00"),
+            1,
+            1,
+            rng,
         )
         assert len(result) == 1
         assert result[0].amount < Decimal("0")
@@ -141,9 +156,16 @@ class TestGenVariable:
 
         rng = random.Random(99)
         result = _util.gen_variable(
-            self._account_id(), 2024, 5, None,
-            ["Walmart"], Decimal("50.00"), Decimal("50.00"),
-            1, 1, rng,
+            self._account_id(),
+            2024,
+            5,
+            None,
+            ["Walmart"],
+            Decimal("50.00"),
+            Decimal("50.00"),
+            1,
+            1,
+            rng,
         )
         # With min==max the midpoint is 50, jittered by 12% → between 44 and 56
         assert len(result) == 1
@@ -155,9 +177,16 @@ class TestGenVariable:
 
         rng = random.Random(7)
         result = _util.gen_variable(
-            self._account_id(), 2024, 6, None,
-            ["A", "B", "C"], Decimal("100.00"), Decimal("200.00"),
-            3, 3, rng,
+            self._account_id(),
+            2024,
+            6,
+            None,
+            ["A", "B", "C"],
+            Decimal("100.00"),
+            Decimal("200.00"),
+            3,
+            3,
+            rng,
         )
         assert len(result) == 3
         for t in result:
@@ -172,9 +201,16 @@ class TestGenVariable:
         merchants = ["MerchantX", "MerchantY"]
         rng = random.Random(13)
         result = _util.gen_variable(
-            self._account_id(), 2024, 4, None,
-            merchants, Decimal("80.00"), Decimal("120.00"),
-            4, 4, rng,
+            self._account_id(),
+            2024,
+            4,
+            None,
+            merchants,
+            Decimal("80.00"),
+            Decimal("120.00"),
+            4,
+            4,
+            rng,
         )
         for t in result:
             assert t.payee_raw in merchants
