@@ -61,7 +61,7 @@ See [docs/getting-started.md](docs/getting-started.md) for the full walkthrough.
 
 ## Try it with demo data
 
-Once the stack is running, load three pre-built households — 30 months of
+Once the stack is running, load five pre-built households — 30 months of
 realistic transactions, budgets, FIRE scenarios, and real estate:
 
 ```bash
@@ -75,8 +75,10 @@ Open `http://localhost` and sign in. Password is `HearthDemo1!` for all demo acc
 | Chen-Nakamura (TX)    | wei@chen-nakamura.local     | ~$899K    |
 | Okonkwo-Rivera (IL)   | darius@okonkwo-rivera.local | ~$3.4M    |
 | Whitfield-Torres (LA) | ben@whitfield-torres.local  | ~$9.5M    |
+| Park-Cole (TN)        | zoe@park-cole.local         | ~$155K    |
+| Langford (FL)         | bob@langford.local          | ~$12.9M   |
 
-See [docs/demo-quickstart.md](docs/demo-quickstart.md) for all six credentials and what each household exercises.
+See [docs/demo-quickstart.md](docs/demo-quickstart.md) for all ten credentials and what each household exercises.
 
 ## Stack
 

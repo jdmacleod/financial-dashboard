@@ -1045,11 +1045,11 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("restaurants", D("2400.00"), date(2025, 6, 1)),  # lifestyle increase
         ("coffee", D("150.00"), date(2024, 1, 1)),
         ("food_delivery", D("300.00"), date(2024, 1, 1)),
-        ("gas_fuel", D("120.00"), date(2024, 1, 1)),
+        ("gas_fuel", D("95.00"), date(2024, 1, 1)),
         ("ev_charging", D("100.00"), date(2024, 1, 1)),
         ("internet", D("120.00"), date(2024, 1, 1)),
         ("cell_phone", D("320.00"), date(2024, 1, 1)),
-        ("streaming", D("128.00"), date(2024, 1, 1)),
+        ("streaming", D("91.00"), date(2024, 1, 1)),
         ("electric", D("420.00"), date(2024, 1, 1)),
         ("fitness", D("390.00"), date(2024, 1, 1)),
         ("therapy", D("880.00"), date(2024, 1, 1)),
@@ -1057,12 +1057,14 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("lawn_garden", D("680.00"), date(2024, 1, 1)),
         ("clothing", D("1500.00"), date(2024, 1, 1)),
         ("personal_care", D("850.00"), date(2024, 1, 1)),
+        ("auto_insurance", D("645.00"), date(2024, 1, 1)),
+        ("home_insurance", D("520.00"), date(2024, 1, 1)),
         ("life_insurance", D("1240.00"), date(2024, 1, 1)),
         ("advisory_fees", D("1800.00"), date(2024, 1, 1)),
         ("travel", D("3000.00"), date(2024, 1, 1)),
-        ("home_maintenance", D("800.00"), date(2024, 1, 1)),
+        ("home_maintenance", D("375.00"), date(2024, 1, 1)),
         ("pet_care", D("300.00"), date(2024, 1, 1)),
-        ("tuition", D("1600.00"), date(2024, 1, 1)),
+        ("tuition", D("1200.00"), date(2024, 1, 1)),
     ]:
         session.add(make_budget(hid, cat[slug], amount, eff_from))
 

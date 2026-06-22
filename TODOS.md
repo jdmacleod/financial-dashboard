@@ -59,6 +59,18 @@ approximation to the user.
 
 ---
 
+### Assets.test.tsx — null-mortgage equity test (Phase 11 deferred)
+
+**Priority:** P2
+
+**What:** Add a Vitest / React Testing Library test to `frontend/src/` that mocks `propertiesApi.getEquity` with `mortgage_balance_visible: false` and verifies the Assets page renders the Sarasota property equity figure without crashing. The Phase 11 design doc (section 2.5, verification checklist) explicitly lists this as a required test before the Phase 11 feature is considered complete.
+
+**Why:** H5 Langford's Sarasota primary home is a cash purchase (`linked_mortgage_account_id = null`). The equity display path for properties without a linked mortgage has not been exercised in the test suite. A crash in this code path would affect any user who creates a real estate account without a linked mortgage.
+
+**Depends on:** ~~Phase 11 H4/H5 seed modules merged~~ — fulfilled by v0.9.4.0. Ready to implement.
+
+---
+
 ## Completed
 
 ### Context-aware category add buttons on Accounts page (Phase 8 F6)

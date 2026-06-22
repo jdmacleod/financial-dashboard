@@ -1,12 +1,12 @@
 # Demo Quickstart
 
-HearthLedger ships with a seed script that populates the system with three
-fictitious US households — from a straightforward dual-income couple to a
-high-net-worth LA family with three properties. Use it to explore every
-feature without entering your own data.
+HearthLedger ships with a seed script that populates the system with five
+fictitious US households — from late-20s Nashville renters paying down debt to
+a high-net-worth Sarasota retirement couple. Use it to explore every feature
+without entering your own data.
 
 > **Demo environments only.** The production architecture is one household per
-> installation. Seeding all three households is valid for demos and testing;
+> installation. Seeding all five households is valid for demos and testing;
 > each user's JWT token scopes them to their own household automatically.
 
 ---
@@ -44,6 +44,14 @@ Household 2: Okonkwo-Rivera (Naperville IL)
 Household 3: Whitfield-Torres (Brentwood LA)
   Members: 4 | Accounts: 25 | Transactions: ~XXXX | Properties: 3
   Computed Net Worth: ~$9,463,400
+
+Household 4: Park-Cole (East Nashville TN)
+  Members: 2 | Accounts: 13 | Transactions: ~XXXX | Properties: 0
+  Computed Net Worth: ~$154,500
+
+Household 5: Langford (Sarasota FL)
+  Members: 2 | Accounts: 15 | Transactions: ~XXXX | Properties: 2
+  Computed Net Worth: ~$12,856,700
 ```
 
 To seed a single household instead:
@@ -127,12 +135,94 @@ What this household demonstrates:
 - Annual lump-sum retirement contributions (SEP-IRA, profit-sharing 401k)
 - Budget history: `restaurants` budget increases from $2,000 → $2,400 in June 2025
 
+### Household 4 — Park-Cole (East Nashville, TN)
+
+_Late-20s dual-income renters. Net worth ~$155K._
+
+| Role    | Email                  | Password     |
+| ------- | ---------------------- | ------------ |
+| Primary | zoe@park-cole.local    | HearthDemo1! |
+| Partner | marcus@park-cole.local | HearthDemo1! |
+
+What this household demonstrates:
+
+- Aggressive debt avalanche: three simultaneous loans (student, Honda auto, personal)
+- Named savings-goal brokerage account (House Fund for future down payment)
+- Renter expense patterns: rent, renters insurance, no mortgage
+- FIRE scenario: "FIRE by 45" on a combined ~$157K income
+- Zoe's student loan income-driven cascade (payment increases after grace period ends)
+- Nashville cost-of-living spending patterns
+
+### Household 5 — Langford (Sarasota, FL)
+
+_Retired couple; SS + pension + RMDs + LLC income. Net worth ~$12.9M._
+
+| Role    | Email                 | Password     |
+| ------- | --------------------- | ------------ |
+| Primary | bob@langford.local    | HearthDemo1! |
+| Partner | maggie@langford.local | HearthDemo1! |
+
+What this household demonstrates:
+
+- Multiple retirement income streams: Social Security, defined-benefit pension, quarterly RMDs
+- Part-time LLC consulting income (Maggie's HR business)
+- Two real estate properties: Sarasota primary home (cash purchase, no mortgage) and Highlands NC vacation home (30-year mortgage)
+- Short-term rental income from Highlands NC property
+- Null-mortgage equity path: primary residence has no linked mortgage account
+- Medicare/Medigap healthcare expense patterns
+- Florida retirement spending (no state income tax, high property tax)
+- Required Minimum Distributions from traditional IRA (quarterly schedule)
+
 ---
 
 ## Re-seeding
 
-The seed script is idempotent within a fresh database. If you want to start
-over, clear the data and re-seed:
+### Check current state
+
+Before resetting anything, inspect what's in the database:
+
+```bash
+docker-compose exec backend python scripts/seed_demo_data.py --action inspect
+```
+
+Output:
+
+```
+=== HearthLedger Demo DB State ===
+
+  #    Name                      Members  Accounts  Transactions  Status
+  -------------------------------------------------------------------
+  1    Chen-Nakamura                   2        12         3,124  SEEDED
+  2    Okonkwo-Rivera                  4        19         4,871  SEEDED
+  3    Whitfield-Torres                4        25         6,390  SEEDED
+  4    Park-Cole                       2        13         2,241  SEEDED
+  5    Langford                        2        15         2,188  SEEDED
+```
+
+### Reset a single household (targeted)
+
+Delete and immediately re-seed one household without touching the others:
+
+```bash
+docker-compose exec backend python scripts/seed_demo_data.py \
+  --household 5 --action reset
+```
+
+The delete and reseed run in a single transaction — if the reseed fails, the
+delete is rolled back and the household is restored. Add `--yes` to skip the
+confirmation prompt (useful in scripts).
+
+### Delete a household without reseeding
+
+```bash
+docker-compose exec backend python scripts/seed_demo_data.py \
+  --household 5 --action delete
+```
+
+### Full reset (nuclear option)
+
+Use this when you want a completely clean database — for example, after a
+schema migration that changes existing tables.
 
 ```bash
 # Stop the stack
@@ -149,14 +239,12 @@ docker-compose up -d
 docker-compose exec backend python scripts/seed_demo_data.py --household all
 ```
 
-Or, to reset just the database without tearing down containers, connect to
-PostgreSQL and truncate the relevant tables — but a full volume reset is
-simpler and avoids foreign-key ordering issues.
-
 ---
 
 ## Related
 
 - [Getting Started](getting-started.md) — install and run HearthLedger from scratch
 - [User Guide](user-guide.md) — walkthrough of every feature
-- [Demo Dataset Specification](hearthledger-demo-data-spec.md) — full data definitions (income patterns, accounts, FIRE scenarios) for all three households
+- [Demo Dataset Specification](hearthledger-demo-data-spec.md) — full data definitions (income patterns, accounts, FIRE scenarios) for H1–H3
+- [Demo Dataset Specification — Revised](hearthledger-demo-data-spec-revised.md) — expanded spec incorporating H4 and H5 alongside H1–H3
+- [Phase 11 Design Doc](phase-11-demo-households-h4-h5.md) — H4 Park-Cole and H5 Langford implementation spec

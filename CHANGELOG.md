@@ -3,6 +3,32 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.9.4.0] - 2026-06-21
+
+### Added
+
+- **Demo households H4 Park-Cole and H5 Langford** — `--household 4` and `--household 5` (or `--household all`) now seed two additional fictitious households, extending the demo dataset to five complete households:
+  - **H4 Park-Cole** (Nashville, TN) — Late-20s renters; 2 members, 13 accounts, ~$154K starting net worth. Exercises: Honda Accord auto-loan payoff cascade (Aug 2025), cascaded student-loan increase, dual Roth IRA contributions, HSA, biweekly payroll with third-paycheck months, renters insurance, FIRE scenario targeting independence at 45.
+  - **H5 Langford** (Sarasota, FL) — Retirees; 2 members, 15 accounts, 2 real estate properties, ~$12.9M net worth. Exercises: Social Security income (3rd-Wednesday disbursement), pension income, IRA Required Minimum Distribution (SECURE 2.0 age-73 rule, quarterly withdrawals 2025–2026), Maggie's LLC consulting draw, ACA marketplace premium (stepped 2024→2025→2026), Medicare Part B/D/Medigap, Sarasota primary home (cash purchase — no linked mortgage), Highlands NC vacation home with mortgage, two FIRE scenarios (portfolio sustainability + longevity stress test).
+- **`SEED_DATE_END` environment variable** — Seed scripts now respect `SEED_DATE_END=YYYY-MM-DD` to extend the transaction window beyond the default 2026-06-21 cutoff. Documented in `.env.example`.
+- **`third_wednesday()` helper in `_util.py`** — Returns the 3rd Wednesday of any month, clamped to `DATE_END`; used for Bob Langford's Social Security deposit scheduling.
+- **`home_property_tax` category** — New category under Housing for primary-residence property taxes, distinct from `rental_property_tax` (rental/vacation property expenses).
+- **Additive seeding guard** — `seed_demo_data.py` now checks per-household existence instead of a global check, enabling H4/H5 to be seeded onto a database that already contains H1–H3 without skipping or re-inserting.
+- **`delete`, `reset`, and `inspect` actions for `seed_demo_data.py`** — the seed script now supports `--action delete` (remove household + all cascaded data), `--action reset` (delete then reseed atomically per household), and `--action inspect` (read-only summary of DB state). All destructive actions require `[y/N]` confirmation unless `--yes` is passed.
+- **Phase 11 design doc** — `docs/phase-11-demo-households-h4-h5.md` documents the household specifications, account structure, income patterns, debt payoff schedules, and FIRE scenario parameters.
+
+### Fixed
+
+- **Budget amounts for H1/H2/H3 seed households** — corrected several budget line amounts that were off by a factor of 10x or misallocated across categories; net worth totals and category spend patterns now match design spec.
+- **H5 Langford advisory fees and home insurance budgets** — `advisory_fees` and `home_insurance` monthly budget values were swapped; corrected to match the Phase 11 spec.
+- **`users.member_id` FK changed to `ON DELETE CASCADE`** — previously `SET NULL`, which orphaned user rows when a household member was deleted; cascade ensures user accounts are removed with their member.
+- **IncomeStreamType for brokerage dividend streams** — Langford brokerage dividend income streams were incorrectly typed as `interest`; corrected to `investment` so they appear in the right projection bucket.
+
+### Added (tests)
+
+- **`backend/tests/unit/test_seed_util.py`** — expanded to 33 unit tests covering all pure-function helpers in `_util.py` (`third_wednesday`, `jitter`, `clamp_day`, `gen_variable`, `last_day_of`, `all_months`, `friday_dates`, `rand_date`) and the H5-specific `_split` function in `h5_langford.py`.
+- **`backend/tests/unit/test_seed_demo_data.py`** — 4 unit tests for `_confirm()` covering the `--yes` bypass flag and `y`/`n`/empty interactive responses.
+
 ## [0.9.3.0] - 2026-06-20
 
 ### Added
