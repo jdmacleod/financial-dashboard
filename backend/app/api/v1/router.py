@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     accounts,
+    advisory_notes,
     audit_log,
     auth,
     backups,
@@ -12,7 +13,9 @@ from app.api.v1 import (
     fire,
     household,
     imports,
+    insurance_policies,
     members,
+    ownership_entities,
     pension,
     properties,
     reports,
@@ -43,3 +46,6 @@ router.include_router(fire.router)
 router.include_router(debt.router)
 router.include_router(exports.router)
 router.include_router(backups.router)
+router.include_router(ownership_entities.router)
+router.include_router(insurance_policies.router)
+router.include_router(advisory_notes.router)

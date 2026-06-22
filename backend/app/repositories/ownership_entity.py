@@ -25,6 +25,15 @@ class OwnershipEntityRepository:
         )
         return {e.id: e for e in result.scalars().all()}
 
+    async def list_for_household(self, household_id: uuid.UUID) -> list[OwnershipEntity]:
+        """Return all ownership entities for the household, oldest first."""
+        result = await self.session.execute(
+            select(OwnershipEntity)
+            .where(OwnershipEntity.household_id == household_id)
+            .order_by(OwnershipEntity.created_at)
+        )
+        return list(result.scalars().all())
+
 
 def counts_in_net_worth(account: Account, entity_map: dict[uuid.UUID, OwnershipEntity]) -> bool:
     """An account contributes to personal net worth when it is flagged

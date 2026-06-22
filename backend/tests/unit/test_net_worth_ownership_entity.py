@@ -16,6 +16,7 @@ from app.db.models.account import Account
 from app.db.models.household import Household
 from app.db.models.ownership_entity import OwnershipEntity
 from app.db.models.snapshot import AccountSnapshot
+from app.db.models.transaction import Transaction
 from app.services.fire_detector import FireInputDetector
 from app.services.report import ReportService
 
@@ -122,3 +123,77 @@ async def test_fire_detector_net_worth_excludes_ilit(
     detector = FireInputDetector(db_session)
     net_worth = await detector._net_worth(primary_ctx)
     assert net_worth == Decimal("100000")
+
+
+async def test_fire_detector_counts_new_account_types(
+    db_session: AsyncSession,
+    household: Household,
+    primary_ctx: VisibilityContext,
+) -> None:
+    """#4: treasury/private_fund (snapshot assets) and sbloc (txn liability) must
+    be counted by the FIRE detector's net-worth computation.
+    """
+    treasury = Account(
+        household_id=household.id,
+        account_type="treasury",
+        nickname="T-Bills",
+        include_in_net_worth=True,
+        is_active=True,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    pe = Account(
+        household_id=household.id,
+        account_type="private_fund",
+        nickname="PE NAV",
+        include_in_net_worth=True,
+        is_active=True,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    sbloc = Account(
+        household_id=household.id,
+        account_type="sbloc",
+        nickname="SBLOC",
+        include_in_net_worth=True,
+        is_active=True,
+        is_revolving=True,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    db_session.add_all([treasury, pe, sbloc])
+    await db_session.flush()
+    db_session.add_all(
+        [
+            AccountSnapshot(
+                account_id=treasury.id,
+                snapshot_date=date(2024, 1, 1),
+                balance=Decimal("700000"),
+                source="manual",
+                created_at=_now(),
+            ),
+            AccountSnapshot(
+                account_id=pe.id,
+                snapshot_date=date(2024, 1, 1),
+                balance=Decimal("180000"),
+                source="manual",
+                created_at=_now(),
+            ),
+            # SBLOC has no snapshot; balance is the running transaction sum.
+            Transaction(
+                account_id=sbloc.id,
+                transaction_date=date(2024, 1, 1),
+                amount=Decimal("-520000"),
+                is_transfer=True,
+                source="manual",
+                is_reviewed=True,
+                created_at=_now(),
+                updated_at=_now(),
+            ),
+        ]
+    )
+    await db_session.flush()
+
+    net_worth = await FireInputDetector(db_session)._net_worth(primary_ctx)
+    # 700k + 180k assets - 520k SBLOC liability.
+    assert net_worth == Decimal("360000")
