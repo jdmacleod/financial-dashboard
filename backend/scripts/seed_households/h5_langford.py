@@ -939,7 +939,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             {
                 "id": str(uuid.uuid4()),
                 "label": "Joint Brokerage — Dividends",
-                "type": "dividend",
+                "type": "investment",
                 "amount_annual": 78000.00,
                 "start_year": 2024,
                 "end_year": None,
@@ -1004,7 +1004,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             {
                 "id": str(uuid.uuid4()),
                 "label": "Joint Brokerage — Dividends",
-                "type": "dividend",
+                "type": "investment",
                 "amount_annual": 78000.00,
                 "start_year": 2024,
                 "end_year": None,
