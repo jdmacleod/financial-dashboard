@@ -1,25 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { advisoryNotesApi } from "@/api/advisoryNotes"
-
-const CATEGORY_LABELS: Record<string, string> = {
-  estate: "Estate",
-  tax: "Tax",
-  concentration: "Concentration",
-  insurance: "Insurance",
-  retirement: "Retirement",
-  charitable: "Charitable",
-  scope_omission: "Scope & Omissions",
-}
-
-function categoryLabel(slug: string): string {
-  return (
-    CATEGORY_LABELS[slug] ??
-    slug
-      .split("_")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ")
-  )
-}
+import { advisoryCategoryMeta } from "@/lib/advisoryCategories"
 
 interface AdvisoryNotesPanelProps {
   accountId?: string
@@ -62,24 +43,36 @@ export function AdvisoryNotesPanel({
         {heading}
       </div>
       <div className="space-y-3">
-        {notes.map((note) => (
-          <div key={note.id}>
-            <div className="flex items-baseline gap-2">
-              <span
-                className="rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
-                style={{ background: "var(--nav-active-bg)", color: "var(--label)" }}
-              >
-                {categoryLabel(note.category)}
-              </span>
-              <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
-                {note.title}
-              </span>
+        {notes.map((note) => {
+          const meta = advisoryCategoryMeta(note.category)
+          const Icon = meta.Icon
+          return (
+            <div
+              key={note.id}
+              style={
+                meta.emphasis
+                  ? { borderLeft: `2px solid ${meta.accent}`, paddingLeft: "8px" }
+                  : undefined
+              }
+            >
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide"
+                  style={{ background: "var(--nav-active-bg)", color: "var(--label)" }}
+                >
+                  <Icon size={11} style={{ color: meta.accent }} />
+                  {meta.label}
+                </span>
+                <span className="text-sm font-semibold" style={{ color: "var(--text)" }}>
+                  {note.title}
+                </span>
+              </div>
+              <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--label)" }}>
+                {note.body}
+              </p>
             </div>
-            <p className="mt-1 text-sm leading-relaxed" style={{ color: "var(--label)" }}>
-              {note.body}
-            </p>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

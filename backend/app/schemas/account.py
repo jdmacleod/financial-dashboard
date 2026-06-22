@@ -55,6 +55,7 @@ class AccountResponse(BaseModel):
     nickname: str
     account_type: str
     owner_member_id: uuid.UUID | None
+    ownership_entity_id: uuid.UUID | None
     institution_name: str | None
     account_number_last4: str | None
     include_in_net_worth: bool

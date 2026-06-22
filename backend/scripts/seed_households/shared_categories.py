@@ -152,13 +152,17 @@ _DEFS: list[tuple[str, str, str | None, bool]] = [
     # Interest expense (new top-level parent) — SBLOC / margin interest.
     ("interest_expense", "Interest Expense", None, False),
     ("sbloc_interest", "SBLOC Interest", "interest_expense", False),
+    ("margin_interest", "Margin Interest", "interest_expense", False),
     # Education.
     ("private_school_tuition", "Private School Tuition", "education", False),
+    # Family support — recurring eldercare for an aging parent (sandwich generation).
+    ("eldercare", "Eldercare & Family Support", None, False),
     # Transfers: equity sales, capital flows, trust/charitable funding, gifting.
     ("equity_sale", "Equity Sale (Diversification)", "transfers", False),
     ("capital_call", "Capital Call", "transfers", False),
     ("capital_distribution_transfer", "Capital Distribution (Cash)", "transfers", False),
     ("sbloc_draw", "SBLOC Draw", "transfers", False),
+    ("margin_draw", "Margin Draw / Paydown", "transfers", False),
     ("daf_contribution", "DAF Contribution", "transfers", False),
     ("trust_funding", "Trust Funding", "transfers", False),
     ("gift_to_ilit", "Gift to ILIT", "transfers", False),

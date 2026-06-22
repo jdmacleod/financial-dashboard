@@ -56,6 +56,7 @@ export interface AccountResponse {
   nickname: string
   account_type: AccountType
   owner_member_id: string | null
+  ownership_entity_id: string | null
   institution_name: string | null
   account_number_last4: string | null
   include_in_net_worth: boolean

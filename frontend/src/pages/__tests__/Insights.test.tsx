@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { vi, describe, it, expect } from "vitest"
 import Insights from "@/pages/Insights"
@@ -49,9 +49,19 @@ describe("Insights", () => {
     renderPage()
     await waitFor(() => expect(screen.getByText("New York estate cliff")).toBeInTheDocument())
     expect(screen.getByText("Single-stock position")).toBeInTheDocument()
-    // Category headings (display labels)
-    expect(screen.getByText("Estate")).toBeInTheDocument()
-    expect(screen.getByText("Concentration")).toBeInTheDocument()
+    // Category labels appear in both the filter chips and the section headings.
+    expect(screen.getAllByText("Estate").length).toBeGreaterThan(0)
+    expect(screen.getAllByText("Concentration").length).toBeGreaterThan(0)
+  })
+
+  it("filters notes when a category chip is selected", async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByText("New York estate cliff")).toBeInTheDocument())
+    // Click the Estate filter chip (button) → only the estate note remains.
+    const estateChip = screen.getAllByText("Estate").find((el) => el.closest("button"))!
+    fireEvent.click(estateChip.closest("button")!)
+    expect(screen.getByText("New York estate cliff")).toBeInTheDocument()
+    expect(screen.queryByText("Single-stock position")).not.toBeInTheDocument()
   })
 
   it("shows an empty state when there are no notes", async () => {

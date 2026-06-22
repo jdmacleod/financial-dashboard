@@ -7,12 +7,12 @@ Post-revision summary of the six demo households after the demo-data extension
 ```
 H1  Chen-Nakamura    Round Rock TX   Members: 2   NW: ~$1,003,300
 H2  Okonkwo-Rivera   Naperville IL   Members: 4   NW: ~$3,620,400
-H3  Whitfield-Torres Brentwood CA    Members: 4   NW: ~$10,019,300
-H4  Park-Cole        Nashville TN    Members: 2   NW: ~$246,000
+H3  Whitfield-Torres Brentwood CA    Members: 4   NW: ~$9,902,500
+H4  Park-Cole        Nashville TN    Members: 2   NW: ~$279,500
 H5  Langford         Sarasota FL     Members: 2   NW: ~$13,327,100
 H6  Castellano       Scarsdale NY    Members: 1   NW: ~$18,290,000
 
-Six states; NW range ~$246,000 -> ~$18,290,000 (74x spread).
+Six states; NW range ~$279,500 -> ~$18,290,000 (65x spread).
 Estate exposure represented:
   - state-only ...................... Illinois cliff (H2)
   - none (federal, married couple) .. H3, H5 (sheltered under the $30M couple exemption)
@@ -38,6 +38,7 @@ Estate exposure represented:
 | Equity comp — RSU (sell-to-cover)                    |     |      |   ✓    |     |     |       |
 | Equity comp — ISO (held tranche, AMT)                |     |      |   ✓    |     |     |       |
 | Equity comp — ESPP (discount, lookback)              |  ✓  |      |        |  ✓  |     |       |
+| Equity comp — NSO (exercise & hold, private co.)     |     |      |        |  ✓  |     |       |
 | Concentrated single-stock position                   |     |      |   ✓    |     |     |   ✓   |
 | Cost-basis lots                                      |  ✓  |      |   ✓    |  ✓  |     |   ✓   |
 | Revocable living trust (titling)                     |     |  ✓   |   ✓    |     |  ✓  |   ✓   |
@@ -47,10 +48,12 @@ Estate exposure represented:
 | Donor-advised fund (held away)                       |     |      |   ✓    |     |     |   ✓   |
 | QCD (RMD-satisfying, income-excluded)                |     |      |        |     |  ✓  |   ✓   |
 | Backdoor Roth                                        |     |  ✓   |   ✓    |     |  ✓  |       |
+| Mega-backdoor Roth (after-tax 401k, in-plan conv.)   |  ✓  |      |        |     |     |       |
 | Roth-conversion window (pre-RMD)                     |     |      |        |     |  ✓  |       |
-| Inherited IRA (SECURE 10-year)                       |     |      |        |     |     |   ✓   |
+| Inherited IRA (SECURE 10-year)                       |     |      |        |  ✓  |     |   ✓   |
 | Capital commitment (PE, capital calls)               |     |      |        |     |     |   ✓   |
 | SBLOC (revolving credit line)                        |     |      |   ✓    |     |     |   ✓   |
+| Margin loan (brokerage, maintenance call)            |     |      |   ✓    |     |     |       |
 | Umbrella liability                                   |  ✓  |  ✓   |        |     |  ✓  |   ✓   |
 | Permanent / cash-value life (asset)                  |     |      |        |     |  ✓  |   ✓   |
 | ILIT-owned permanent life (excluded from NW)         |     |      |        |     |     |   ✓   |
@@ -65,12 +68,13 @@ Estate exposure represented:
 | Single-filer tax / single-filer IRMAA                |     |      |        |     |     |   ✓   |
 | Market-dip discontinuity (non-monotonic NW)          |  ✓  |  ✓   |   ✓    |  ✓  |  ✓  |   ✓   |
 | Unemployment gap (income stop + spend-down)          |     |      |        |  ✓  |     |       |
+| Eldercare / sandwich-generation cash flow            |     |  ✓   |        |     |     |       |
 | Bonus / liquidity income spike                       |     |      |   ✓    |     |     |       |
 
-**NSO** is the one equity-compensation grant type with a category
-(`nso_exercise_income`) but no household exercising it; RSU, ISO, and ESPP cover
-the equity-comp surface. It is available for a future household without further
-schema or taxonomy work.
+All four equity-compensation grant types (RSU, ISO, ESPP, NSO) are now exercised
+by a household: RSU/ISO at H3, ESPP at H1/H4, and NSO at H4 (a private-company
+exercise-and-hold tranche). Both revolving credit-line types are represented —
+SBLOC at H3/H6 and a brokerage margin loan at H3.
 
 ---
 

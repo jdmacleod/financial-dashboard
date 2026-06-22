@@ -24,6 +24,7 @@ const mockAccount: AccountResponse = {
   nickname: "Chase Checking",
   account_type: "checking",
   owner_member_id: "m1",
+  ownership_entity_id: null,
   institution_name: "Chase",
   account_number_last4: "1234",
   include_in_net_worth: true,

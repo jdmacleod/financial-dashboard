@@ -1,4 +1,4 @@
-"""Household 3 — Whitfield-Torres (Brentwood, LA). ~$9.5M net worth."""
+"""Household 3 — Whitfield-Torres (Brentwood, LA). ~$9.9M net worth."""
 
 from __future__ import annotations
 
@@ -1057,6 +1057,39 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         )
     add(tx(sbloc.id, date(2025, 6, 20), D("150000.00"), "SBLOC partial paydown", cat["sbloc_draw"]))
 
+    # ── Margin loan at the taxable brokerage (revolving) ────────────────────────
+    # Distinct from the pledged-asset SBLOC: margin borrows inside the brokerage
+    # against marginable securities and is subject to maintenance calls. Drawn to
+    # bridge a real-estate close; interest capitalizes monthly; partially repaid.
+    margin = make_account(
+        hid, "margin", "Brokerage Margin Loan", "Fidelity", "7705", is_revolving=True
+    )
+    session.add(margin)
+    await session.flush()
+    add(tx(margin.id, date(2024, 7, 10), -D("150000.00"), "Margin draw", cat["margin_draw"]))
+    for ms in all_months():
+        y, m = ms.year, ms.month
+        if date(y, m, 1) < date(2024, 7, 1) or ms > DATE_END:
+            continue
+        add(
+            tx(
+                margin.id,
+                clamp_day(y, m, 25),
+                -D("700.00"),
+                "Margin interest",
+                cat["margin_interest"],
+            )
+        )
+    add(
+        tx(
+            margin.id,
+            date(2025, 12, 12),
+            D("50000.00"),
+            "Margin partial paydown",
+            cat["margin_draw"],
+        )
+    )
+
     # ── Scheduled/specialty insurance + wine collection asset ───────────────────
     wine = acc("other_asset", "Wine Collection (manually valued)", "—", None)
     await session.flush()
@@ -1135,6 +1168,20 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "and caps the deduction benefit at 35% for top-bracket itemizers, so do not assume "
             "dollar-for-dollar benefit at the top rate.",
             account_id=daf.id,
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "concentration",
+            "Margin vs. SBLOC, and the maintenance-call risk on a concentrated book",
+            "Brokerage margin and a pledged-asset SBLOC both borrow against securities, but margin sits "
+            "inside the brokerage and is marked daily: a drawdown in the concentrated single-stock "
+            "position can trigger a maintenance call and forced sales at the worst time. An SBLOC is "
+            "typically more forgiving on call terms. Keep total borrowing well below the maintenance "
+            "threshold, and remember margin interest is deductible only against net investment income "
+            "(Form 4952), not automatically.",
+            account_id=margin.id,
         )
     )
     session.add(
@@ -1365,10 +1412,10 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "name": "Whitfield-Torres",
         "location": "Brentwood LA",
         "members": 4,
-        "accounts": 28,  # +3: DAF (held away), SBLOC, wine collection
+        "accounts": 29,  # +4: DAF (held away), SBLOC, margin loan, wine collection
         "transactions": len(all_txns),
         "properties": 3,
-        "net_worth": 10_019_297.0,  # ReportService-computed as of 2026-06-21
+        "net_worth": 9_902_497.0,  # -$116,800 margin loan; ReportService-computed as of 2026-06-21
         "fire_scenarios": 2,
         "debt_records": 1,
     }

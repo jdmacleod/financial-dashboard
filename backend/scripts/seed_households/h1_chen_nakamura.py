@@ -519,7 +519,38 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             )
         )
 
+    # ── Mega-backdoor Roth (after-tax 401(k) → in-plan Roth conversion) ─────────
+    # Dell's plan (Fidelity NetBenefits) allows after-tax contributions beyond the
+    # employee deferral limit with same-plan Roth conversion. Wei converts a
+    # quarterly after-tax tranche to Roth; the conversion is an in-plan transfer,
+    # so it moves dollars between snapshot-valued accounts without new cash.
+    for yr in (2024, 2025):
+        for q_month in (3, 6, 9, 12):
+            d, c = transfer(
+                wei_401k.id,
+                wei_roth.id,
+                date(yr, q_month, 15),
+                D("4500.00"),
+                "Dell 401(k) after-tax → in-plan Roth conversion",
+                cat["roth_conversion"],
+            )
+            add(d, c)
+
     # ── Advisory notes ──────────────────────────────────────────────────────────
+    session.add(
+        make_advisory_note(
+            hid,
+            "retirement",
+            "Mega-backdoor Roth: after-tax 401(k) contributions converted in-plan",
+            "When a 401(k) plan allows after-tax (non-Roth) contributions plus in-plan Roth conversion, "
+            "a high earner can move dollars well beyond the regular employee-deferral limit into Roth, "
+            "up to the overall defined-contribution cap (employee + employer + after-tax). Converting "
+            "promptly keeps the taxable gain on the after-tax portion near zero. Confirm the plan "
+            "supports both features before relying on it — many do not — and watch the combined annual "
+            "addition limit.",
+            account_id=wei_roth.id,
+        )
+    )
     session.add(
         make_advisory_note(
             hid,
