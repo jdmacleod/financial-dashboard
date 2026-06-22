@@ -819,6 +819,56 @@ Income vs. expenses for a real estate property.
 | `from` | date | Start date (required) |
 | `to` | date | End date (required) |
 
+### `GET /reports/estate-exposure`
+
+Computed federal estate-exposure report. Groups visible accounts by titling, nets liabilities against assets per bucket, and splits the total into the taxable estate (directly-owned holdings plus revocable-trust-titled accounts) versus holdings removed from the estate (ILIT / irrevocable trust / CRT, where the ownership entity's `is_in_taxable_estate` is `false`). The gross taxable estate is compared against the applicable federal exemption — one per `primary`/`partner` member, capped at two for portability.
+
+This lens ignores `include_in_net_worth` / `counts_in_personal_net_worth`: estate inclusion follows legal titling, not net-worth display preference.
+
+**Query parameters:**
+| Parameter | Type | Description |
+|---|---|---|
+| `as_of` | date | Valuation date (optional, default: today) |
+
+**Response:**
+
+```json
+{
+  "as_of": "2026-06-22",
+  "gross_taxable_estate": "19000000.0000",
+  "excluded_from_estate": "5000000.0000",
+  "total_net_worth": "24000000.0000",
+  "exemption_per_person": "15000000",
+  "exemption_holders": 1,
+  "applicable_exemption": "15000000",
+  "taxable_overage": "4000000.0000",
+  "estimated_federal_estate_tax": "1600000.0000",
+  "federal_estate_tax_rate": 0.4,
+  "entities": [
+    {
+      "entity_id": null,
+      "entity_name": null,
+      "entity_type": null,
+      "is_in_taxable_estate": true,
+      "assets": "16000000.0000",
+      "liabilities": "1000000.0000",
+      "net_value": "15000000.0000"
+    },
+    {
+      "entity_id": "uuid",
+      "entity_name": "Family ILIT",
+      "entity_type": "ilit",
+      "is_in_taxable_estate": false,
+      "assets": "5000000.0000",
+      "liabilities": "0.0000",
+      "net_value": "5000000.0000"
+    }
+  ]
+}
+```
+
+An `entities` row with `entity_id: null` is the directly-owned bucket (no ownership entity). Exemption figures reflect the 2026 federal unified credit ($15,000,000 per decedent) and the 40% top marginal rate.
+
 ### `GET /dashboard`
 
 Aggregated dashboard data: net worth summary, MTD cash flow, budget alerts, and top spending categories.
@@ -845,6 +895,436 @@ Aggregated dashboard data: net worth summary, MTD cash flow, budget alerts, and 
   }
 }
 ```
+
+---
+
+## Planning & Wealth Structure
+
+Endpoints for the household's estate, equity-compensation, insurance, and
+private-investment data. All are household-scoped. Write operations (`POST`,
+`PATCH`, `DELETE`) require the `primary` or `partner` role; a `dependent` role
+receives `403`. Mutations are recorded in the audit log, and encrypted fields
+(ownership entity `name`, capital commitment `fund_name`) are decrypted in
+responses, stored encrypted at rest, and never written to the audit log.
+
+### Ownership entities
+
+Trusts and other titling layers (revocable/irrevocable trusts, ILITs, charitable
+trusts, LLCs, custodial accounts) that accounts and properties can be titled to.
+`is_in_taxable_estate` and `counts_in_personal_net_worth` drive the
+estate-exposure and net-worth aggregations.
+
+#### `GET /ownership-entities`
+
+Lists the household's ownership entities, oldest first.
+
+**Response:** array of `OwnershipEntityResponse`
+
+```json
+[
+  {
+    "id": "uuid",
+    "household_id": "uuid",
+    "entity_type": "revocable_trust",
+    "name": "Castellano Family Trust",
+    "grantor_member_id": "uuid",
+    "is_in_taxable_estate": true,
+    "counts_in_personal_net_worth": true,
+    "created_at": "2026-01-15T10:00:00Z"
+  }
+]
+```
+
+Entity types: `revocable_trust`, `irrevocable_trust`, `ilit`, `crt_crat`,
+`crt_crut`, `clt`, `llc`, `custodial_utma`, `custodial_ugma`.
+
+#### `POST /ownership-entities`
+
+Creates an ownership entity. `primary`/`partner` only.
+
+**Request body:**
+
+```json
+{
+  "entity_type": "ilit",
+  "name": "Castellano Irrevocable Life Insurance Trust",
+  "grantor_member_id": "uuid",
+  "is_in_taxable_estate": false,
+  "counts_in_personal_net_worth": false
+}
+```
+
+`entity_type` and `name` are required. `grantor_member_id` is optional and must
+belong to the household. `is_in_taxable_estate` and `counts_in_personal_net_worth`
+default to `true`.
+
+**Response:** `OwnershipEntityResponse` — `201 Created`
+
+#### `PATCH /ownership-entities/{entity_id}`
+
+Updates an ownership entity. All fields optional. `primary`/`partner` only.
+
+#### `DELETE /ownership-entities/{entity_id}`
+
+Deletes an ownership entity. `primary`/`partner` only.
+
+**Response:** `204 No Content`
+
+### Advisory notes
+
+Planning insights persisted as first-class data, optionally anchored to an
+account or an ownership entity.
+
+#### `GET /advisory-notes`
+
+Lists the household's advisory notes, oldest first. A note anchored to an
+account is only returned to members who can see that account; household-level
+and entity-anchored notes are always visible.
+
+**Query parameters:**
+| Parameter | Type | Description |
+|---|---|---|
+| `account_id` | uuid | Filter to notes anchored to this account |
+| `ownership_entity_id` | uuid | Filter to notes anchored to this entity |
+| `category` | string | Filter by category |
+
+**Response:** array of `AdvisoryNoteResponse`
+
+```json
+[
+  {
+    "id": "uuid",
+    "household_id": "uuid",
+    "account_id": null,
+    "ownership_entity_id": "uuid",
+    "category": "estate",
+    "title": "Illinois estate tax: $4M exemption, non-portable",
+    "body": "Illinois imposes its own estate tax ...",
+    "created_at": "2026-01-15T10:00:00Z"
+  }
+]
+```
+
+Categories: `estate`, `tax`, `concentration`, `insurance`, `retirement`,
+`charitable`, `scope_omission`.
+
+#### `POST /advisory-notes`
+
+Creates an advisory note. `primary`/`partner` only.
+
+**Request body:**
+
+```json
+{
+  "account_id": null,
+  "ownership_entity_id": "uuid",
+  "category": "estate",
+  "title": "Illinois estate tax",
+  "body": "Illinois imposes its own estate tax ..."
+}
+```
+
+`category`, `title`, and `body` are required. `account_id` and
+`ownership_entity_id` are optional anchors; each must belong to the household,
+and `account_id` must be an account the caller can see.
+
+**Response:** `AdvisoryNoteResponse` — `201 Created`
+
+#### `PATCH /advisory-notes/{note_id}`
+
+Updates an advisory note. All fields optional. `primary`/`partner` only.
+
+#### `DELETE /advisory-notes/{note_id}`
+
+Deletes an advisory note. `primary`/`partner` only.
+
+**Response:** `204 No Content`
+
+### Insurance policies
+
+Coverage records spanning term/permanent life, umbrella liability, disability,
+long-term care, and scheduled/specialty policies.
+
+#### `GET /insurance-policies`
+
+Lists the household's insurance policies, oldest first.
+
+**Response:** array of `InsurancePolicyResponse`
+
+```json
+[
+  {
+    "id": "uuid",
+    "household_id": "uuid",
+    "policy_type": "umbrella_liability",
+    "insured_member_id": "uuid",
+    "owner_ownership_entity_id": null,
+    "coverage_amount": "5000000.0000",
+    "premium_amount": "1200.0000",
+    "premium_cadence": "annual",
+    "cash_value_account_id": null,
+    "metadata": { "carrier": "Chubb" },
+    "created_at": "2026-01-15T10:00:00Z"
+  }
+]
+```
+
+Policy types: `term_life`, `permanent_life`, `umbrella_liability`,
+`disability`, `long_term_care`, `scheduled_specialty`. Premium cadence:
+`monthly`, `quarterly`, `annual`.
+
+#### `POST /insurance-policies`
+
+Creates an insurance policy. `primary`/`partner` only.
+
+**Request body:**
+
+```json
+{
+  "policy_type": "permanent_life",
+  "insured_member_id": "uuid",
+  "owner_ownership_entity_id": "uuid",
+  "coverage_amount": "2000000",
+  "premium_amount": "9500",
+  "premium_cadence": "annual",
+  "cash_value_account_id": "uuid",
+  "metadata": {}
+}
+```
+
+`policy_type`, `coverage_amount`, `premium_amount`, and `premium_cadence` are
+required. `insured_member_id`, `owner_ownership_entity_id`, and
+`cash_value_account_id` are optional and must belong to the household (the
+account must be visible to the caller). `metadata` defaults to `{}`.
+
+**Response:** `InsurancePolicyResponse` — `201 Created`
+
+#### `PATCH /insurance-policies/{policy_id}`
+
+Updates an insurance policy. All fields optional. `primary`/`partner` only.
+
+#### `DELETE /insurance-policies/{policy_id}`
+
+Deletes an insurance policy. `primary`/`partner` only.
+
+**Response:** `204 No Content`
+
+### Equity grants
+
+Equity-compensation grants (RSU/ISO/NSO/ESPP) to a member, each with its
+embedded vesting events.
+
+#### `GET /equity-grants`
+
+Lists the household's equity grants, ordered by grant date, each with its
+vesting events embedded.
+
+**Query parameters:**
+| Parameter | Type | Description |
+|---|---|---|
+| `member_id` | uuid | Filter to one member's grants |
+
+**Response:** array of `EquityGrantResponse`
+
+```json
+[
+  {
+    "id": "uuid",
+    "household_id": "uuid",
+    "member_id": "uuid",
+    "grant_type": "rsu",
+    "grant_date": "2024-01-15",
+    "shares_granted": "1000.000000",
+    "strike_price": null,
+    "ticker": "ACME",
+    "vesting_schedule": { "cliff_months": 12, "total_months": 48 },
+    "espp_discount_pct": null,
+    "espp_lookback": null,
+    "created_at": "2026-01-15T10:00:00Z",
+    "vesting_events": [
+      {
+        "id": "uuid",
+        "equity_grant_id": "uuid",
+        "event_date": "2024-02-01",
+        "shares_vested": "250.000000",
+        "fmv_at_event": "30.0000",
+        "taxable_ordinary_income": "7500.0000",
+        "amt_preference_amount": null,
+        "shares_sold_to_cover": "0.000000",
+        "resulting_lot_id": "uuid",
+        "created_at": "2026-01-15T10:00:00Z"
+      }
+    ]
+  }
+]
+```
+
+Grant types: `rsu`, `iso`, `nso`, `espp`.
+
+#### `POST /equity-grants`
+
+Creates an equity grant (without vesting events). `primary`/`partner` only.
+
+**Request body:**
+
+```json
+{
+  "member_id": "uuid",
+  "grant_type": "rsu",
+  "grant_date": "2024-01-15",
+  "shares_granted": "1000",
+  "strike_price": null,
+  "ticker": "ACME",
+  "vesting_schedule": { "cliff_months": 12, "total_months": 48 },
+  "espp_discount_pct": null,
+  "espp_lookback": null
+}
+```
+
+`member_id` (must belong to the household), `grant_type`, `grant_date`,
+`shares_granted` (> 0), and `ticker` are required. `vesting_schedule` defaults
+to `{}`.
+
+**Response:** `EquityGrantResponse` — `201 Created`
+
+#### `PATCH /equity-grants/{grant_id}`
+
+Updates a grant's fields (not its owning member). All fields optional.
+`primary`/`partner` only.
+
+#### `DELETE /equity-grants/{grant_id}`
+
+Deletes a grant. `primary`/`partner` only. Returns `409 Conflict` if the grant
+has recorded vesting events — those carry posted income transactions and
+cost-basis lots and must not be cascaded away.
+
+**Response:** `204 No Content`
+
+### Investment lots
+
+Cost-basis lots for individual securities within an investment account. Lots
+belong to accounts, so visibility and write access are enforced through the
+owning account.
+
+#### `GET /investment-lots`
+
+Lists cost-basis lots in accounts the caller can see, ordered by acquired date.
+
+**Query parameters:**
+| Parameter | Type | Description |
+|---|---|---|
+| `account_id` | uuid | Filter to one account (must be visible to the caller) |
+
+**Response:** array of `InvestmentLotResponse`
+
+```json
+[
+  {
+    "id": "uuid",
+    "account_id": "uuid",
+    "ticker": "ACME",
+    "shares": "100.000000",
+    "basis_per_share": "42.500000",
+    "acquired_date": "2023-06-01",
+    "basis_type": "purchase",
+    "created_at": "2026-01-15T10:00:00Z"
+  }
+]
+```
+
+Basis types: `purchase`, `rsu_vest`, `espp`, `inherited_stepup`,
+`gift_carryover`, `reinvested_dividend`.
+
+#### `POST /investment-lots`
+
+Creates a cost-basis lot. `primary`/`partner` only; the target account must be
+visible to the caller.
+
+**Request body:**
+
+```json
+{
+  "account_id": "uuid",
+  "ticker": "ACME",
+  "shares": "100",
+  "basis_per_share": "42.50",
+  "acquired_date": "2023-06-01",
+  "basis_type": "purchase"
+}
+```
+
+All fields required; `shares` must be `> 0`.
+
+**Response:** `InvestmentLotResponse` — `201 Created`
+
+#### `PATCH /investment-lots/{lot_id}`
+
+Updates a lot's ticker, shares, basis, acquired date, or basis type (a lot
+cannot be moved to a different account). All fields optional. `primary`/`partner`
+only.
+
+#### `DELETE /investment-lots/{lot_id}`
+
+Deletes a lot. `primary`/`partner` only.
+
+**Response:** `204 No Content`
+
+### Capital commitments
+
+Private-fund commitments with drawn/undrawn capital. `nav_account_id` points at
+the `private_fund` account holding current NAV.
+
+#### `GET /capital-commitments`
+
+Lists the household's capital commitments, ordered by vintage year.
+
+**Response:** array of `CapitalCommitmentResponse`
+
+```json
+[
+  {
+    "id": "uuid",
+    "household_id": "uuid",
+    "fund_name": "Sequoia Capital Fund XX",
+    "committed_amount": "2000000.0000",
+    "called_to_date": "1300000.0000",
+    "nav_account_id": "uuid",
+    "vintage_year": 2022,
+    "created_at": "2026-01-15T10:00:00Z"
+  }
+]
+```
+
+#### `POST /capital-commitments`
+
+Creates a capital commitment. `primary`/`partner` only.
+
+**Request body:**
+
+```json
+{
+  "fund_name": "Sequoia Capital Fund XX",
+  "committed_amount": "2000000",
+  "called_to_date": "0",
+  "nav_account_id": "uuid",
+  "vintage_year": 2022
+}
+```
+
+`fund_name`, `committed_amount` (> 0), `nav_account_id` (must be visible to the
+caller), and `vintage_year` are required. `called_to_date` defaults to `0`.
+
+**Response:** `CapitalCommitmentResponse` — `201 Created`
+
+#### `PATCH /capital-commitments/{commitment_id}`
+
+Updates a capital commitment. All fields optional. `primary`/`partner` only.
+
+#### `DELETE /capital-commitments/{commitment_id}`
+
+Deletes a capital commitment. `primary`/`partner` only.
+
+**Response:** `204 No Content`
 
 ---
 
