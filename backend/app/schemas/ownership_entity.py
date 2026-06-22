@@ -1,7 +1,27 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+
+from app.db.models.ownership_entity import OWNERSHIP_ENTITY_TYPES
+
+EntityTypeLiteral = str
+
+
+class OwnershipEntityCreate(BaseModel):
+    entity_type: str = Field(..., pattern=f"^({'|'.join(OWNERSHIP_ENTITY_TYPES)})$")
+    name: str = Field(..., min_length=1, max_length=200)
+    grantor_member_id: uuid.UUID | None = None
+    is_in_taxable_estate: bool = True
+    counts_in_personal_net_worth: bool = True
+
+
+class OwnershipEntityUpdate(BaseModel):
+    entity_type: str | None = Field(default=None, pattern=f"^({'|'.join(OWNERSHIP_ENTITY_TYPES)})$")
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    grantor_member_id: uuid.UUID | None = None
+    is_in_taxable_estate: bool | None = None
+    counts_in_personal_net_worth: bool | None = None
 
 
 class OwnershipEntityResponse(BaseModel):

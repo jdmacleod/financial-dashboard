@@ -4,16 +4,22 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.audit import AuditRepository, audit
+from app.core.audit import AuditRepository, _snapshot, audit
 from app.core.visibility import VisibilityContext
 from app.db.models.equity_grant import EquityGrant, VestingEvent
 from app.db.models.investment_lot import InvestmentLot
+from app.db.models.member import HouseholdMember
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
-from app.schemas.equity_grant import EquityGrantResponse, VestingEventResponse
+from app.schemas.equity_grant import (
+    EquityGrantCreate,
+    EquityGrantResponse,
+    EquityGrantUpdate,
+    VestingEventResponse,
+)
 
 
 @dataclass
@@ -95,6 +101,138 @@ class EquityCompService:
             )
             for g in grants
         ]
+
+    async def get_grant(self, ctx: VisibilityContext, grant_id: uuid.UUID) -> EquityGrant:
+        result = await self.session.execute(
+            select(EquityGrant).where(
+                EquityGrant.id == grant_id,
+                EquityGrant.household_id == ctx.household_id,
+            )
+        )
+        grant = result.scalar_one_or_none()
+        if grant is None:
+            raise HTTPException(status_code=404, detail="Equity grant not found")
+        return grant
+
+    async def grant_response(
+        self, ctx: VisibilityContext, grant: EquityGrant
+    ) -> EquityGrantResponse:
+        """Build the response for a single grant, embedding its vesting events."""
+        events = list(
+            (
+                await self.session.execute(
+                    select(VestingEvent)
+                    .where(VestingEvent.equity_grant_id == grant.id)
+                    .order_by(VestingEvent.event_date)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return EquityGrantResponse(
+            id=grant.id,
+            household_id=grant.household_id,
+            member_id=grant.member_id,
+            grant_type=grant.grant_type,
+            grant_date=grant.grant_date,
+            shares_granted=grant.shares_granted,
+            strike_price=grant.strike_price,
+            ticker=grant.ticker,
+            vesting_schedule=grant.vesting_schedule,
+            espp_discount_pct=grant.espp_discount_pct,
+            espp_lookback=grant.espp_lookback,
+            created_at=grant.created_at,
+            vesting_events=[VestingEventResponse.model_validate(e) for e in events],
+        )
+
+    async def _validate_member(self, ctx: VisibilityContext, member_id: uuid.UUID) -> None:
+        result = await self.session.execute(
+            select(HouseholdMember.id).where(
+                HouseholdMember.id == member_id,
+                HouseholdMember.household_id == ctx.household_id,
+            )
+        )
+        if result.scalar_one_or_none() is None:
+            raise HTTPException(status_code=400, detail="member_id not in household")
+
+    @audit("equity_grant.created", "equity_grant")
+    async def create_grant(self, ctx: VisibilityContext, data: EquityGrantCreate) -> EquityGrant:
+        if not ctx.can_write:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+        await self._validate_member(ctx, data.member_id)
+        grant = EquityGrant(
+            household_id=ctx.household_id,
+            member_id=data.member_id,
+            grant_type=data.grant_type,
+            grant_date=data.grant_date,
+            shares_granted=data.shares_granted,
+            strike_price=data.strike_price,
+            ticker=data.ticker,
+            vesting_schedule=data.vesting_schedule,
+            espp_discount_pct=data.espp_discount_pct,
+            espp_lookback=data.espp_lookback,
+            created_at=datetime.now(UTC),
+        )
+        self.session.add(grant)
+        await self.session.flush()
+        await self.session.refresh(grant)
+        return grant
+
+    @audit("equity_grant.updated", "equity_grant")
+    async def update_grant(
+        self, ctx: VisibilityContext, grant_id: uuid.UUID, data: EquityGrantUpdate
+    ) -> EquityGrant:
+        if not ctx.can_write:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+        grant = await self.get_grant(ctx, grant_id)
+        self._prev_snapshot = _snapshot(grant)
+        if data.grant_type is not None:
+            grant.grant_type = data.grant_type
+        if data.grant_date is not None:
+            grant.grant_date = data.grant_date
+        if data.shares_granted is not None:
+            grant.shares_granted = data.shares_granted
+        if data.strike_price is not None:
+            grant.strike_price = data.strike_price
+        if data.ticker is not None:
+            grant.ticker = data.ticker
+        if data.vesting_schedule is not None:
+            grant.vesting_schedule = data.vesting_schedule
+        if data.espp_discount_pct is not None:
+            grant.espp_discount_pct = data.espp_discount_pct
+        if data.espp_lookback is not None:
+            grant.espp_lookback = data.espp_lookback
+        await self.session.flush()
+        await self.session.refresh(grant)
+        return grant
+
+    async def delete_grant(self, ctx: VisibilityContext, grant_id: uuid.UUID) -> None:
+        if not ctx.can_write:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+        grant = await self.get_grant(ctx, grant_id)
+        # Vesting events carry posted income transactions and cost-basis lots;
+        # refuse to delete a grant that still has them rather than cascade away
+        # real financial history.
+        event_count = await self.session.execute(
+            select(func.count())
+            .select_from(VestingEvent)
+            .where(VestingEvent.equity_grant_id == grant_id)
+        )
+        if int(event_count.scalar_one()) > 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Cannot delete a grant with recorded vesting events",
+            )
+        prev = _snapshot(grant)
+        await self.session.delete(grant)
+        await self.session.flush()
+        await self.audit_repo.write(
+            ctx=ctx,
+            action="equity_grant.deleted",
+            entity_type="equity_grant",
+            entity_id=grant_id,
+            previous_value=prev,
+        )
 
     @audit("equity.vesting_recorded", "vesting_event")
     async def record_vesting_event(

@@ -1,11 +1,15 @@
 import uuid
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.visibility import VisibilityContext, get_visibility_ctx
 from app.db.base import get_session
-from app.schemas.investment_lot import InvestmentLotResponse
+from app.schemas.investment_lot import (
+    InvestmentLotCreate,
+    InvestmentLotResponse,
+    InvestmentLotUpdate,
+)
 from app.services.investment_lot import InvestmentLotService
 
 router = APIRouter()
@@ -20,3 +24,40 @@ async def list_investment_lots(
     svc = InvestmentLotService(session)
     lots = await svc.list_lots(ctx, account_id=account_id)
     return [InvestmentLotResponse.model_validate(lot) for lot in lots]
+
+
+@router.post(
+    "/investment-lots",
+    response_model=InvestmentLotResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_investment_lot(
+    data: InvestmentLotCreate,
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> InvestmentLotResponse:
+    svc = InvestmentLotService(session)
+    lot = await svc.create(ctx, data)
+    return InvestmentLotResponse.model_validate(lot)
+
+
+@router.patch("/investment-lots/{lot_id}", response_model=InvestmentLotResponse)
+async def update_investment_lot(
+    lot_id: uuid.UUID,
+    data: InvestmentLotUpdate,
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> InvestmentLotResponse:
+    svc = InvestmentLotService(session)
+    lot = await svc.update(ctx, lot_id, data)
+    return InvestmentLotResponse.model_validate(lot)
+
+
+@router.delete("/investment-lots/{lot_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_investment_lot(
+    lot_id: uuid.UUID,
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> None:
+    svc = InvestmentLotService(session)
+    await svc.delete(ctx, lot_id)
