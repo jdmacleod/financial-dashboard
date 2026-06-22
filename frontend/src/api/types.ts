@@ -577,3 +577,92 @@ export interface ExportJobResponse {
 export interface ExportCreateResponse {
   export_job_id: string
 }
+
+// ── Demo-data extension (read API) ──────────────────────────────────────────
+
+export interface AdvisoryNoteResponse {
+  id: string
+  household_id: string
+  account_id: string | null
+  ownership_entity_id: string | null
+  category: string
+  title: string
+  body: string
+  created_at: string
+}
+
+export interface OwnershipEntityResponse {
+  id: string
+  household_id: string
+  entity_type: string
+  name: string
+  grantor_member_id: string | null
+  is_in_taxable_estate: boolean
+  counts_in_personal_net_worth: boolean
+  created_at: string
+}
+
+export interface InsurancePolicyResponse {
+  id: string
+  household_id: string
+  policy_type: string
+  insured_member_id: string | null
+  owner_ownership_entity_id: string | null
+  coverage_amount: string
+  premium_amount: string
+  premium_cadence: string
+  cash_value_account_id: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface VestingEventResponse {
+  id: string
+  equity_grant_id: string
+  event_date: string
+  shares_vested: string
+  fmv_at_event: string
+  taxable_ordinary_income: string
+  amt_preference_amount: string | null
+  shares_sold_to_cover: string
+  resulting_lot_id: string | null
+  created_at: string
+}
+
+export interface EquityGrantResponse {
+  id: string
+  household_id: string
+  member_id: string
+  grant_type: string
+  grant_date: string
+  shares_granted: string
+  strike_price: string | null
+  ticker: string
+  vesting_schedule: Record<string, unknown>
+  espp_discount_pct: string | null
+  espp_lookback: boolean | null
+  created_at: string
+  vesting_events: VestingEventResponse[]
+}
+
+export interface InvestmentLotResponse {
+  id: string
+  account_id: string
+  ticker: string
+  shares: string
+  basis_per_share: string
+  acquired_date: string
+  basis_type: string
+  created_at: string
+}
+
+export interface CapitalCommitmentResponse {
+  id: string
+  household_id: string
+  fund_name: string
+  committed_amount: string
+  called_to_date: string
+  nav_account_id: string
+  vintage_year: number
+  created_at: string
+}
