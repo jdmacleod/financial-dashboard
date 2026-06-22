@@ -244,3 +244,45 @@ class TestRandDate:
         for _ in range(50):
             d = _util.rand_date(2024, 3, rng, avoid_sunday=True)
             assert d.weekday() != 6, f"{d} is a Sunday but avoid_sunday=True"
+
+
+class TestSplit:
+    def test_count_one_returns_list_of_total(self) -> None:
+        import random
+        from decimal import Decimal
+
+        from seed_households import h5_langford
+
+        rng = random.Random(0)
+        result = h5_langford._split(Decimal("100.00"), 1, rng)
+        assert result == [Decimal("100.00")]
+
+    def test_parts_sum_to_total_count_two(self) -> None:
+        import random
+        from decimal import Decimal
+
+        from seed_households import h5_langford
+
+        total = Decimal("100.00")
+        parts = h5_langford._split(total, 2, random.Random(42))
+        assert sum(parts) == total
+
+    def test_parts_sum_to_total_count_three(self) -> None:
+        import random
+        from decimal import Decimal
+
+        from seed_households import h5_langford
+
+        total = Decimal("300.00")
+        parts = h5_langford._split(total, 3, random.Random(7))
+        assert sum(parts) == total
+
+    def test_all_parts_positive(self) -> None:
+        import random
+        from decimal import Decimal
+
+        from seed_households import h5_langford
+
+        parts = h5_langford._split(Decimal("50.00"), 4, random.Random(99))
+        for p in parts:
+            assert p > Decimal("0")
