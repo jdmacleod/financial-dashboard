@@ -1,4 +1,5 @@
 # HearthLedger — Demo Dataset Revision & Extension Spec
+
 ## Handoff Artifact for Claude Code (Households 1–6, schema additions, scope documentation)
 
 **Date prepared:** June 21, 2026
@@ -28,16 +29,16 @@ Seven structural additions. Each is described as the table(s) and columns to cre
 
 Create table `ownership_entity`:
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | UUID PK | |
-| `household_id` | UUID FK → households | |
-| `entity_type` | enum | `revocable_trust`, `irrevocable_trust`, `ilit`, `crt_crat`, `crt_crut`, `clt`, `llc`, `custodial_utma`, `custodial_ugma` |
-| `name` | encrypted text | e.g., "Castellano Family Revocable Trust" — PII, encrypt |
-| `grantor_member_id` | UUID FK → members, nullable | |
-| `is_in_taxable_estate` | bool | `false` for ILIT/CRT/irrevocable; `true` for revocable — drives estate-exposure reporting |
-| `counts_in_personal_net_worth` | bool | `false` for ILIT/CRT/DAF-held assets; `true` for revocable-trust titling |
-| `created_at` | timestamptz | |
+| Column                         | Type                        | Notes                                                                                                                    |
+| ------------------------------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `id`                           | UUID PK                     |                                                                                                                          |
+| `household_id`                 | UUID FK → households        |                                                                                                                          |
+| `entity_type`                  | enum                        | `revocable_trust`, `irrevocable_trust`, `ilit`, `crt_crat`, `crt_crut`, `clt`, `llc`, `custodial_utma`, `custodial_ugma` |
+| `name`                         | encrypted text              | e.g., "Castellano Family Revocable Trust" — PII, encrypt                                                                 |
+| `grantor_member_id`            | UUID FK → members, nullable |                                                                                                                          |
+| `is_in_taxable_estate`         | bool                        | `false` for ILIT/CRT/irrevocable; `true` for revocable — drives estate-exposure reporting                                |
+| `counts_in_personal_net_worth` | bool                        | `false` for ILIT/CRT/DAF-held assets; `true` for revocable-trust titling                                                 |
+| `created_at`                   | timestamptz                 |                                                                                                                          |
 
 Add a nullable `ownership_entity_id` FK to **both** `accounts` and `real_estate_properties`. When present, the asset is titled in that entity rather than owned individually/jointly. Net-worth and estate-exposure aggregations must respect `counts_in_personal_net_worth` and `is_in_taxable_estate` on the linked entity: a revocable living trust is a pure titling layer (still in net worth, still in the taxable estate), whereas assets titled in an ILIT or CRT are excluded from personal net worth and from the taxable-estate figure. Wire visibility through the existing `get_visible(ctx)` path so entity-titled accounts respect RBAC. Encrypt `name`.
 
@@ -45,18 +46,18 @@ Add a nullable `ownership_entity_id` FK to **both** `accounts` and `real_estate_
 
 Create table `insurance_policy`:
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | UUID PK | |
-| `household_id` | UUID FK | |
-| `policy_type` | enum | `term_life`, `permanent_life`, `umbrella_liability`, `disability`, `long_term_care`, `scheduled_specialty` |
-| `insured_member_id` | UUID FK → members, nullable | |
-| `owner_ownership_entity_id` | UUID FK → ownership_entity, nullable | non-null when an ILIT owns the policy |
-| `coverage_amount` | Decimal | death benefit / liability limit / scheduled value |
-| `premium_amount` | Decimal | per the premium cadence |
-| `premium_cadence` | enum | `monthly`, `quarterly`, `annual` |
-| `cash_value_account_id` | UUID FK → accounts, nullable | links a permanent policy to an asset account holding its cash value |
-| `metadata` | JSONB | scheduled-item list, riders, elimination period, etc. |
+| Column                      | Type                                 | Notes                                                                                                      |
+| --------------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+| `id`                        | UUID PK                              |                                                                                                            |
+| `household_id`              | UUID FK                              |                                                                                                            |
+| `policy_type`               | enum                                 | `term_life`, `permanent_life`, `umbrella_liability`, `disability`, `long_term_care`, `scheduled_specialty` |
+| `insured_member_id`         | UUID FK → members, nullable          |                                                                                                            |
+| `owner_ownership_entity_id` | UUID FK → ownership_entity, nullable | non-null when an ILIT owns the policy                                                                      |
+| `coverage_amount`           | Decimal                              | death benefit / liability limit / scheduled value                                                          |
+| `premium_amount`            | Decimal                              | per the premium cadence                                                                                    |
+| `premium_cadence`           | enum                                 | `monthly`, `quarterly`, `annual`                                                                           |
+| `cash_value_account_id`     | UUID FK → accounts, nullable         | links a permanent policy to an asset account holding its cash value                                        |
+| `metadata`                  | JSONB                                | scheduled-item list, riders, elimination period, etc.                                                      |
 
 Permanent (cash-value) policies link to an `accounts` row of a new `account_type = 'life_insurance_cash_value'`, so the growing cash value flows through existing valuation and net-worth logic. Term/umbrella/DI/LTC/specialty policies carry no linked account; they contribute only a recurring premium expense and coverage metadata. Critically: if a permanent policy is **owned by an ILIT** (`owner_ownership_entity_id` set, entity `counts_in_personal_net_worth = false`), its cash value must **not** be counted in personal net worth — the policyholder funds it via gift transactions instead (see A.7 advisory note and H6).
 
@@ -64,31 +65,31 @@ Permanent (cash-value) policies link to an `accounts` row of a new `account_type
 
 Create table `equity_grant`:
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | UUID PK | |
-| `household_id` / `member_id` | UUID FKs | |
-| `grant_type` | enum | `rsu`, `iso`, `nso`, `espp` |
-| `grant_date` | date | |
-| `shares_granted` | Decimal | |
-| `strike_price` | Decimal, nullable | null for RSU |
-| `ticker` | text | the employer security |
-| `vesting_schedule` | JSONB | cliff + cadence (e.g., 1-yr cliff then quarterly over 4 yrs) |
-| `espp_discount_pct` / `espp_lookback` | Decimal / bool, nullable | ESPP only |
+| Column                                | Type                     | Notes                                                        |
+| ------------------------------------- | ------------------------ | ------------------------------------------------------------ |
+| `id`                                  | UUID PK                  |                                                              |
+| `household_id` / `member_id`          | UUID FKs                 |                                                              |
+| `grant_type`                          | enum                     | `rsu`, `iso`, `nso`, `espp`                                  |
+| `grant_date`                          | date                     |                                                              |
+| `shares_granted`                      | Decimal                  |                                                              |
+| `strike_price`                        | Decimal, nullable        | null for RSU                                                 |
+| `ticker`                              | text                     | the employer security                                        |
+| `vesting_schedule`                    | JSONB                    | cliff + cadence (e.g., 1-yr cliff then quarterly over 4 yrs) |
+| `espp_discount_pct` / `espp_lookback` | Decimal / bool, nullable | ESPP only                                                    |
 
 Create table `vesting_event`:
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | UUID PK | |
-| `equity_grant_id` | UUID FK | |
-| `event_date` | date | |
-| `shares_vested` | Decimal | |
-| `fmv_at_event` | Decimal | |
-| `taxable_ordinary_income` | Decimal | RSU vest / NSO exercise / ESPP disqualifying portion |
-| `amt_preference_amount` | Decimal, nullable | ISO bargain element when exercised-and-held |
-| `shares_sold_to_cover` | Decimal | sell-to-cover withholding |
-| `resulting_lot_id` | UUID FK → investment_lot, nullable | the lot created by retained shares |
+| Column                    | Type                               | Notes                                                |
+| ------------------------- | ---------------------------------- | ---------------------------------------------------- |
+| `id`                      | UUID PK                            |                                                      |
+| `equity_grant_id`         | UUID FK                            |                                                      |
+| `event_date`              | date                               |                                                      |
+| `shares_vested`           | Decimal                            |                                                      |
+| `fmv_at_event`            | Decimal                            |                                                      |
+| `taxable_ordinary_income` | Decimal                            | RSU vest / NSO exercise / ESPP disqualifying portion |
+| `amt_preference_amount`   | Decimal, nullable                  | ISO bargain element when exercised-and-held          |
+| `shares_sold_to_cover`    | Decimal                            | sell-to-cover withholding                            |
+| `resulting_lot_id`        | UUID FK → investment_lot, nullable | the lot created by retained shares                   |
 
 A vesting event posts an income transaction (categorized `rsu_vest_income` / `nso_exercise_income` / `espp_purchase`), a sell-to-cover transfer, and creates an `investment_lot` (A.4) for retained shares. ISO exercises that are held set `amt_preference_amount` and create an advisory note about the AMT year. Because v1 defers gross-salary/payroll-deduction tracking, model the vest at **net** values and tag the withholding nuance as a v2 enrichment — do not block on it.
 
@@ -96,15 +97,15 @@ A vesting event posts an income transaction (categorized `rsu_vest_income` / `ns
 
 Create table `investment_lot`:
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | UUID PK | |
-| `account_id` | UUID FK → accounts | |
-| `ticker` | text | |
-| `shares` | Decimal | |
-| `basis_per_share` | Decimal | |
-| `acquired_date` | date | |
-| `basis_type` | enum | `purchase`, `rsu_vest`, `espp`, `inherited_stepup`, `gift_carryover`, `reinvested_dividend` |
+| Column            | Type               | Notes                                                                                       |
+| ----------------- | ------------------ | ------------------------------------------------------------------------------------------- |
+| `id`              | UUID PK            |                                                                                             |
+| `account_id`      | UUID FK → accounts |                                                                                             |
+| `ticker`          | text               |                                                                                             |
+| `shares`          | Decimal            |                                                                                             |
+| `basis_per_share` | Decimal            |                                                                                             |
+| `acquired_date`   | date               |                                                                                             |
+| `basis_type`      | enum               | `purchase`, `rsu_vest`, `espp`, `inherited_stepup`, `gift_carryover`, `reinvested_dividend` |
 
 Lot-level basis is the prerequisite for concentration reporting, holding-period (LTCG vs STCG) logic, and realistic tax-aware selling. Investment accounts that hold individual securities (H3's concentrated position, H6's legacy stock and PE-adjacent holdings) populate lots; broadly diversified fund accounts may carry a single synthetic lot. `inherited_stepup` is required for H6 (assets stepped up at the late spouse's 2022 death). Holdings sold draw down specific lots and realize gain/loss against `basis_per_share`.
 
@@ -112,15 +113,15 @@ Lot-level basis is the prerequisite for concentration reporting, holding-period 
 
 Create table `capital_commitment`:
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | UUID PK | |
-| `household_id` | UUID FK | |
-| `fund_name` | encrypted text | PII-adjacent; encrypt |
-| `committed_amount` | Decimal | |
-| `called_to_date` | Decimal | |
-| `nav_account_id` | UUID FK → accounts | account of new `account_type = 'private_fund'` holding current NAV |
-| `vintage_year` | int | |
+| Column             | Type               | Notes                                                              |
+| ------------------ | ------------------ | ------------------------------------------------------------------ |
+| `id`               | UUID PK            |                                                                    |
+| `household_id`     | UUID FK            |                                                                    |
+| `fund_name`        | encrypted text     | PII-adjacent; encrypt                                              |
+| `committed_amount` | Decimal            |                                                                    |
+| `called_to_date`   | Decimal            |                                                                    |
+| `nav_account_id`   | UUID FK → accounts | account of new `account_type = 'private_fund'` holding current NAV |
+| `vintage_year`     | int                |                                                                    |
 
 Capital calls post as transfers out (category `capital_call`) that increase `called_to_date`; distributions post as inflows (category `capital_distribution`, an `investment_income` child). The defining demo value here is the irregular call/distribution cash-flow shape against an outstanding committed-but-uncalled balance — no other construct in the dataset produces it. Required for H6; optional enrichment for H3.
 
@@ -132,15 +133,15 @@ Extend the `account_type` enum with `sbloc` and `margin`. These are borrowing ac
 
 Create table `advisory_note`:
 
-| Column | Type | Notes |
-|---|---|---|
-| `id` | UUID PK | |
-| `household_id` | UUID FK | |
-| `account_id` / `ownership_entity_id` | UUID FKs, nullable | optional anchor |
-| `category` | enum | `estate`, `tax`, `concentration`, `insurance`, `retirement`, `charitable`, `scope_omission` |
-| `title` | text | |
-| `body` | text | the planning insight, in prose |
-| `created_at` | timestamptz | |
+| Column                               | Type               | Notes                                                                                       |
+| ------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------- |
+| `id`                                 | UUID PK            |                                                                                             |
+| `household_id`                       | UUID FK            |                                                                                             |
+| `account_id` / `ownership_entity_id` | UUID FKs, nullable | optional anchor                                                                             |
+| `category`                           | enum               | `estate`, `tax`, `concentration`, `insurance`, `retirement`, `charitable`, `scope_omission` |
+| `title`                              | text               |                                                                                             |
+| `body`                               | text               | the planning insight, in prose                                                              |
+| `created_at`                         | timestamptz        |                                                                                             |
 
 Advisory notes are how the review's findings persist as first-class data rather than code comments — the application can surface them in the relevant record's history/detail panel. Every household revision below specifies the advisory notes to seed. The `scope_omission` category is also used in Phase E to record intentional omissions household-by-household where relevant.
 
@@ -216,24 +217,24 @@ A single primary member (Rosa). No partner, no dependents, no `account_access_gr
 
 ### D.3 Account and entity inventory (net-worth sanity check)
 
-| Item | Type | Value | Notes |
-|---|---|---|---|
-| Primary residence (Scarsdale) | real_estate | 3,800,000 | titled in revocable trust; free and clear; ~$60K/yr property tax |
-| Manhattan co-op (pied-à-terre) | real_estate | 1,200,000 | titled in revocable trust; monthly maintenance |
-| Diversified taxable brokerage | brokerage | 3,400,000 | titled in revocable trust; single synthetic lot ok |
-| Legacy concentrated stock | brokerage | 2,300,000 | one public ticker; lots: `inherited_stepup` basis ≈ 1,500,000 |
-| Spousal rollover IRA | ira | 2,800,000 | RMDs at 74; QCD-eligible |
-| Inherited IRA (sister, d. 2023) | inherited_ira | 620,000 | SECURE 10-year; full depletion by 2033 |
-| Roth IRA | roth_ira | 900,000 | |
-| Treasury / T-bill ladder | private_fund? no → `treasury` | 700,000 | use existing cash-equivalent type or add `treasury` |
-| Money-market / brokerage cash | brokerage | 400,000 | |
-| Checking | checking | 120,000 | |
-| Savings | savings | 180,000 | |
-| Whole-life cash value (owned by Rosa) | life_insurance_cash_value | 410,000 | counts in NW (not ILIT-owned) |
-| Art collection | collectible | 800,000 | scheduled/specialty insured |
-| Private-equity fund NAV | private_fund | 1,180,000 | committed 2,000,000; called 1,300,000; vintage 2021 |
-| SBLOC drawn | sbloc (revolving) | (520,000) | against the diversified brokerage |
-| **Personal net worth** | | **≈ 18,290,000** | |
+| Item                                  | Type                          | Value            | Notes                                                            |
+| ------------------------------------- | ----------------------------- | ---------------- | ---------------------------------------------------------------- |
+| Primary residence (Scarsdale)         | real_estate                   | 3,800,000        | titled in revocable trust; free and clear; ~$60K/yr property tax |
+| Manhattan co-op (pied-à-terre)        | real_estate                   | 1,200,000        | titled in revocable trust; monthly maintenance                   |
+| Diversified taxable brokerage         | brokerage                     | 3,400,000        | titled in revocable trust; single synthetic lot ok               |
+| Legacy concentrated stock             | brokerage                     | 2,300,000        | one public ticker; lots: `inherited_stepup` basis ≈ 1,500,000    |
+| Spousal rollover IRA                  | ira                           | 2,800,000        | RMDs at 74; QCD-eligible                                         |
+| Inherited IRA (sister, d. 2023)       | inherited_ira                 | 620,000          | SECURE 10-year; full depletion by 2033                           |
+| Roth IRA                              | roth_ira                      | 900,000          |                                                                  |
+| Treasury / T-bill ladder              | private_fund? no → `treasury` | 700,000          | use existing cash-equivalent type or add `treasury`              |
+| Money-market / brokerage cash         | brokerage                     | 400,000          |                                                                  |
+| Checking                              | checking                      | 120,000          |                                                                  |
+| Savings                               | savings                       | 180,000          |                                                                  |
+| Whole-life cash value (owned by Rosa) | life_insurance_cash_value     | 410,000          | counts in NW (not ILIT-owned)                                    |
+| Art collection                        | collectible                   | 800,000          | scheduled/specialty insured                                      |
+| Private-equity fund NAV               | private_fund                  | 1,180,000        | committed 2,000,000; called 1,300,000; vintage 2021              |
+| SBLOC drawn                           | sbloc (revolving)             | (520,000)        | against the diversified brokerage                                |
+| **Personal net worth**                |                               | **≈ 18,290,000** |                                                                  |
 
 Entities **excluded** from personal net worth (exercise the ownership-entity feature without inflating NW): the **CRT** (~$2.5M, Rosa holds only an income interest), the **ILIT** (owns a ~$3M permanent policy outside her estate), and the **DAF** (~$1.1M, irrevocably given). Each is an `ownership_entity` (or held-away charitable account for the DAF) with `counts_in_personal_net_worth = false` and, for the ILIT/CRT, `is_in_taxable_estate = false`.
 
@@ -314,6 +315,6 @@ Update the cross-household feature matrix to add rows for: equity compensation (
 
 `ownership_entity` (trusts/titling) · `insurance_policy` (+ optional `life_insurance_cash_value` account) · `equity_grant` + `vesting_event` · `investment_lot` (cost basis) · `capital_commitment` (+ `private_fund` account) · `advisory_note`. Account-type enum extended with `sbloc`, `margin`, `private_fund`, `life_insurance_cash_value`, and (if not present) a cash-equivalent `treasury`. New FKs: `ownership_entity_id` on `accounts` and `real_estate_properties`; `is_revolving` boolean on `accounts`.
 
-*All tax thresholds herein are 2025–2026 figures (federal exemption $15M; annual gift exclusion $19,000; QCD limit ≈ $108,000 for 2025; IL estate exemption $4M; NY estate exemption $7.35M with 105% cliff) and should be re-verified at implementation against current IRS and state figures.*
+_All tax thresholds herein are 2025–2026 figures (federal exemption $15M; annual gift exclusion $19,000; QCD limit ≈ $108,000 for 2025; IL estate exemption $4M; NY estate exemption $7.35M with 105% cliff) and should be re-verified at implementation against current IRS and state figures._
 
-*End of HearthLedger Demo Dataset Revision & Extension Spec.*
+_End of HearthLedger Demo Dataset Revision & Extension Spec._

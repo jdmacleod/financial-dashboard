@@ -532,8 +532,14 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
 
     # ── Zoe's startup ESPP (15% discount, lookback) ─────────────────────────────
     espp = make_equity_grant(
-        hid, zoe.id, "espp", date(2024, 1, 1), D("0"), "DTOPS",
-        espp_discount_pct=D("0.15"), espp_lookback=True,
+        hid,
+        zoe.id,
+        "espp",
+        date(2024, 1, 1),
+        D("0"),
+        "DTOPS",
+        espp_discount_pct=D("0.15"),
+        espp_lookback=True,
     )
     session.add(espp)
     await session.flush()
@@ -549,34 +555,40 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         )
         session.add(lot)
         await session.flush()
-        session.add(make_vesting_event(espp.id, pdate, shares, fmv, discount_value,
-                                       resulting_lot_id=lot.id))
+        session.add(
+            make_vesting_event(espp.id, pdate, shares, fmv, discount_value, resulting_lot_id=lot.id)
+        )
         add(tx(checking.id, pdate, discount_value, "DataOps ESPP discount", cat["espp_purchase"]))
 
     # ── Brief unemployment gap (Marcus, Sep-Oct 2024) ───────────────────────────
     # Unemployment benefit partly replaces income; the spend-down is visible in the
     # cash-flow series (ending balances still reconcile to the targets below).
     for gap_date in (date(2024, 9, 15), date(2024, 10, 15)):
-        add(tx(checking.id, gap_date, D("1800.00"), "TN Unemployment Benefit",
-               cat["misc_income"]))
+        add(tx(checking.id, gap_date, D("1800.00"), "TN Unemployment Benefit", cat["misc_income"]))
 
     # ── Advisory notes ──────────────────────────────────────────────────────────
-    session.add(make_advisory_note(
-        hid, "tax",
-        "Married-filing-separately can lower income-driven student-loan payments",
-        "With federal student loans on income-driven repayment, filing taxes separately (MFS) can "
-        "exclude a spouse's income from the payment calculation, lowering the monthly payment. The "
-        "tradeoff is MFS bracket treatment and the loss of certain credits/deductions; it pays off "
-        "only when the IDR savings exceed the higher joint tax. Re-run the comparison annually.",
-    ))
-    session.add(make_advisory_note(
-        hid, "retirement",
-        "Early-career unemployment gap and the emergency fund",
-        "The 2024 income gap was bridged by the emergency fund and unemployment benefits without "
-        "tapping retirement accounts — preserving compounding and avoiding early-withdrawal "
-        "penalties. Rebuilding the emergency fund to 3-6 months of expenses is the priority once "
-        "income stabilizes.",
-    ))
+    session.add(
+        make_advisory_note(
+            hid,
+            "tax",
+            "Married-filing-separately can lower income-driven student-loan payments",
+            "With federal student loans on income-driven repayment, filing taxes separately (MFS) can "
+            "exclude a spouse's income from the payment calculation, lowering the monthly payment. The "
+            "tradeoff is MFS bracket treatment and the loss of certain credits/deductions; it pays off "
+            "only when the IDR savings exceed the higher joint tax. Re-run the comparison annually.",
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "retirement",
+            "Early-career unemployment gap and the emergency fund",
+            "The 2024 income gap was bridged by the emergency fund and unemployment benefits without "
+            "tapping retirement accounts — preserving compounding and avoiding early-withdrawal "
+            "penalties. Rebuilding the emergency fund to 3-6 months of expenses is the priority once "
+            "income stabilizes.",
+        )
+    )
 
     # ── Opening balance transactions ───────────────────────────────────────────
     # Target = desired Jun 2026 balance (post-transaction).

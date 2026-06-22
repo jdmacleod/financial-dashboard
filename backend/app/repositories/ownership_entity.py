@@ -26,9 +26,7 @@ class OwnershipEntityRepository:
         return {e.id: e for e in result.scalars().all()}
 
 
-def counts_in_net_worth(
-    account: Account, entity_map: dict[uuid.UUID, OwnershipEntity]
-) -> bool:
+def counts_in_net_worth(account: Account, entity_map: dict[uuid.UUID, OwnershipEntity]) -> bool:
     """An account contributes to personal net worth when it is flagged
     include_in_net_worth AND it is not titled in an entity that sits outside
     personal net worth (ILIT/CRT/DAF-held). A missing entity row is treated

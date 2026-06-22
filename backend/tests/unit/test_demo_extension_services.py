@@ -56,9 +56,7 @@ async def _latest_audit_row(session: AsyncSession, action: str) -> AuditLog | No
 
 
 async def _account_txns(session: AsyncSession, account_id) -> list[Transaction]:
-    result = await session.execute(
-        select(Transaction).where(Transaction.account_id == account_id)
-    )
+    result = await session.execute(select(Transaction).where(Transaction.account_id == account_id))
     return list(result.scalars().all())
 
 

@@ -879,8 +879,12 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
 
     # ── Revocable living trust (titles residence + taxable brokerage) ───────────
     rev_trust = make_ownership_entity(
-        hid, "revocable_trust", "Whitfield-Torres Family Revocable Trust",
-        counts_in_net_worth=True, in_taxable_estate=True, grantor_member_id=ben.id,
+        hid,
+        "revocable_trust",
+        "Whitfield-Torres Family Revocable Trust",
+        counts_in_net_worth=True,
+        in_taxable_estate=True,
+        grantor_member_id=ben.id,
     )
     session.add(rev_trust)
     await session.flush()
@@ -890,11 +894,22 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
 
     # ── Equity compensation: Ben's RSU + ISO at a public streamer (NFLX) ─────────
     rsu = make_equity_grant(
-        hid, ben.id, "rsu", date(2022, 2, 15), D("8000"), "NFLX",
+        hid,
+        ben.id,
+        "rsu",
+        date(2022, 2, 15),
+        D("8000"),
+        "NFLX",
         vesting_schedule={"cliff_months": 12, "cadence": "quarterly", "years": 4},
     )
     iso = make_equity_grant(
-        hid, ben.id, "iso", date(2023, 1, 20), D("4000"), "NFLX", strike_price=D("330.00"),
+        hid,
+        ben.id,
+        "iso",
+        date(2023, 1, 20),
+        D("4000"),
+        "NFLX",
+        strike_price=D("330.00"),
         vesting_schedule={"cliff_months": 12, "cadence": "annual", "years": 4},
     )
     session.add_all([rsu, iso])
@@ -911,26 +926,53 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         shares = D("125")
         sold = D("50")
         income = (shares * fmv).quantize(D("0.01"))
-        lot = make_investment_lot(ben_brok.id, "NFLX", shares - sold, fmv, clamp_day(y, m, 5),
-                                  "rsu_vest")
+        lot = make_investment_lot(
+            ben_brok.id, "NFLX", shares - sold, fmv, clamp_day(y, m, 5), "rsu_vest"
+        )
         session.add(lot)
         await session.flush()
-        session.add(make_vesting_event(rsu.id, clamp_day(y, m, 5), shares, fmv, income,
-                                       shares_sold_to_cover=sold, resulting_lot_id=lot.id))
+        session.add(
+            make_vesting_event(
+                rsu.id,
+                clamp_day(y, m, 5),
+                shares,
+                fmv,
+                income,
+                shares_sold_to_cover=sold,
+                resulting_lot_id=lot.id,
+            )
+        )
         add(tx(schwab_chk.id, clamp_day(y, m, 5), income, "NFLX RSU vest", cat["rsu_vest_income"]))
-        add(tx(schwab_chk.id, clamp_day(y, m, 6), -(sold * fmv).quantize(D("0.01")),
-               "NFLX sell-to-cover", cat["equity_sale"]))
+        add(
+            tx(
+                schwab_chk.id,
+                clamp_day(y, m, 6),
+                -(sold * fmv).quantize(D("0.01")),
+                "NFLX sell-to-cover",
+                cat["equity_sale"],
+            )
+        )
 
     # ISO held tranche exercised-and-held in 2024 → AMT preference that year.
     iso_shares = D("2000")
     iso_fmv = D("485.00")
     amt_pref = ((iso_fmv - D("330.00")) * iso_shares).quantize(D("0.01"))
-    iso_lot = make_investment_lot(ben_brok.id, "NFLX", iso_shares, D("330.00"),
-                                  date(2024, 5, 10), "purchase")
+    iso_lot = make_investment_lot(
+        ben_brok.id, "NFLX", iso_shares, D("330.00"), date(2024, 5, 10), "purchase"
+    )
     session.add(iso_lot)
     await session.flush()
-    session.add(make_vesting_event(iso.id, date(2024, 5, 10), iso_shares, iso_fmv, D("0"),
-                                   amt_preference_amount=amt_pref, resulting_lot_id=iso_lot.id))
+    session.add(
+        make_vesting_event(
+            iso.id,
+            date(2024, 5, 10),
+            iso_shares,
+            iso_fmv,
+            D("0"),
+            amt_preference_amount=amt_pref,
+            resulting_lot_id=iso_lot.id,
+        )
+    )
     # Direct long-held purchase lots that deepen the concentration.
     for buy_date, sh, basis in [
         (date(2018, 6, 1), D("1500"), D("180.00")),
@@ -942,24 +984,61 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     for ms in all_months():
         y, m = ms.year, ms.month
         if m in (2, 8) and ms <= DATE_END:  # semiannual pre-scheduled trim
-            add(tx(ben_brok.id, clamp_day(y, m, 12), -D("90000.00"),
-                   "10b5-1 scheduled NFLX sale", cat["equity_sale"]))
-            add(tx(jpm_chk.id, clamp_day(y, m, 13), D("90000.00"),
-                   "Diversification proceeds", cat["equity_sale"]))
+            add(
+                tx(
+                    ben_brok.id,
+                    clamp_day(y, m, 12),
+                    -D("90000.00"),
+                    "10b5-1 scheduled NFLX sale",
+                    cat["equity_sale"],
+                )
+            )
+            add(
+                tx(
+                    jpm_chk.id,
+                    clamp_day(y, m, 13),
+                    D("90000.00"),
+                    "Diversification proceeds",
+                    cat["equity_sale"],
+                )
+            )
 
     # ── Donor-advised fund (held away, excluded from personal net worth) ────────
     daf = acc("other_asset", "Schwab Charitable DAF", "Schwab Charitable", "7781", in_nw=False)
     await session.flush()
-    add(tx(daf.id, date(2024, 11, 20), D("250000.00"), "Appreciated NFLX contribution",
-           cat["daf_contribution"]))
-    add(tx(daf.id, date(2025, 11, 19), D("180000.00"), "Appreciated NFLX contribution",
-           cat["daf_contribution"]))
+    add(
+        tx(
+            daf.id,
+            date(2024, 11, 20),
+            D("250000.00"),
+            "Appreciated NFLX contribution",
+            cat["daf_contribution"],
+        )
+    )
+    add(
+        tx(
+            daf.id,
+            date(2025, 11, 19),
+            D("180000.00"),
+            "Appreciated NFLX contribution",
+            cat["daf_contribution"],
+        )
+    )
     for grant_date in (date(2024, 12, 10), date(2025, 6, 10), date(2025, 12, 10)):
-        add(tx(daf.id, grant_date, -D("60000.00"), "DAF grant to charities", cat["daf_contribution"]))
+        add(
+            tx(
+                daf.id,
+                grant_date,
+                -D("60000.00"),
+                "DAF grant to charities",
+                cat["daf_contribution"],
+            )
+        )
 
     # ── Securities-based line of credit (revolving) ─────────────────────────────
-    sbloc = make_account(hid, "sbloc", "Pledged-Asset Line", "Schwab Bank", "6690",
-                         is_revolving=True)
+    sbloc = make_account(
+        hid, "sbloc", "Pledged-Asset Line", "Schwab Bank", "6690", is_revolving=True
+    )
     session.add(sbloc)
     await session.flush()
     add(tx(sbloc.id, date(2024, 4, 15), -D("300000.00"), "SBLOC draw", cat["sbloc_draw"]))
@@ -967,80 +1046,120 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         y, m = ms.year, ms.month
         if date(y, m, 1) < date(2024, 4, 1) or ms > DATE_END:
             continue
-        add(tx(sbloc.id, clamp_day(y, m, 28), -D("1450.00"), "SBLOC interest",
-               cat["sbloc_interest"]))
-    add(tx(sbloc.id, date(2025, 6, 20), D("150000.00"), "SBLOC partial paydown",
-           cat["sbloc_draw"]))
+        add(
+            tx(
+                sbloc.id,
+                clamp_day(y, m, 28),
+                -D("1450.00"),
+                "SBLOC interest",
+                cat["sbloc_interest"],
+            )
+        )
+    add(tx(sbloc.id, date(2025, 6, 20), D("150000.00"), "SBLOC partial paydown", cat["sbloc_draw"]))
 
     # ── Scheduled/specialty insurance + wine collection asset ───────────────────
     wine = acc("other_asset", "Wine Collection (manually valued)", "—", None)
     await session.flush()
     session.add(snapshot(wine.id, last_day_of(2026, 5), D("145000.00")))
-    session.add(make_insurance_policy(
-        hid, "scheduled_specialty", D("145000"), D("1100"), "annual",
-        metadata={"schedule": "fine_wine", "appraisal_date": "2024-01"},
-    ))
+    session.add(
+        make_insurance_policy(
+            hid,
+            "scheduled_specialty",
+            D("145000"),
+            D("1100"),
+            "annual",
+            metadata={"schedule": "fine_wine", "appraisal_date": "2024-01"},
+        )
+    )
     for prem_year in (2024, 2025, 2026):
-        add(tx(jpm_chk.id, date(prem_year, 1, 22), -D("1100.00"), "AXA Art / Wine Schedule",
-               cat["specialty_insurance_premium"]))
+        add(
+            tx(
+                jpm_chk.id,
+                date(prem_year, 1, 22),
+                -D("1100.00"),
+                "AXA Art / Wine Schedule",
+                cat["specialty_insurance_premium"],
+            )
+        )
 
     # ── Backdoor Roth (over the direct-Roth income limit) ───────────────────────
     for who_roth, label in ((ben_roth, "Ben"), (gab_roth, "Gabriela")):
         for yr in (2024, 2025):
-            d, c = transfer(jpm_chk.id, who_roth.id, date(yr, 1, 12), D("7000.00"),
-                            f"{label} backdoor Roth conversion", cat["roth_conversion"])
+            d, c = transfer(
+                jpm_chk.id,
+                who_roth.id,
+                date(yr, 1, 12),
+                D("7000.00"),
+                f"{label} backdoor Roth conversion",
+                cat["roth_conversion"],
+            )
             add(d, c)
 
     # ── One-time bonus / liquidity spike ────────────────────────────────────────
     add(tx(schwab_chk.id, date(2025, 3, 15), D("220000.00"), "Performance bonus", cat["bonus"]))
 
     # ── Advisory notes ──────────────────────────────────────────────────────────
-    session.add(make_advisory_note(
-        hid, "concentration",
-        "Concentrated single-stock position and 10b5-1 selling",
-        "Vested RSUs plus direct holdings concentrate roughly 30% of the investment portfolio in "
-        "one employer stock. A position above ~20% of net worth warrants deliberate "
-        "diversification; a 10b5-1 plan lets an insider sell on a pre-scheduled basis without "
-        "insider-trading exposure, trimming the position systematically rather than timing it.",
-        account_id=ben_brok.id,
-    ))
-    session.add(make_advisory_note(
-        hid, "tax",
-        "AMT year, backdoor Roth, and California Prop 13",
-        "Exercising and holding the ISO tranche creates an AMT preference equal to the bargain "
-        "element in that year, generating an AMT credit to carry forward against future regular "
-        "tax. The household is over the direct-Roth income limit, so Roth funding goes through a "
-        "non-deductible IRA conversion (backdoor Roth). On the residence, California Proposition 13 "
-        "caps the assessed value's growth, so the property-tax basis lags well behind current "
-        "market value.",
-    ))
-    session.add(make_advisory_note(
-        hid, "charitable",
-        "Appreciated-stock-to-DAF mechanics and the 2026 OBBBA deduction limits",
-        "Donating appreciated company stock to a donor-advised fund avoids capital-gains tax on "
-        "the donated shares and gives a deduction at fair market value (subject to the 30%-of-AGI "
-        "limit for long-term appreciated non-cash gifts). For 2026, OBBBA adds a 0.5%-of-AGI floor "
-        "and caps the deduction benefit at 35% for top-bracket itemizers, so do not assume "
-        "dollar-for-dollar benefit at the top rate.",
-        account_id=daf.id,
-    ))
-    session.add(make_advisory_note(
-        hid, "insurance",
-        "Scheduled coverage for the wine collection",
-        "Fine-wine and other collectibles are excluded or sub-limited on a standard homeowners "
-        "policy; a scheduled/specialty floater insures the appraised value against breakage, "
-        "spoilage, and theft. Re-appraise periodically as the collection appreciates.",
-        account_id=wine.id,
-    ))
-    session.add(make_advisory_note(
-        hid, "scope_omission",
-        "Family-office structures (PPLI, captive insurance) are out of scope",
-        "Private-placement life insurance (PPLI), captive insurance, and funded irrevocable "
-        "vehicles (GRATs/SLATs/IDGTs, FLPs, dynasty trusts) belong to the >$20M family-office "
-        "world and are intentionally outside HearthLedger's scope. At this level the system models "
-        "revocable-trust titling, equity compensation, concentration, charitable vehicles, and "
-        "SBLOC borrowing — not funded ultra-HNW transfer structures. See docs/scope-boundaries.md.",
-    ))
+    session.add(
+        make_advisory_note(
+            hid,
+            "concentration",
+            "Concentrated single-stock position and 10b5-1 selling",
+            "Vested RSUs plus direct holdings concentrate roughly 30% of the investment portfolio in "
+            "one employer stock. A position above ~20% of net worth warrants deliberate "
+            "diversification; a 10b5-1 plan lets an insider sell on a pre-scheduled basis without "
+            "insider-trading exposure, trimming the position systematically rather than timing it.",
+            account_id=ben_brok.id,
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "tax",
+            "AMT year, backdoor Roth, and California Prop 13",
+            "Exercising and holding the ISO tranche creates an AMT preference equal to the bargain "
+            "element in that year, generating an AMT credit to carry forward against future regular "
+            "tax. The household is over the direct-Roth income limit, so Roth funding goes through a "
+            "non-deductible IRA conversion (backdoor Roth). On the residence, California Proposition 13 "
+            "caps the assessed value's growth, so the property-tax basis lags well behind current "
+            "market value.",
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "charitable",
+            "Appreciated-stock-to-DAF mechanics and the 2026 OBBBA deduction limits",
+            "Donating appreciated company stock to a donor-advised fund avoids capital-gains tax on "
+            "the donated shares and gives a deduction at fair market value (subject to the 30%-of-AGI "
+            "limit for long-term appreciated non-cash gifts). For 2026, OBBBA adds a 0.5%-of-AGI floor "
+            "and caps the deduction benefit at 35% for top-bracket itemizers, so do not assume "
+            "dollar-for-dollar benefit at the top rate.",
+            account_id=daf.id,
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "insurance",
+            "Scheduled coverage for the wine collection",
+            "Fine-wine and other collectibles are excluded or sub-limited on a standard homeowners "
+            "policy; a scheduled/specialty floater insures the appraised value against breakage, "
+            "spoilage, and theft. Re-appraise periodically as the collection appreciates.",
+            account_id=wine.id,
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "scope_omission",
+            "Family-office structures (PPLI, captive insurance) are out of scope",
+            "Private-placement life insurance (PPLI), captive insurance, and funded irrevocable "
+            "vehicles (GRATs/SLATs/IDGTs, FLPs, dynasty trusts) belong to the >$20M family-office "
+            "world and are intentionally outside HearthLedger's scope. At this level the system models "
+            "revocable-trust titling, equity compensation, concentration, charitable vehicles, and "
+            "SBLOC borrowing — not funded ultra-HNW transfer structures. See docs/scope-boundaries.md.",
+        )
+    )
 
     # ── Opening balance transactions ───────────────────────────────────────────
     targets = {

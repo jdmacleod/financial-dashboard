@@ -471,9 +471,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         session.add(lot)
         await session.flush()  # vesting_event.resulting_lot_id references investment_lot
         session.add(
-            make_vesting_event(
-                espp.id, pdate, shares, fmv, discount_value, resulting_lot_id=lot.id
-            )
+            make_vesting_event(espp.id, pdate, shares, fmv, discount_value, resulting_lot_id=lot.id)
         )
         # The 15% discount shows as supplemental income on the purchase date.
         add(tx(checking.id, pdate, discount_value, "Dell ESPP discount", cat["espp_purchase"]))

@@ -647,62 +647,106 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     # ── Insurance: umbrella + long-term care for both adults ────────────────────
     session.add(
         make_insurance_policy(
-            hid, "umbrella_liability", D("4000000"), D("780"), "annual",
+            hid,
+            "umbrella_liability",
+            D("4000000"),
+            D("780"),
+            "annual",
             metadata={"underlying": ["auto", "home", "rental_condo"]},
         )
     )
     for who in (darius, carmen):
         session.add(
             make_insurance_policy(
-                hid, "long_term_care", D("300000"), D("3200"), "annual",
+                hid,
+                "long_term_care",
+                D("300000"),
+                D("3200"),
+                "annual",
                 insured_member_id=who.id,
                 metadata={"daily_benefit": 250, "inflation_rider": "3pct_compound"},
             )
         )
     for prem_year in (2024, 2025, 2026):
-        add(tx(checking1.id, date(prem_year, 4, 10), -D("780.00"), "Chubb Umbrella Policy",
-               cat["umbrella_premium"]))
+        add(
+            tx(
+                checking1.id,
+                date(prem_year, 4, 10),
+                -D("780.00"),
+                "Chubb Umbrella Policy",
+                cat["umbrella_premium"],
+            )
+        )
         if prem_year < 2026:
-            add(tx(checking1.id, date(prem_year, 10, 5), -D("6400.00"),
-                   "Northwestern LTC (both)", cat["ltc_insurance_premium"]))
+            add(
+                tx(
+                    checking1.id,
+                    date(prem_year, 10, 5),
+                    -D("6400.00"),
+                    "Northwestern LTC (both)",
+                    cat["ltc_insurance_premium"],
+                )
+            )
 
     # ── 529 superfunding (five-year-forward gift election) + private school ──────
     for kid_529 in (emma_529, noah_529):
-        d, c = transfer(checking1.id, kid_529.id, date(2024, 1, 18), D("90000.00"),
-                        "529 Superfund (5-yr election)", cat["529_superfund"])
+        d, c = transfer(
+            checking1.id,
+            kid_529.id,
+            date(2024, 1, 18),
+            D("90000.00"),
+            "529 Superfund (5-yr election)",
+            cat["529_superfund"],
+        )
         add(d, c)
     for month_start in all_months():
         y, m = month_start.year, month_start.month
         if m in (1, 2, 3, 4, 5, 8, 9, 10, 11, 12):  # 10 months, school year
-            add(tx(checking1.id, clamp_day(y, m, 5), -D("1650.00"),
-                   "Naperville Day School Tuition", cat["private_school_tuition"]))
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, 5),
+                    -D("1650.00"),
+                    "Naperville Day School Tuition",
+                    cat["private_school_tuition"],
+                )
+            )
 
     # ── Advisory notes ──────────────────────────────────────────────────────────
-    session.add(make_advisory_note(
-        hid, "estate",
-        "Illinois estate tax: $4M exemption, non-portable, with a cliff",
-        "Illinois imposes its own estate tax at a $4,000,000 per-person exemption that is not "
-        "indexed for inflation and not portable between spouses, with graduated rates up to 16% "
-        "and a cliff that taxes the whole estate once the threshold is crossed. At ~$3.4M the "
-        "household is just under the line, but appreciation and life-insurance death benefits "
-        "could push it over. The standard mitigation is a bypass/credit-shelter trust funded at "
-        "the first death to preserve both spouses' exemptions.",
-        ownership_entity_id=bypass_trust.id,
-    ))
-    session.add(make_advisory_note(
-        hid, "charitable",
-        "529 superfunding gift-tax election",
-        "A five-year-forward lump 529 contribution lets each parent front-load up to five years "
-        "of the annual gift exclusion per child in one year without using lifetime exemption, by "
-        "filing the 5-year election on Form 709. No federal gift tax is due if no further gifts "
-        "are made to the same beneficiary during the five-year spread.",
-    ))
-    session.add(make_advisory_note(
-        hid, "insurance",
-        "Long-term-care timing",
-        "Pre-retirement (mid-40s to mid-50s) is the standard window to lock in LTC coverage while "
-        "premiums and underwriting are favorable; waiting raises both cost and decline risk.",
-    ))
+    session.add(
+        make_advisory_note(
+            hid,
+            "estate",
+            "Illinois estate tax: $4M exemption, non-portable, with a cliff",
+            "Illinois imposes its own estate tax at a $4,000,000 per-person exemption that is not "
+            "indexed for inflation and not portable between spouses, with graduated rates up to 16% "
+            "and a cliff that taxes the whole estate once the threshold is crossed. At ~$3.4M the "
+            "household is just under the line, but appreciation and life-insurance death benefits "
+            "could push it over. The standard mitigation is a bypass/credit-shelter trust funded at "
+            "the first death to preserve both spouses' exemptions.",
+            ownership_entity_id=bypass_trust.id,
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "charitable",
+            "529 superfunding gift-tax election",
+            "A five-year-forward lump 529 contribution lets each parent front-load up to five years "
+            "of the annual gift exclusion per child in one year without using lifetime exemption, by "
+            "filing the 5-year election on Form 709. No federal gift tax is due if no further gifts "
+            "are made to the same beneficiary during the five-year spread.",
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "insurance",
+            "Long-term-care timing",
+            "Pre-retirement (mid-40s to mid-50s) is the standard window to lock in LTC coverage while "
+            "premiums and underwriting are favorable; waiting raises both cost and decline risk.",
+        )
+    )
 
     # ── Opening balance transactions ───────────────────────────────────────────
     targets = {

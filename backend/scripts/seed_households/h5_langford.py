@@ -886,7 +886,9 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     session.add(snapshot(tbill.id, last_day_of(2026, 5), D("210000.00")))
 
     # ── Cash-value permanent life (Bob owns — estate-liquidity provisioning) ─────
-    life_cv = acc("life_insurance_cash_value", "Whole Life Cash Value", "Northwestern Mutual", "8890")
+    life_cv = acc(
+        "life_insurance_cash_value", "Whole Life Cash Value", "Northwestern Mutual", "8890"
+    )
     await session.flush()
     session.add(snapshot(life_cv.id, last_day_of(2026, 5), D("186000.00")))
     session.add(
@@ -905,14 +907,22 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     # ── Umbrella ($10M) + long-term-care policies ───────────────────────────────
     session.add(
         make_insurance_policy(
-            hid, "umbrella_liability", D("10000000"), D("1850"), "annual",
+            hid,
+            "umbrella_liability",
+            D("10000000"),
+            D("1850"),
+            "annual",
             metadata={"underlying": ["auto", "home", "vacation_home"]},
         )
     )
     for who in (bob, maggie):
         session.add(
             make_insurance_policy(
-                hid, "long_term_care", D("400000"), D("3800"), "annual",
+                hid,
+                "long_term_care",
+                D("400000"),
+                D("3800"),
+                "annual",
                 insured_member_id=who.id,
                 metadata={"daily_benefit": 350, "inflation_rider": "3pct_compound"},
             )
@@ -920,54 +930,97 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
 
     # Premium transactions (umbrella annual, LTC annual, permanent-life quarterly).
     for prem_year in (2024, 2025, 2026):
-        add(tx(checking.id, date(prem_year, 2, 12), -D("1850.00"), "Chubb Umbrella Policy",
-               cat["umbrella_premium"]))
+        add(
+            tx(
+                checking.id,
+                date(prem_year, 2, 12),
+                -D("1850.00"),
+                "Chubb Umbrella Policy",
+                cat["umbrella_premium"],
+            )
+        )
         if prem_year < 2026:
-            add(tx(checking.id, date(prem_year, 9, 20), -D("7600.00"),
-                   "Mutual of Omaha LTC (both)", cat["ltc_insurance_premium"]))
+            add(
+                tx(
+                    checking.id,
+                    date(prem_year, 9, 20),
+                    -D("7600.00"),
+                    "Mutual of Omaha LTC (both)",
+                    cat["ltc_insurance_premium"],
+                )
+            )
         for q_month in (3, 6, 9, 12):
             if date(prem_year, q_month, 1) <= DATE_END:
-                add(tx(checking.id, clamp_day(prem_year, q_month, 14), -D("2400.00"),
-                       "Northwestern Mutual Whole Life", cat["permanent_life_premium"]))
+                add(
+                    tx(
+                        checking.id,
+                        clamp_day(prem_year, q_month, 14),
+                        -D("2400.00"),
+                        "Northwestern Mutual Whole Life",
+                        cat["permanent_life_premium"],
+                    )
+                )
 
     # ── Roth-conversion window (2024, pre-RMD) — partial conversions ─────────────
     # IRA/Roth are snapshot-valued, so these document the conversion cash-flow
     # without double-counting against the snapshot balances.
     for conv_month in (3, 7, 11):
-        d, c = transfer(bob_ira.id, bob_roth.id, clamp_day(2024, conv_month, 18),
-                        D("40000.00"), "Roth conversion — fill 24% bracket", cat["roth_conversion"])
+        d, c = transfer(
+            bob_ira.id,
+            bob_roth.id,
+            clamp_day(2024, conv_month, 18),
+            D("40000.00"),
+            "Roth conversion — fill 24% bracket",
+            cat["roth_conversion"],
+        )
         add(d, c)
 
     # ── QCD satisfying part of the RMD (excluded from income; not to a DAF) ──────
     for qcd_year in (2025, 2026):
         if date(qcd_year, 11, 1) <= DATE_END:
-            add(tx(bob_ira.id, clamp_day(qcd_year, 11, 15), -D("25000.00"),
-                   "QCD — Sarasota Community Foundation", cat["qcd_note"]))
+            add(
+                tx(
+                    bob_ira.id,
+                    clamp_day(qcd_year, 11, 15),
+                    -D("25000.00"),
+                    "QCD — Sarasota Community Foundation",
+                    cat["qcd_note"],
+                )
+            )
 
     # ── Advisory notes ──────────────────────────────────────────────────────────
-    session.add(make_advisory_note(
-        hid, "retirement",
-        "Roth-conversion window and the IRMAA two-year lookback",
-        "In the low-income years before RMDs begin, partial Roth conversions fill the lower "
-        "brackets and shrink future RMDs. Watch the IRMAA two-year lookback: a conversion in "
-        "year N raises Medicare Part B/D premiums in year N+2, so size conversions against the "
-        "next IRMAA tier, not just the marginal income-tax bracket.",
-    ))
-    session.add(make_advisory_note(
-        hid, "charitable",
-        "QCD satisfies the RMD while staying out of taxable income",
-        "A Qualified Charitable Distribution from the IRA counts toward the year's RMD but is "
-        "excluded from AGI, which also helps manage IRMAA tiers. A QCD must go directly to a "
-        "public charity — it cannot be routed to a donor-advised fund.",
-    ))
-    session.add(make_advisory_note(
-        hid, "insurance",
-        "Permanent life as an estate-liquidity asset; umbrella sizing",
-        "The whole-life cash value is a balance-sheet asset (owned by Bob, in net worth) that can "
-        "fund estate costs without forcing asset sales. Umbrella coverage should at least equal "
-        "net worth; at this level $10M is appropriate given the homes and vacation rental exposure.",
-        account_id=life_cv.id,
-    ))
+    session.add(
+        make_advisory_note(
+            hid,
+            "retirement",
+            "Roth-conversion window and the IRMAA two-year lookback",
+            "In the low-income years before RMDs begin, partial Roth conversions fill the lower "
+            "brackets and shrink future RMDs. Watch the IRMAA two-year lookback: a conversion in "
+            "year N raises Medicare Part B/D premiums in year N+2, so size conversions against the "
+            "next IRMAA tier, not just the marginal income-tax bracket.",
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "charitable",
+            "QCD satisfies the RMD while staying out of taxable income",
+            "A Qualified Charitable Distribution from the IRA counts toward the year's RMD but is "
+            "excluded from AGI, which also helps manage IRMAA tiers. A QCD must go directly to a "
+            "public charity — it cannot be routed to a donor-advised fund.",
+        )
+    )
+    session.add(
+        make_advisory_note(
+            hid,
+            "insurance",
+            "Permanent life as an estate-liquidity asset; umbrella sizing",
+            "The whole-life cash value is a balance-sheet asset (owned by Bob, in net worth) that can "
+            "fund estate costs without forcing asset sales. Umbrella coverage should at least equal "
+            "net worth; at this level $10M is appropriate given the homes and vacation rental exposure.",
+            account_id=life_cv.id,
+        )
+    )
 
     # ── Opening balance transactions ───────────────────────────────────────────
     targets: dict[uuid.UUID, D] = {

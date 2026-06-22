@@ -33,39 +33,39 @@ Estate exposure represented:
 
 ✓ = represented in that household.
 
-| Planning surface / feature | H1 | H2 | H3 | H4 | H5 | H6 |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|
-| Equity comp — RSU (sell-to-cover) | | | ✓ | | | |
-| Equity comp — ISO (held tranche, AMT) | | | ✓ | | | |
-| Equity comp — ESPP (discount, lookback) | ✓ | | | ✓ | | |
-| Concentrated single-stock position | | | ✓ | | | ✓ |
-| Cost-basis lots | ✓ | | ✓ | ✓ | | ✓ |
-| Revocable living trust (titling) | | ✓ | ✓ | | ✓ | ✓ |
-| Bypass / credit-shelter trust (documented, unfunded) | | ✓ | | | | |
-| ILIT (irrevocable life insurance trust) | | | | | | ✓ |
-| CRT (charitable remainder unitrust) | | | | | | ✓ |
-| Donor-advised fund (held away) | | | ✓ | | | ✓ |
-| QCD (RMD-satisfying, income-excluded) | | | | | ✓ | ✓ |
-| Backdoor Roth | | ✓ | ✓ | | ✓ | |
-| Roth-conversion window (pre-RMD) | | | | | ✓ | |
-| Inherited IRA (SECURE 10-year) | | | | | | ✓ |
-| Capital commitment (PE, capital calls) | | | | | | ✓ |
-| SBLOC (revolving credit line) | | | ✓ | | | ✓ |
-| Umbrella liability | ✓ | ✓ | | | ✓ | ✓ |
-| Permanent / cash-value life (asset) | | | | | ✓ | ✓ |
-| ILIT-owned permanent life (excluded from NW) | | | | | | ✓ |
-| Disability insurance | ✓ | | | | | |
-| Long-term-care insurance | | ✓ | | | ✓ | ✓ |
-| Scheduled / specialty insurance | | | ✓ | | | ✓ |
-| Collectible asset (manually valued) | | | ✓ wine | | | ✓ art |
-| 529 superfunding (5-year election) | | ✓ | | | | |
-| Private-school tuition | | ✓ | | | | |
-| State estate tax exposure | | ✓ IL | | | | ✓ NY |
-| Single-member RBAC (one principal, no grants) | | | | | | ✓ |
-| Single-filer tax / single-filer IRMAA | | | | | | ✓ |
-| Market-dip discontinuity (non-monotonic NW) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Unemployment gap (income stop + spend-down) | | | | ✓ | | |
-| Bonus / liquidity income spike | | | ✓ | | | |
+| Planning surface / feature                           | H1  |  H2  |   H3   | H4  | H5  |  H6   |
+| ---------------------------------------------------- | :-: | :--: | :----: | :-: | :-: | :---: |
+| Equity comp — RSU (sell-to-cover)                    |     |      |   ✓    |     |     |       |
+| Equity comp — ISO (held tranche, AMT)                |     |      |   ✓    |     |     |       |
+| Equity comp — ESPP (discount, lookback)              |  ✓  |      |        |  ✓  |     |       |
+| Concentrated single-stock position                   |     |      |   ✓    |     |     |   ✓   |
+| Cost-basis lots                                      |  ✓  |      |   ✓    |  ✓  |     |   ✓   |
+| Revocable living trust (titling)                     |     |  ✓   |   ✓    |     |  ✓  |   ✓   |
+| Bypass / credit-shelter trust (documented, unfunded) |     |  ✓   |        |     |     |       |
+| ILIT (irrevocable life insurance trust)              |     |      |        |     |     |   ✓   |
+| CRT (charitable remainder unitrust)                  |     |      |        |     |     |   ✓   |
+| Donor-advised fund (held away)                       |     |      |   ✓    |     |     |   ✓   |
+| QCD (RMD-satisfying, income-excluded)                |     |      |        |     |  ✓  |   ✓   |
+| Backdoor Roth                                        |     |  ✓   |   ✓    |     |  ✓  |       |
+| Roth-conversion window (pre-RMD)                     |     |      |        |     |  ✓  |       |
+| Inherited IRA (SECURE 10-year)                       |     |      |        |     |     |   ✓   |
+| Capital commitment (PE, capital calls)               |     |      |        |     |     |   ✓   |
+| SBLOC (revolving credit line)                        |     |      |   ✓    |     |     |   ✓   |
+| Umbrella liability                                   |  ✓  |  ✓   |        |     |  ✓  |   ✓   |
+| Permanent / cash-value life (asset)                  |     |      |        |     |  ✓  |   ✓   |
+| ILIT-owned permanent life (excluded from NW)         |     |      |        |     |     |   ✓   |
+| Disability insurance                                 |  ✓  |      |        |     |     |       |
+| Long-term-care insurance                             |     |  ✓   |        |     |  ✓  |   ✓   |
+| Scheduled / specialty insurance                      |     |      |   ✓    |     |     |   ✓   |
+| Collectible asset (manually valued)                  |     |      | ✓ wine |     |     | ✓ art |
+| 529 superfunding (5-year election)                   |     |  ✓   |        |     |     |       |
+| Private-school tuition                               |     |  ✓   |        |     |     |       |
+| State estate tax exposure                            |     | ✓ IL |        |     |     | ✓ NY  |
+| Single-member RBAC (one principal, no grants)        |     |      |        |     |     |   ✓   |
+| Single-filer tax / single-filer IRMAA                |     |      |        |     |     |   ✓   |
+| Market-dip discontinuity (non-monotonic NW)          |  ✓  |  ✓   |   ✓    |  ✓  |  ✓  |   ✓   |
+| Unemployment gap (income stop + spend-down)          |     |      |        |  ✓  |     |       |
+| Bonus / liquidity income spike                       |     |      |   ✓    |     |     |       |
 
 **NSO** is the one equity-compensation grant type with a category
 (`nso_exercise_income`) but no household exercising it; RSU, ISO, and ESPP cover

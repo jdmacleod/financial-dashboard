@@ -32,11 +32,13 @@ These are concrete mismatches between the spec's assumptions and the actual code
 Each one would bite during implementation.
 
 ### 1. `account_type` names in the spec do not exist in the enum
+
 `backend/app/db/models/account.py:10` defines `ACCOUNT_TYPES` as a Postgres native
 enum (`name="account_type"`, `create_type=False`). The actual values are
 `investment_brokerage`, `retirement_ira`, `retirement_roth_ira`, etc. The spec's H6
 inventory (D.3) uses `brokerage`, `ira`, `roth_ira`, and **`inherited_ira`** — none
 of which match, and `inherited_ira` does not exist at all.
+
 - **Resolution:** map `brokerage → investment_brokerage`, `ira → retirement_ira`,
   `roth_ira → retirement_roth_ira`. Decide `inherited_ira`: add it as a real enum
   value (recommended — H4 and H6 both need it, and the SECURE 10-year drawdown is a
@@ -46,11 +48,13 @@ of which match, and `inherited_ira` does not exist at all.
   if chosen).
 
 ### 2. Adding Postgres enum values is a migration trap and is not cleanly reversible
+
 `ALTER TYPE account_type ADD VALUE ...` cannot be used in the same transaction that
 later references the new value, and Alembic wraps each migration in a transaction.
 Postgres also has **no `DROP VALUE`**, so a literal reversible `downgrade()` requires
 recreating the type and recasting the column. This collides directly with the
 project's "migration is reversible (has `downgrade()`)" checklist item.
+
 - **Resolution:** isolate enum additions in their own migration step using
   autocommit (`op.execute("COMMIT")` or `connection.execution_options(isolation_level="AUTOCOMMIT")`),
   and document the enum-additions `downgrade()` as the standard "recreate-type" dance
@@ -58,19 +62,22 @@ project's "migration is reversible (has `downgrade()`)" checklist item.
   checklist item is consciously waived, not silently failed.
 
 ### 3. Net-worth math keys off a different field than the spec assumes
+
 Net worth is computed by filtering `account.include_in_net_worth` (boolean on
 `accounts`), at `backend/app/services/report.py:231` and `:252`, and
 `backend/app/services/fire_detector.py:223`. The spec introduces a **second**
 gate, `ownership_entity.counts_in_personal_net_worth`, plus a brand-new
 `is_in_taxable_estate` concept that no report currently computes.
+
 - **Resolution:** the net-worth predicate becomes `include_in_net_worth AND
-  (ownership_entity_id IS NULL OR entity.counts_in_personal_net_worth)`. This must
+(ownership_entity_id IS NULL OR entity.counts_in_personal_net_worth)`. This must
   be applied in `report.py` (both sites), `fire_detector.py:223`, and anywhere
   real-estate value rolls up. Estate-exposure reporting (`is_in_taxable_estate`) is
   net-new surface — there is no existing report to extend, so scope it explicitly
   (new report method, or advisory-note-only with no computed figure — see Decision 1).
 
 ### 4. Phase B categories do not map onto the existing taxonomy
+
 `Category` (`backend/app/db/models/category.py`) has only `is_income` (bool) plus a
 parent hierarchy. There is no "transfer" category type and no `interest_expense` or
 `insurance` parent. The shared taxonomy lives as a flat `_DEFS` list in
@@ -78,6 +85,7 @@ parent hierarchy. There is no "transfer" category type and no `interest_expense`
 `financial_services > life_insurance`, and there is no interest-expense parent.
 The spec's `umbrella_premium → insurance` and `sbloc_interest → interest_expense`
 reference parents that do not exist.
+
 - **Resolution:** either add new parent categories (`insurance`, `interest_expense`)
   to `_DEFS` or graft the new leaves under `financial_services`. Transfers are modeled
   as `is_income=False` rows (consistent with existing `cc_payment`, `mortgage_payment`,
@@ -85,15 +93,18 @@ reference parents that do not exist.
   so this is one edit, not six.
 
 ### 5. New encrypted fields must be named to hit the audit exclusion set
+
 `backend/app/core/audit.py:12` excludes encrypted fields by **exact column name**
 (`ENCRYPTED_FIELDS`). A column literally named `name` (spec A.1 for
 `ownership_entity.name`) or `fund_name` (A.5) would **leak into the audit log** —
 directly violating AC #6.
+
 - **Resolution:** follow the `Account` pattern — store as `BYTEA`/`LargeBinary`
   columns named `name_enc` and `fund_name_enc`, and add both to `ENCRYPTED_FIELDS`
   in `audit.py`. Encryption itself reuses `backend/app/core/encryption.py`.
 
 ### 6. The seed path bypasses services and `@audit` by design
+
 `seed_demo_data.py` runs as the DB owner, calls `session.add(...)` directly, and even
 deletes from `audit_log` (line 108–119, an accepted dev-tooling exception). So
 populating the new tables in the generators does **not** exercise `@audit` service
@@ -102,6 +113,7 @@ methods. Phase A AC #5/#7 (vesting/capital-call/SBLOC via `@audit`) are about th
 from seeding. Do not assume the seed run proves those ACs.
 
 ### 7. Seeder registration is two dicts + an import
+
 Adding H6 means: create `backend/scripts/seed_households/h6_castellano.py`, import it
 in `seed_demo_data.py:37`, add `6: h6_castellano.seed` to `_SEEDERS` (line 49), and
 `6: "Castellano Household"` to `_HOUSEHOLD_NAMES` (line 57). Deterministic RNG is
@@ -116,11 +128,11 @@ in `seed_demo_data.py:37`, add `6: h6_castellano.seed` to `_SEEDERS` (line 49), 
 The new tables need, at minimum, to exist and feed net-worth math. The question is how
 far up the stack they go. This is the single largest effort driver.
 
-| Option | What it includes | Effort | Best when |
-|---|---|---|---|
-| **A. Data-model + seed only** | Models, migration, net-worth/estate aggregation wiring in `report.py`, encryption, seed generators (C–F). No new repositories/services/API/frontend. `@audit` service methods built **only** as far as ACs #5/#7 strictly require (thin services covering vest/capital-call/SBLOC create paths) + their unit tests. | **M–L** | The goal is a richer demo dataset and the data-model foundation, with UI/API deferred. |
-| **B. + read API & frontend display** | Option A plus Pydantic schemas, read endpoints, and `get_visible`-routed repositories so the app can actually surface advisory notes / entities / lots in detail panels (A.7's stated intent). Integration tests per CLAUDE.md. | **L–XL** | You want the demo to *show* the new structures in the UI, not just compute correct net worth. |
-| **C. Full CRUD feature set** | Option B plus write endpoints, forms, full `@audit` coverage across all new tables, frontend mutation flows. | **XL+** (multi-PR) | These become first-class user-editable features, not demo-only scaffolding. |
+| Option                               | What it includes                                                                                                                                                                                                                                                                                                    | Effort             | Best when                                                                                     |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ | --------------------------------------------------------------------------------------------- |
+| **A. Data-model + seed only**        | Models, migration, net-worth/estate aggregation wiring in `report.py`, encryption, seed generators (C–F). No new repositories/services/API/frontend. `@audit` service methods built **only** as far as ACs #5/#7 strictly require (thin services covering vest/capital-call/SBLOC create paths) + their unit tests. | **M–L**            | The goal is a richer demo dataset and the data-model foundation, with UI/API deferred.        |
+| **B. + read API & frontend display** | Option A plus Pydantic schemas, read endpoints, and `get_visible`-routed repositories so the app can actually surface advisory notes / entities / lots in detail panels (A.7's stated intent). Integration tests per CLAUDE.md.                                                                                     | **L–XL**           | You want the demo to _show_ the new structures in the UI, not just compute correct net worth. |
+| **C. Full CRUD feature set**         | Option B plus write endpoints, forms, full `@audit` coverage across all new tables, frontend mutation flows.                                                                                                                                                                                                        | **XL+** (multi-PR) | These become first-class user-editable features, not demo-only scaffolding.                   |
 
 **Recommendation: A**, scoped as the first PR, with B as an explicit fast-follow if the
 demo needs to display the new data. Rationale: the spec's own framing is "demo dataset
@@ -140,11 +152,13 @@ rows noted inline.
 Execute A → B → (C/D/E in any order) → F, per the spec. Phase A is the hard prerequisite.
 
 ### Phase A — schema additions
+
 **New migration:** `backend/alembic/versions/0007_demo_data_extension.py` (next in the
 `000N_` sequence; current head is `0006`). Consider splitting enum-value additions into
 `0007a` to isolate the autocommit requirement (see mismatch #2).
 
 **New models** in `backend/app/db/models/` (register each in `models/__init__.py`):
+
 - `ownership_entity.py` — `OwnershipEntity`. `name_enc BYTEA` (encrypted), `entity_type`
   enum, `is_in_taxable_estate`, `counts_in_personal_net_worth`, `grantor_member_id` FK.
 - `insurance_policy.py` — `InsurancePolicy`. `metadata JSONB`, optional
@@ -158,6 +172,7 @@ Execute A → B → (C/D/E in any order) → F, per the spec. Phase A is the har
   `account_id` / `ownership_entity_id` anchors.
 
 **Column additions:**
+
 - `accounts`: `ownership_entity_id UUID NULL FK`, `is_revolving BOOLEAN NOT NULL DEFAULT false`.
 - `real_estate_properties`: `ownership_entity_id UUID NULL FK`.
 - `account_type` enum: add `sbloc`, `margin`, `private_fund`, `life_insurance_cash_value`,
@@ -168,6 +183,7 @@ Execute A → B → (C/D/E in any order) → F, per the spec. Phase A is the har
 untouched at `SELECT, INSERT` only.
 
 **Aggregation wiring (the real work):**
+
 - Extend the net-worth predicate in `report.py:231`, `report.py:252`,
   `fire_detector.py:223` to respect `counts_in_personal_net_worth` (mismatch #3).
 - Decide estate-exposure surface for `is_in_taxable_estate` (new report method vs.
@@ -175,6 +191,7 @@ untouched at `SELECT, INSERT` only.
   choice; the figure lives in the note prose, not a computed report.
 
 **Audit/encryption wiring:**
+
 - Add `name_enc`, `fund_name_enc` to `ENCRYPTED_FIELDS` in `audit.py:12`.
 - Thin `@audit` service methods for the mutation paths ACs #5/#7 require:
   vesting-event create (atomic lot + income txn + sell-to-cover transfer),
@@ -184,6 +201,7 @@ untouched at `SELECT, INSERT` only.
 **Phase A acceptance criteria** map 1:1 to the spec's six; see traceability table below.
 
 ### Phase B — shared taxonomy
+
 Edit `backend/scripts/seed_households/shared_categories.py` `_DEFS` only. Add the
 income/expense/transfer leaves from spec §Phase B, reconciling parents per mismatch #4
 (add `insurance` and `interest_expense` parents, or graft under `financial_services`).
@@ -193,8 +211,10 @@ read-side filter wherever income is summed if QCDs must be excluded from taxable
 displays.
 
 ### Phase C — revise H1–H5
+
 Additive edits to the five existing generators (sizes today: h1 22KB, h2 30KB, h3 38KB,
 h4 26KB, h5 39KB). Per the spec:
+
 - **h1_chen_nakamura.py:** ESPP grant + purchase events + lots; umbrella + DI policies;
   market-dip in snapshot valuations (Q3 2024 → mid-2025); optional mega-backdoor Roth.
   2 advisory notes (`insurance`, `concentration`).
@@ -217,6 +237,7 @@ After each, re-run the per-household net-worth sanity check and update the print
 summary (spec Phase F targets).
 
 ### Phase D — new H6 Castellano
+
 Create `backend/scripts/seed_households/h6_castellano.py` mirroring `h5_langford.py`'s
 structure (most similar: retired, decumulation). Wire into `seed_demo_data.py` per
 mismatch #7. Implement the D.3 inventory (≈ $18.29M NW), the four trust/charitable
@@ -229,6 +250,7 @@ property tax, single-filer top-tier IRMAA), one decumulation FIRE scenario (mult
 JSONB), a decumulation budget with one budget-history step, and all D.9 advisory notes.
 
 ### Phase E — scope-boundaries doc
+
 Create `~/Documents/hearthledger-spec/docs/scope-boundaries.md` (note: **reference-spec
 repo, not this repo** — the spec is explicit about the path). Enumerate the five
 intentional omissions with reasoning. Seed `scope_omission` advisory notes on H3
@@ -236,6 +258,7 @@ intentional omissions with reasoning. Seed `scope_omission` advisory notes on H3
 scope).
 
 ### Phase F — coverage matrix + acceptance
+
 Update the printed `--household all` summary to six households with the spec's NW targets;
 extend the cross-household feature matrix (wherever it lives in docs) with the new rows.
 Verify all 8 final acceptance criteria.
@@ -244,22 +267,22 @@ Verify all 8 final acceptance criteria.
 
 ## Acceptance-criteria traceability
 
-| AC | Where satisfied | Test |
-|---|---|---|
-| A.1 migration up/down clean | `0007*` migration; enum downgrade caveat (mismatch #2) | `alembic upgrade head` + `downgrade` in CI |
-| A.2 grants correct, audit_log untouched | migration `GRANT` block | grant assertion test |
-| A.3 ILIT/CRT excluded, revocable included | `report.py` predicate change (mismatch #3) | net-worth unit test per entity type |
-| A.4 ILIT-owned cash value excluded | net-worth predicate + `insurance_policy` link | unit test |
-| A.5 vesting atomic via `@audit` | new `@audit` service method | service unit test + audit-row assertion |
-| A.6 encrypted cols never in audit | `name_enc`/`fund_name_enc` in `ENCRYPTED_FIELDS` | `@audit` exclusion test |
-| F.1 `--household 6`/`all` idempotent | seeder registration + `_household_exists` guard | seed run |
-| F.2 NW within rounding | per-household sanity checks | seed summary assertions |
-| F.3 H6 one principal, zero grants | H6 generator | inspect/count test |
-| F.4 entity NW/estate inclusion | predicate change | unit test |
-| F.5 every advisory note exists | C–E generators | count/anchor test |
-| F.6 scope-boundaries.md exists | Phase E | file-exists check |
-| F.7 vest/capital-call/SBLOC postings | services + generators | service + seed assertions |
-| F.8 no encrypted field in audit | audit exclusion | exclusion test |
+| AC                                        | Where satisfied                                        | Test                                       |
+| ----------------------------------------- | ------------------------------------------------------ | ------------------------------------------ |
+| A.1 migration up/down clean               | `0007*` migration; enum downgrade caveat (mismatch #2) | `alembic upgrade head` + `downgrade` in CI |
+| A.2 grants correct, audit_log untouched   | migration `GRANT` block                                | grant assertion test                       |
+| A.3 ILIT/CRT excluded, revocable included | `report.py` predicate change (mismatch #3)             | net-worth unit test per entity type        |
+| A.4 ILIT-owned cash value excluded        | net-worth predicate + `insurance_policy` link          | unit test                                  |
+| A.5 vesting atomic via `@audit`           | new `@audit` service method                            | service unit test + audit-row assertion    |
+| A.6 encrypted cols never in audit         | `name_enc`/`fund_name_enc` in `ENCRYPTED_FIELDS`       | `@audit` exclusion test                    |
+| F.1 `--household 6`/`all` idempotent      | seeder registration + `_household_exists` guard        | seed run                                   |
+| F.2 NW within rounding                    | per-household sanity checks                            | seed summary assertions                    |
+| F.3 H6 one principal, zero grants         | H6 generator                                           | inspect/count test                         |
+| F.4 entity NW/estate inclusion            | predicate change                                       | unit test                                  |
+| F.5 every advisory note exists            | C–E generators                                         | count/anchor test                          |
+| F.6 scope-boundaries.md exists            | Phase E                                                | file-exists check                          |
+| F.7 vest/capital-call/SBLOC postings      | services + generators                                  | service + seed assertions                  |
+| F.8 no encrypted field in audit           | audit exclusion                                        | exclusion test                             |
 
 ---
 
@@ -310,4 +333,4 @@ review and test gate before any household generator depends on them.
 
 ---
 
-*Plan only. Greenlight a scope option and I'll implement, starting with Phase A as its own PR.*
+_Plan only. Greenlight a scope option and I'll implement, starting with Phase A as its own PR._
