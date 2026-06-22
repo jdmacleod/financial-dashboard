@@ -179,11 +179,11 @@ async def main(household_arg: str | None, action: str, yes: bool) -> None:
         sys.exit(1)
 
     if household_arg == "all":
-        to_target = [1, 2, 3, 4, 5]
+        to_target = sorted(_SEEDERS)
     else:
         n = int(household_arg)
-        if n not in _SEEDERS:
-            print(f"Error: --household must be 1-5 or all. Got: {household_arg}")
+        if n not in _SEEDERS:  # argparse catches this via choices=; guard is for programmatic callers
+            print(f"Error: --household must be a valid household number or all. Got: {household_arg}")
             sys.exit(1)
         to_target = [n]
 
@@ -204,7 +204,7 @@ async def main(household_arg: str | None, action: str, yes: bool) -> None:
             num = to_target[0]
             prompt = f"Delete Household {num} ({_HOUSEHOLD_NAMES[num]})? This cannot be undone."
         else:
-            prompt = "Delete all 5 demo households? This cannot be undone."
+            prompt = f"Delete all {len(_SEEDERS)} demo households? This cannot be undone."
 
         if not _confirm(prompt, yes):
             print("Aborted.")
@@ -226,7 +226,7 @@ async def main(household_arg: str | None, action: str, yes: bool) -> None:
             num = to_target[0]
             prompt = f"Delete and reseed Household {num} ({_HOUSEHOLD_NAMES[num]})?"
         else:
-            prompt = "Delete and reseed all 5 demo households?"
+            prompt = f"Delete and reseed all {len(_SEEDERS)} demo households?"
 
         if not _confirm(prompt, yes):
             print("Aborted.")
@@ -285,7 +285,7 @@ examples:
     )
     parser.add_argument(
         "--household",
-        choices=["1", "2", "3", "4", "5", "all"],
+        choices=[str(k) for k in sorted(_SEEDERS)] + ["all"],
         default=None,
         help="Which household(s) to target. Required for seed/delete/reset; defaults to 'all' for inspect.",
     )
