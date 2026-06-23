@@ -8,7 +8,7 @@ tracking system.
 | File                                                 | Purpose                                                                           |
 | ---------------------------------------------------- | --------------------------------------------------------------------------------- |
 | `docs/getting-started.md`                            | Install, configure, and run HearthLedger for the first time                       |
-| `docs/demo-quickstart.md`                            | Seed demo data and log in with the five sample households                         |
+| `docs/demo-quickstart.md`                            | Seed demo data and log in with the six sample households                          |
 | `docs/user-guide.md`                                 | Complete guide to every feature                                                   |
 | `docs/howto-add-accounts.md`                         | How to add accounts across all five category groups                               |
 | `docs/howto-view-investment-positions.md`            | How to read the Top positions table and Holdings mix on the Investments page      |

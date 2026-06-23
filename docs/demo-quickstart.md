@@ -1,12 +1,12 @@
 # Demo Quickstart
 
-HearthLedger ships with a seed script that populates the system with five
+HearthLedger ships with a seed script that populates the system with six
 fictitious US households, ranging from late-20s Nashville renters paying down
-debt to a high-net-worth Sarasota retirement couple. Use it to explore every feature
-without entering your own data.
+debt to a widowed Westchester County retiree with a full estate-planning stack.
+Use it to explore every feature without entering your own data.
 
 > **Demo environments only.** The production architecture is one household per
-> installation. Seeding all five households is valid for demos and testing;
+> installation. Seeding all six households is valid for demos and testing;
 > each user's JWT token scopes them to their own household automatically.
 
 ---
@@ -52,6 +52,10 @@ Household 4: Park-Cole (East Nashville TN)
 Household 5: Langford (Sarasota FL)
   Members: 2 | Accounts: 15 | Transactions: ~XXXX | Properties: 2
   Computed Net Worth: ~$12,856,700
+
+Household 6: Castellano (Scarsdale NY)
+  Members: 1 | Accounts: 17 | Transactions: ~XXXX | Properties: 2
+  Computed Net Worth: ~$18,290,000
 ```
 
 To seed a single household instead:
@@ -175,6 +179,28 @@ What this household demonstrates:
 
 ---
 
+### Household 6: Castellano (Scarsdale, NY)
+
+_Widowed retiree; full estate-and-legacy stack. Net worth ~$18.3M._
+
+| Role    | Email                 | Password     |
+| ------- | --------------------- | ------------ |
+| Primary | rosa@castellano.local | HearthDemo1! |
+
+What this household demonstrates:
+
+- Single-member household: one primary principal, full visibility, no access grants
+- Revocable trust titling on accounts
+- ILIT-owned permanent life insurance policy (outside personal net worth and the taxable estate)
+- Charitable remainder unitrust (CRT) and donor-advised fund (DAF), both excluded from personal net worth
+- Legacy concentrated stock position with stepped-up basis
+- Inherited IRA on the SECURE Act 10-year distribution clock
+- Private-equity capital commitment with capital calls
+- Revolving SBLOC (securities-backed line of credit)
+- Single decumulation FIRE scenario
+
+---
+
 ## Re-seeding
 
 ### Check current state
@@ -197,6 +223,7 @@ Output:
   3    Whitfield-Torres                4        25         6,390  SEEDED
   4    Park-Cole                       2        13         2,241  SEEDED
   5    Langford                        2        15         2,188  SEEDED
+  6    Castellano                      1        17        ~2,000  SEEDED
 ```
 
 ### Reset a single household (targeted)
