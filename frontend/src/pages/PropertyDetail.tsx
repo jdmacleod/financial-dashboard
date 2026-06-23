@@ -22,6 +22,7 @@ import type { PropertyResponse, PropertyType } from "@/api/types"
 import { formatCurrency, formatDate } from "@/lib/formatters"
 import { lastNMonthsRange } from "@/lib/dateRange"
 import { HistoryPanel } from "@/components/app/HistoryPanel"
+import { useOwnershipEntities } from "@/hooks/useOwnershipEntities"
 
 const PROPERTY_TYPE_LABELS: Record<PropertyType, string> = {
   primary_residence: "Primary Residence",
@@ -47,6 +48,7 @@ const editPropertySchema = z.object({
   purchase_date: z.string().optional(),
   purchase_price: z.string().optional(),
   linked_mortgage_account_id: z.string().optional(),
+  ownership_entity_id: z.string().nullable(),
 })
 type EditPropertyForm = z.infer<typeof editPropertySchema>
 
@@ -66,6 +68,7 @@ function EditPropertyModal({
   })
   const mortgageAccounts =
     allAccounts?.filter((a) => a.account_type === "mortgage" && a.is_active) ?? []
+  const { data: entities } = useOwnershipEntities()
 
   const {
     register,
@@ -79,6 +82,7 @@ function EditPropertyModal({
       purchase_date: property.purchase_date ?? "",
       purchase_price: property.purchase_price ?? "",
       linked_mortgage_account_id: property.linked_mortgage_account_id ?? "",
+      ownership_entity_id: property.ownership_entity_id,
     },
   })
 
@@ -90,6 +94,7 @@ function EditPropertyModal({
         purchase_date: data.purchase_date || null,
         purchase_price: data.purchase_price || null,
         linked_mortgage_account_id: data.linked_mortgage_account_id || null,
+        ownership_entity_id: data.ownership_entity_id || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["property", property.id] })
@@ -171,6 +176,22 @@ function EditPropertyModal({
               Links this property to a mortgage for equity calculation.
             </p>
           </div>
+          {entities && entities.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Titled to</label>
+              <select
+                {...register("ownership_entity_id")}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="">Directly owned</option>
+                {entities.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           {error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {error}

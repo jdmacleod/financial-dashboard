@@ -212,7 +212,7 @@ const settingsAppearanceRoute = createRoute({
 
 const assetsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: "/assets",
+  path: "/real-estate",
   component: Assets,
 })
 

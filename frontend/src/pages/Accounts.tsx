@@ -621,7 +621,7 @@ export default function Accounts() {
     },
     Retirement: () => navigate({ to: "/reports/retirement" }),
     Investments: () => navigate({ to: "/reports/investments" }),
-    "Real estate": () => navigate({ to: "/assets" }),
+    "Real estate": () => navigate({ to: "/real-estate" }),
     Liabilities: () => {
       setAddFilter("liabilities")
       setShowAdd(true)

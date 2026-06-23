@@ -254,34 +254,42 @@ export default function Budgets() {
             </p>
           </div>
           <div className="divide-y divide-gray-100">
-            {report.categories.map((item) => (
-              <div key={item.category_id} className="px-4 py-3">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm font-medium text-gray-900">{item.name}</span>
-                  <span className="text-xs text-gray-500">
-                    {formatCurrency(item.actual)} / {formatCurrency(item.budget)}
-                  </span>
+            {report.categories.map((item) => {
+              const pct = item.percentage_used
+              const isOver = pct > 100
+              const barColor = isOver ? "bg-red-500" : pct >= 90 ? "bg-amber-500" : "bg-emerald-500"
+              return (
+                <div key={item.category_id} className="px-4 py-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-medium text-gray-900">{item.name}</span>
+                    <span className="text-xs text-gray-500">
+                      {formatCurrency(item.actual)} / {formatCurrency(item.budget)}
+                    </span>
+                  </div>
+                  <div className="relative h-2" style={{ marginRight: isOver ? "10px" : "0" }}>
+                    <div className="absolute inset-0 bg-gray-100 rounded-full" />
+                    <div
+                      className={`absolute left-0 top-0 h-full transition-all ${isOver ? "rounded-l-full" : "rounded-full"} ${barColor}`}
+                      style={{ width: `${Math.min(100, pct)}%` }}
+                    />
+                    {isOver && (
+                      <div
+                        className="absolute bg-red-700 rounded-r-full"
+                        style={{ right: "-10px", top: "-1px", width: "7px", height: "10px" }}
+                      />
+                    )}
+                  </div>
+                  <p
+                    className={`text-xs mt-0.5 ${isOver ? "font-medium text-red-600" : "text-gray-400"}`}
+                  >
+                    {pct.toFixed(0)}% used ·{" "}
+                    {Number(item.remaining) >= 0
+                      ? `${formatCurrency(item.remaining)} remaining`
+                      : `${formatCurrency(Math.abs(Number(item.remaining)))} over`}
+                  </p>
                 </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-all ${
-                      item.percentage_used >= 100
-                        ? "bg-red-500"
-                        : item.percentage_used >= 90
-                          ? "bg-amber-500"
-                          : "bg-emerald-500"
-                    }`}
-                    style={{ width: `${Math.min(100, item.percentage_used)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {item.percentage_used.toFixed(0)}% used ·{" "}
-                  {Number(item.remaining) >= 0
-                    ? `${formatCurrency(item.remaining)} remaining`
-                    : `${formatCurrency(Math.abs(Number(item.remaining)))} over`}
-                </p>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}

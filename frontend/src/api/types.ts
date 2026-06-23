@@ -232,6 +232,7 @@ export interface PropertyResponse {
   purchase_date: string | null
   purchase_price: string | null
   linked_mortgage_account_id: string | null
+  ownership_entity_id: string | null
   property_type: PropertyType
   current_estimated_value: string | null
   current_value_as_of: string | null

@@ -257,6 +257,9 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     session.add_all(build_snapshots(sophia_roth.id, D("4800.00"), sophia_roth_contribs, 0.09))
     session.add_all(build_snapshots(ethan_529.id, D("60000.00"), ethan_529_contribs, 0.09))
     session.add_all(build_snapshots(hsa.id, D("28400.00"), hsa_contribs, 0.09))
+    session.add(snapshot(jpm_mort.id, last_day_of(2026, 5), D("-1285000.00")))
+    session.add(snapshot(wf_mort.id, last_day_of(2026, 5), D("-645200.00")))
+    session.add(snapshot(ld_mort.id, last_day_of(2026, 5), D("-418600.00")))
 
     # ── Transaction generation ────────────────────────────────────────────────
     all_txns: list = []

@@ -446,7 +446,7 @@ describe("Accounts — split-panel ledger", () => {
     renderAccounts()
     await waitFor(() => screen.getByText("Real estate"))
     await user.click(screen.getByRole("button", { name: "Add Real estate account" }))
-    expect(mockNavigate).toHaveBeenCalledWith({ to: "/assets" })
+    expect(mockNavigate).toHaveBeenCalledWith({ to: "/real-estate" })
     expect(screen.queryByTestId("add-account-modal")).not.toBeInTheDocument()
   })
 

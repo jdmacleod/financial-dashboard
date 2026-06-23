@@ -41,6 +41,7 @@ class AccountCreate(BaseModel):
 class AccountUpdate(BaseModel):
     nickname: str | None = None
     owner_member_id: uuid.UUID | None = None
+    ownership_entity_id: uuid.UUID | None = None
     institution_name: str | None = None
     account_number: str | None = None
     routing_number: str | None = None
