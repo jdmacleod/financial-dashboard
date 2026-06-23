@@ -14,6 +14,8 @@ import type { BudgetResponse, BudgetVsActualsItem } from "@/api/types"
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type RangeMode = "month" | "ytd" | "1y" | "all"
+type ActualsSort = "pct_used_desc" | "budget_desc" | "actual_desc" | "name_asc"
+type BudgetsSort = "name_asc" | "budget_desc" | "period"
 
 // ── Utilities ────────────────────────────────────────────────────────────────
 
@@ -42,11 +44,10 @@ function rangeMonths(
   currentMonthStr: string,
   earliestBudgetMonth: string,
 ): string[] {
-  const today = new Date()
   const curDate = localMonthDate(currentMonthStr)
   if (mode === "month") return [currentMonthStr]
   if (mode === "ytd") {
-    const jan = format(startOfYear(today), "yyyy-MM")
+    const jan = format(startOfYear(curDate), "yyyy-MM")
     return monthsBetween(jan, currentMonthStr)
   }
   if (mode === "1y") {
@@ -80,17 +81,15 @@ function aggregateItems(reports: { categories: BudgetVsActualsItem[] }[]): Budge
       }
     }
   }
-  return Array.from(agg.entries())
-    .map(([id, v]) => ({
-      category_id: id,
-      name: v.name,
-      budget: v.budget.toFixed(2),
-      actual: v.actual.toFixed(2),
-      remaining: (v.budget - v.actual).toFixed(2),
-      percentage_used: v.budget > 0 ? (v.actual / v.budget) * 100 : 0,
-      period: v.period,
-    }))
-    .sort((a, b) => b.percentage_used - a.percentage_used)
+  return Array.from(agg.entries()).map(([id, v]) => ({
+    category_id: id,
+    name: v.name,
+    budget: v.budget.toFixed(2),
+    actual: v.actual.toFixed(2),
+    remaining: (v.budget - v.actual).toFixed(2),
+    percentage_used: v.budget > 0 ? (v.actual / v.budget) * 100 : 0,
+    period: v.period,
+  }))
 }
 
 const CHART_COLORS = [
@@ -111,14 +110,20 @@ const CHART_COLORS = [
 const createSchema = z.object({
   category_id: z.string().min(1, "Required"),
   period: z.enum(["monthly", "annual"]),
-  amount: z.string().min(1, "Required"),
+  amount: z
+    .string()
+    .min(1, "Required")
+    .refine((v) => Number(v) > 0, "Amount must be greater than 0"),
   effective_from: z.string().min(1, "Required"),
 })
 type CreateForm = z.infer<typeof createSchema>
 
 const editSchema = z.object({
   period: z.enum(["monthly", "annual"]),
-  amount: z.string().min(1, "Required"),
+  amount: z
+    .string()
+    .min(1, "Required")
+    .refine((v) => Number(v) > 0, "Amount must be greater than 0"),
   effective_from: z.string().min(1, "Required"),
   effective_to: z.string().optional(),
 })
@@ -562,6 +567,9 @@ export default function Budgets() {
   const [month, setMonth] = useState(currentMonth())
   const [rangeMode, setRangeMode] = useState<RangeMode>("month")
   const [showAdd, setShowAdd] = useState(false)
+  const [filterText, setFilterText] = useState("")
+  const [actualsSort, setActualsSort] = useState<ActualsSort>("pct_used_desc")
+  const [budgetsSort, setBudgetsSort] = useState<BudgetsSort>("name_asc")
 
   const { data: budgets } = useQuery({
     queryKey: ["budgets"],
@@ -623,7 +631,7 @@ export default function Budgets() {
     setMonth(format(addMonths(new Date(y, m - 1, 1), 1), "yyyy-MM"))
   }
 
-  const categoryMap = new Map(categories?.map((c) => [c.id, c]) ?? [])
+  const categoryMap = useMemo(() => new Map(categories?.map((c) => [c.id, c]) ?? []), [categories])
 
   const rangeLabel = rangeMode !== "month" ? rangeSummaryLabel(rangeMode, monthsToFetch) : month
 
@@ -632,6 +640,48 @@ export default function Budgets() {
     reportLoading && monthsToFetch.length > 1
       ? `${loadedCount} / ${monthsToFetch.length} months`
       : null
+
+  const filteredReportItems = useMemo(() => {
+    if (!filterText) return reportItems
+    const lower = filterText.toLowerCase()
+    return reportItems.filter((i) => i.name.toLowerCase().includes(lower))
+  }, [reportItems, filterText])
+
+  const sortedReportItems = useMemo(() => {
+    return [...filteredReportItems].sort((a, b) => {
+      if (actualsSort === "pct_used_desc") return b.percentage_used - a.percentage_used
+      if (actualsSort === "budget_desc") return Number(b.budget) - Number(a.budget)
+      if (actualsSort === "actual_desc") return Number(b.actual) - Number(a.actual)
+      return a.name.localeCompare(b.name)
+    })
+  }, [filteredReportItems, actualsSort])
+
+  const filteredBudgets = useMemo(() => {
+    if (!budgets) return []
+    if (!filterText) return budgets
+    const lower = filterText.toLowerCase()
+    return budgets.filter((b) => {
+      const name = categoryMap.get(b.category_id)?.name ?? ""
+      return name.toLowerCase().includes(lower)
+    })
+  }, [budgets, categoryMap, filterText])
+
+  const sortedBudgets = useMemo(() => {
+    return [...filteredBudgets].sort((a, b) => {
+      const nameA = categoryMap.get(a.category_id)?.name ?? ""
+      const nameB = categoryMap.get(b.category_id)?.name ?? ""
+      if (budgetsSort === "name_asc") return nameA.localeCompare(nameB)
+      if (budgetsSort === "budget_desc") return Number(b.amount) - Number(a.amount)
+      if (budgetsSort === "period") {
+        if (a.period === b.period) return nameA.localeCompare(nameB)
+        return a.period === "monthly" ? -1 : 1
+      }
+      return 0
+    })
+  }, [filteredBudgets, budgetsSort, categoryMap])
+
+  const visibleCount = filteredReportItems.length
+  const totalCount = reportItems.length
 
   return (
     <div className="p-8 max-w-3xl mx-auto space-y-6">
@@ -677,6 +727,51 @@ export default function Budgets() {
       {/* Donut chart overview — only show when we have data */}
       {reportItems.length > 0 && <BudgetDonutChart items={reportItems} />}
 
+      {/* Filter bar — below donut so donut's independence from the filter is visually clear */}
+      {(reportItems.length > 0 || (budgets && budgets.length > 0)) && (
+        <div className="flex items-center gap-3">
+          <div role="search" className="relative flex-1 max-w-xs">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+                <line
+                  x1="9.5"
+                  y1="9.5"
+                  x2="13"
+                  y2="13"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </span>
+            <input
+              aria-label="Filter categories"
+              placeholder="Filter categories…"
+              value={filterText}
+              onChange={(e) => setFilterText(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+          {filterText && (
+            <span
+              aria-live="polite"
+              className="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5 flex-shrink-0"
+            >
+              {visibleCount} of {totalCount}
+            </span>
+          )}
+          {filterText && (
+            <button
+              onClick={() => setFilterText("")}
+              className="text-xs text-indigo-600 hover:text-indigo-800 flex-shrink-0 py-1 px-2 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Budget vs Actuals report */}
       {reportLoading && loadedCount === 0 && <div className="text-sm text-gray-400">Loading…</div>}
       {reportError && (
@@ -691,88 +786,149 @@ export default function Budgets() {
       )}
 
       {reportItems.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+        <div
+          data-testid="section-actuals"
+          className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+        >
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
               Budget vs Actuals — {rangeLabel}
             </p>
+            <select
+              aria-label="Sort budget vs actuals"
+              value={actualsSort}
+              onChange={(e) => setActualsSort(e.target.value as ActualsSort)}
+              className="text-xs text-gray-500 border-0 bg-transparent cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+            >
+              <option value="pct_used_desc">% Used ↓</option>
+              <option value="budget_desc">Budget ↓</option>
+              <option value="actual_desc">Actual Spend ↓</option>
+              <option value="name_asc">Name A-Z</option>
+            </select>
           </div>
-          <div className="divide-y divide-gray-100">
-            {reportItems.map((item) => {
-              const pct = item.percentage_used
-              const isOver = pct > 100
-              const barColor = isOver ? "bg-red-500" : pct >= 90 ? "bg-amber-500" : "bg-emerald-500"
-              return (
-                <div key={item.category_id} className="px-4 py-3">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-sm font-medium text-gray-900 truncate">
-                        {item.name}
+          {sortedReportItems.length === 0 && filterText ? (
+            <div className="px-4 py-6 text-center">
+              <p className="text-sm text-gray-400">
+                No categories match{" "}
+                <span className="font-medium text-gray-600">'{filterText}'</span>.{" "}
+                <button
+                  onClick={() => setFilterText("")}
+                  className="text-indigo-600 hover:text-indigo-800 underline"
+                >
+                  Clear filter
+                </button>
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {sortedReportItems.map((item) => {
+                const pct = item.percentage_used
+                const isOver = pct > 100
+                const barColor = isOver
+                  ? "bg-red-500"
+                  : pct >= 90
+                    ? "bg-amber-500"
+                    : "bg-emerald-500"
+                return (
+                  <div key={item.category_id} className="px-4 py-3">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-medium text-gray-900 truncate">
+                          {item.name}
+                        </span>
+                        {item.period === "annual" && rangeMode === "month" && (
+                          <span className="text-xs text-gray-400 flex-shrink-0">annual÷12</span>
+                        )}
+                      </div>
+                      <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
+                        {formatCurrency(item.actual)} / {formatCurrency(item.budget)}
                       </span>
-                      {item.period === "annual" && rangeMode === "month" && (
-                        <span className="text-xs text-gray-400 flex-shrink-0">annual÷12</span>
+                    </div>
+                    <div className="relative h-2" style={{ marginRight: isOver ? "10px" : "0" }}>
+                      <div className="absolute inset-0 bg-gray-100 rounded-full" />
+                      <div
+                        className={`absolute left-0 top-0 h-full transition-all ${isOver ? "rounded-l-full" : "rounded-full"} ${barColor}`}
+                        style={{ width: `${Math.min(100, pct)}%` }}
+                      />
+                      {isOver && (
+                        <div
+                          className="absolute bg-red-700 rounded-r-full"
+                          style={{ right: "-10px", top: "-1px", width: "7px", height: "10px" }}
+                        />
                       )}
                     </div>
-                    <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                      {formatCurrency(item.actual)} / {formatCurrency(item.budget)}
-                    </span>
+                    <p
+                      className={`text-xs mt-0.5 ${isOver ? "font-medium text-red-600" : "text-gray-400"}`}
+                    >
+                      {pct.toFixed(0)}% used ·{" "}
+                      {Number(item.remaining) >= 0
+                        ? `${formatCurrency(item.remaining)} remaining`
+                        : `${formatCurrency(Math.abs(Number(item.remaining)))} over`}
+                    </p>
                   </div>
-                  <div className="relative h-2" style={{ marginRight: isOver ? "10px" : "0" }}>
-                    <div className="absolute inset-0 bg-gray-100 rounded-full" />
-                    <div
-                      className={`absolute left-0 top-0 h-full transition-all ${isOver ? "rounded-l-full" : "rounded-full"} ${barColor}`}
-                      style={{ width: `${Math.min(100, pct)}%` }}
-                    />
-                    {isOver && (
-                      <div
-                        className="absolute bg-red-700 rounded-r-full"
-                        style={{ right: "-10px", top: "-1px", width: "7px", height: "10px" }}
-                      />
-                    )}
-                  </div>
-                  <p
-                    className={`text-xs mt-0.5 ${isOver ? "font-medium text-red-600" : "text-gray-400"}`}
-                  >
-                    {pct.toFixed(0)}% used ·{" "}
-                    {Number(item.remaining) >= 0
-                      ? `${formatCurrency(item.remaining)} remaining`
-                      : `${formatCurrency(Math.abs(Number(item.remaining)))} over`}
-                  </p>
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {/* All Budgets list (budget definitions) */}
       {budgets && budgets.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+        <div
+          data-testid="section-budgets"
+          className="bg-white rounded-xl border border-gray-200 overflow-hidden"
+        >
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
               All Budgets
             </p>
+            <select
+              aria-label="Sort all budgets"
+              value={budgetsSort}
+              onChange={(e) => setBudgetsSort(e.target.value as BudgetsSort)}
+              className="text-xs text-gray-500 border-0 bg-transparent cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded"
+            >
+              <option value="name_asc">Name A-Z</option>
+              <option value="budget_desc">Budget ↓</option>
+              <option value="period">Period</option>
+            </select>
           </div>
-          <div className="divide-y divide-gray-100">
-            {budgets.map((b) => {
-              const cat = categoryMap.get(b.category_id)
-              const name = cat?.name ?? b.category_id
-              return (
-                <div key={b.id}>
-                  <div className="px-4 pt-2 pb-0">
-                    <p className="text-xs font-semibold text-gray-600">{name}</p>
+          {sortedBudgets.length === 0 && filterText ? (
+            <div className="px-4 py-6 text-center">
+              <p className="text-sm text-gray-400">
+                No categories match{" "}
+                <span className="font-medium text-gray-600">'{filterText}'</span>.{" "}
+                <button
+                  onClick={() => setFilterText("")}
+                  className="text-indigo-600 hover:text-indigo-800 underline"
+                >
+                  Clear filter
+                </button>
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {sortedBudgets.map((b) => {
+                const cat = categoryMap.get(b.category_id)
+                const name = cat?.name ?? b.category_id
+                return (
+                  <div key={b.id}>
+                    <div className="px-4 pt-2 pb-0">
+                      <p className="text-xs font-semibold text-gray-600">{name}</p>
+                    </div>
+                    <BudgetRow
+                      budget={b}
+                      categoryName={name}
+                      onDelete={() => {
+                        if (window.confirm("Delete this budget?")) removeBudget.mutate(b.id)
+                      }}
+                    />
                   </div>
-                  <BudgetRow
-                    budget={b}
-                    categoryName={name}
-                    onDelete={() => {
-                      if (window.confirm("Delete this budget?")) removeBudget.mutate(b.id)
-                    }}
-                  />
-                </div>
-              )
-            })}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
