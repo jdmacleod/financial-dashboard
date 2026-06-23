@@ -51,6 +51,7 @@ class RealEstateService:
             purchase_date=property_.purchase_date,
             purchase_price=property_.purchase_price,
             linked_mortgage_account_id=property_.linked_mortgage_account_id,
+            ownership_entity_id=property_.ownership_entity_id,
             property_type=property_.property_type,
             current_estimated_value=latest.estimated_value if latest else None,
             current_value_as_of=latest.valuation_date if latest else None,

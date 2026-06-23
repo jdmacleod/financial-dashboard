@@ -233,6 +233,8 @@ class AccountService:
             account.nickname = data.nickname
         if data.owner_member_id is not None:
             account.owner_member_id = data.owner_member_id
+        if "ownership_entity_id" in data.model_fields_set:
+            account.ownership_entity_id = data.ownership_entity_id
         if data.institution_name is not None:
             account.institution_name_enc = encrypt(data.institution_name)
         if data.account_number is not None:

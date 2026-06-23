@@ -26,6 +26,7 @@ class PropertyUpdate(BaseModel):
     purchase_price: Decimal | None = None
     linked_mortgage_account_id: uuid.UUID | None = None
     property_type: PropertyTypeLiteral | None = None
+    ownership_entity_id: uuid.UUID | None = None
 
 
 class PropertyResponse(BaseModel):
@@ -36,6 +37,7 @@ class PropertyResponse(BaseModel):
     purchase_date: date | None
     purchase_price: Decimal | None
     linked_mortgage_account_id: uuid.UUID | None
+    ownership_entity_id: uuid.UUID | None
     property_type: str
     current_estimated_value: Decimal | None
     current_value_as_of: date | None

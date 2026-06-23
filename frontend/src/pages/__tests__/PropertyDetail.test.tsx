@@ -63,6 +63,7 @@ const baseProperty: PropertyResponse = {
   purchase_date: "2020-06-15",
   purchase_price: "300000.0000",
   linked_mortgage_account_id: null,
+  ownership_entity_id: null,
   property_type: "primary_residence",
   current_estimated_value: "380000.0000",
   current_value_as_of: "2025-01-01",

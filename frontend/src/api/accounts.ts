@@ -22,6 +22,7 @@ export const accountsApi = {
     data: Partial<{
       nickname: string
       owner_member_id: string | null
+      ownership_entity_id: string | null
       institution_name: string | null
       account_number: string | null
       routing_number: string | null

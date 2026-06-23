@@ -5,6 +5,7 @@ import { z } from "zod"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { accountsApi } from "@/api/accounts"
 import { useAuth } from "@/hooks/useAuth"
+import { useOwnershipEntities } from "@/hooks/useOwnershipEntities"
 import type { AccountResponse } from "@/api/types"
 
 const editSchema = z.object({
@@ -13,6 +14,7 @@ const editSchema = z.object({
   account_number: z.string().optional(),
   notes: z.string().optional(),
   include_in_net_worth: z.boolean(),
+  ownership_entity_id: z.string().nullable(),
 })
 type EditForm = z.infer<typeof editSchema>
 
@@ -46,6 +48,7 @@ export default function EditAccountModal({ account, onClose }: EditAccountModalP
   const overlayRef = useRef<HTMLDivElement>(null)
   const role = useAuth((s) => s.role)
   const canViewAccountNumber = role === "primary" || role === "partner"
+  const { data: entities } = useOwnershipEntities()
 
   const {
     register,
@@ -59,6 +62,7 @@ export default function EditAccountModal({ account, onClose }: EditAccountModalP
       account_number: "",
       notes: account.notes ?? "",
       include_in_net_worth: account.include_in_net_worth,
+      ownership_entity_id: account.ownership_entity_id,
     },
   })
 
@@ -70,6 +74,7 @@ export default function EditAccountModal({ account, onClose }: EditAccountModalP
         account_number: data.account_number || null,
         notes: data.notes || null,
         include_in_net_worth: data.include_in_net_worth,
+        ownership_entity_id: data.ownership_entity_id || null,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["accounts"] })
@@ -171,6 +176,21 @@ export default function EditAccountModal({ account, onClose }: EditAccountModalP
               placeholder="e.g. Chase Bank"
             />
           </div>
+
+          {/* Titling entity */}
+          {entities && entities.length > 0 && (
+            <div>
+              <label style={LABEL_STYLE}>Titled to</label>
+              <select {...register("ownership_entity_id")} style={INPUT_STYLE}>
+                <option value="">Directly owned</option>
+                {entities.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Account number — only shown to primary/partner */}
           {canViewAccountNumber && (

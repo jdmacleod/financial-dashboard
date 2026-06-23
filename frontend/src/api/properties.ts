@@ -35,6 +35,7 @@ export const propertiesApi = {
       purchase_date: string | null
       purchase_price: string | null
       linked_mortgage_account_id: string | null
+      ownership_entity_id: string | null
       property_type: PropertyType
     }>,
   ) => api.patch<PropertyResponse>(`/properties/${id}`, data),
