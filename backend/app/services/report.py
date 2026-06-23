@@ -732,7 +732,7 @@ class ReportService:
                 actual=actual,
                 remaining=remaining,
                 percentage_used=pct,
-                period=budget.period,
+                period=budget.period,  # type: ignore[arg-type]
             )
 
         items = sorted(best.values(), key=lambda i: i.percentage_used, reverse=True)

@@ -874,6 +874,83 @@ async def test_budget_vs_actuals_no_budgets(
     assert report.categories == []
 
 
+async def test_budget_vs_actuals_annual_proration(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Annual budgets are prorated to monthly (÷12) when returned by the report."""
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "Budget Checking Annual")
+    cat = await _add_category(db_session, household.id, "HomeInsurance")
+
+    annual_budget = Budget(
+        household_id=household.id,
+        category_id=cat.id,
+        period="annual",
+        amount=Decimal("1200"),
+        effective_from=date(2025, 1, 1),
+        effective_to=None,
+    )
+    db_session.add(annual_budget)
+    await db_session.flush()
+
+    await _add_transaction(db_session, account.id, date(2025, 3, 15), Decimal("-80"), cat.id)
+
+    svc = ReportService(db_session)
+    report = await svc.budget_vs_actuals(ctx, "2025-03")
+
+    assert len(report.categories) == 1
+    item = report.categories[0]
+    # Annual $1200 prorated to monthly $100
+    assert item.budget == Decimal("100.00")
+    assert item.actual == Decimal("80")
+    assert item.remaining == Decimal("20.00")
+    assert item.period == "annual"
+    assert item.name == "HomeInsurance"
+
+
+async def test_budget_vs_actuals_period_field_propagated(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """The period field on BudgetVsActualsItem reflects the budget's period type."""
+    ctx = _ctx(household, primary_member, primary_user)
+    await _make_account(db_session, ctx, "checking", "Budget Checking Period")
+    cat_m = await _add_category(db_session, household.id, "Groceries2")
+    cat_a = await _add_category(db_session, household.id, "Insurance2")
+
+    db_session.add(
+        Budget(
+            household_id=household.id,
+            category_id=cat_m.id,
+            period="monthly",
+            amount=Decimal("500"),
+            effective_from=date(2025, 1, 1),
+        )
+    )
+    db_session.add(
+        Budget(
+            household_id=household.id,
+            category_id=cat_a.id,
+            period="annual",
+            amount=Decimal("1200"),
+            effective_from=date(2025, 1, 1),
+        )
+    )
+    await db_session.flush()
+
+    svc = ReportService(db_session)
+    report = await svc.budget_vs_actuals(ctx, "2025-03")
+
+    by_cat = {item.name: item for item in report.categories}
+    assert by_cat["Groceries2"].period == "monthly"
+    assert by_cat["Insurance2"].period == "annual"
+
+
 # ---------------------------------------------------------------------------
 # Property P&L tests
 # ---------------------------------------------------------------------------

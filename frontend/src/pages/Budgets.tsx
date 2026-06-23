@@ -492,7 +492,7 @@ function BudgetDonutChart({ items }: { items: BudgetVsActualsItem[] }) {
             </p>
           </div>
           <div className="space-y-1.5">
-            {data.slice(0, 8).map((d, i) => (
+            {data.slice(0, TOP_N).map((d, i) => (
               <div key={d.name} className="flex items-center gap-2">
                 <div
                   className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
@@ -504,7 +504,9 @@ function BudgetDonutChart({ items }: { items: BudgetVsActualsItem[] }) {
                 </span>
               </div>
             ))}
-            {data.length > 8 && <p className="text-xs text-gray-400">+ {data.length - 8} more</p>}
+            {data.length > TOP_N && (
+              <p className="text-xs text-gray-400">+ {data.length - TOP_N} more</p>
+            )}
           </div>
         </div>
       </div>
@@ -576,7 +578,7 @@ export default function Budgets() {
     if (!budgets?.length) return format(subMonths(new Date(), 35), "yyyy-MM")
     const earliest = budgets.reduce(
       (min, b) => (b.effective_from < min ? b.effective_from : min),
-      "9999-99-99",
+      "9999-12-31", // sentinel: any real date compares as less
     )
     return earliest.substring(0, 7)
   }, [budgets])
@@ -595,6 +597,9 @@ export default function Budgets() {
   })
 
   const reportLoading = monthQueries.some((q) => q.isLoading)
+  const reportError =
+    !reportLoading && monthQueries.length > 0 && monthQueries.every((q) => q.isError)
+  const reportPartialError = !reportLoading && !reportError && monthQueries.some((q) => q.isError)
   const reportItems = useMemo(() => {
     const completed = monthQueries.filter((q) => q.data).map((q) => q.data!)
     if (completed.length === 0) return []
@@ -674,6 +679,16 @@ export default function Budgets() {
 
       {/* Budget vs Actuals report */}
       {reportLoading && loadedCount === 0 && <div className="text-sm text-gray-400">Loading…</div>}
+      {reportError && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          Could not load budget data. Please try again.
+        </div>
+      )}
+      {reportPartialError && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+          Some months could not be loaded — totals shown may be incomplete.
+        </div>
+      )}
 
       {reportItems.length > 0 && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -694,7 +709,7 @@ export default function Budgets() {
                       <span className="text-sm font-medium text-gray-900 truncate">
                         {item.name}
                       </span>
-                      {item.period === "annual" && (
+                      {item.period === "annual" && rangeMode === "month" && (
                         <span className="text-xs text-gray-400 flex-shrink-0">annual÷12</span>
                       )}
                     </div>

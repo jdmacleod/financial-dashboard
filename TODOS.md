@@ -1,5 +1,29 @@
 # TODOS
 
+### Quarterly budget period — Budgets tab (Deferred from v0.16.0.0)
+
+**What:** Add `"quarterly"` as a valid budget period alongside `"monthly"` and `"annual"`. The Budgets tab would show a `÷3` monthly proration badge and the backend would divide by 3 in the budget-vs-actuals report.
+
+**Why:** The original devex review request mentioned "quarterly or yearly items." Only annual was implemented because it covers the most common case (annual subscriptions, insurance, property tax).
+
+**Cons:** Adds a third enum value that must be threaded through schema, service, DB migration, and UI radio buttons. Modest scope but requires an Alembic migration to update the `budgetperiod` Postgres enum.
+
+**Depends on:** v0.16.0.0 shipped.
+
+---
+
+### Unique constraint on (household_id, category_id, effective_from) in budgets table
+
+**What:** Add a DB-level unique constraint to prevent two budgets for the same category and start date. Currently prevented only by application logic; a race condition could create duplicates.
+
+**Why:** Adversarial review (v0.16.0.0) identified that `list_active_for_period` returns all matching budgets and the service discards duplicates with last-wins dict behavior. A uniqueness constraint enforces the intent at the DB layer.
+
+**Cons:** Requires an Alembic migration. May need a data cleanup pass if any households have existing duplicates.
+
+**Depends on:** v0.16.0.0 shipped.
+
+---
+
 ### WCAG 2.1 AA accessibility audit — HearthLedger v1 (Post-Phase 7)
 
 **What:** Run a full WCAG 2.1 AA audit across all HearthLedger pages: color contrast ratios (4.5:1 body text, 3:1 large text), screen reader label completeness, keyboard navigation order, and focus indicator visibility.

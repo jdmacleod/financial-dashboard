@@ -103,8 +103,8 @@ describe("AppLayout", () => {
       expect(screen.getByText("Accounts")).toBeInTheDocument()
       expect(screen.getByText("Investments")).toBeInTheDocument()
       expect(screen.getByText("Retirement")).toBeInTheDocument()
-      expect(screen.getByText("Real estate")).toBeInTheDocument()
-      expect(screen.getByText("Cash flow")).toBeInTheDocument()
+      expect(screen.getByText("Real Estate")).toBeInTheDocument()
+      expect(screen.getByText("Cash Flow")).toBeInTheDocument()
     })
 
     it("renders planning section with FIRE, Debt, Budgets", () => {

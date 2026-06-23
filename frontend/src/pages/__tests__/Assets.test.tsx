@@ -130,7 +130,7 @@ describe("Assets — Real estate tab (Phase 6)", () => {
   it("renders page heading", async () => {
     renderPage()
     await waitFor(() => {
-      expect(screen.getByText("Real estate")).toBeInTheDocument()
+      expect(screen.getByText("Real Estate")).toBeInTheDocument()
     })
   })
 

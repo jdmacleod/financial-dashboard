@@ -56,10 +56,12 @@ class BudgetRepository:
         self, household_id: uuid.UUID, period_start: date, period_end: date
     ) -> list[Budget]:
         result = await self.session.execute(
-            select(Budget).where(
+            select(Budget)
+            .where(
                 Budget.household_id == household_id,
                 Budget.effective_from <= period_start,
                 or_(Budget.effective_to.is_(None), Budget.effective_to >= period_end),
             )
+            .order_by(Budget.effective_from.desc(), Budget.id.desc())
         )
         return list(result.scalars().all())

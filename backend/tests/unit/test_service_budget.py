@@ -255,6 +255,81 @@ async def test_delete_budget_forbidden(
     assert exc_info.value.status_code == 403
 
 
+async def test_update_budget_period(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    cat = await _make_category(db_session, household)
+
+    svc = BudgetService(db_session)
+    budget = await svc.create(
+        ctx,
+        BudgetCreate(
+            category_id=cat.id,
+            amount=Decimal("1200.00"),
+            effective_from=date(2025, 1, 1),
+        ),
+    )
+    assert budget.period == "monthly"
+
+    updated = await svc.update(ctx, budget.id, BudgetUpdate(period="annual"))
+    assert updated.period == "annual"
+
+
+async def test_update_budget_effective_to_cleared(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    cat = await _make_category(db_session, household)
+
+    svc = BudgetService(db_session)
+    budget = await svc.create(
+        ctx,
+        BudgetCreate(
+            category_id=cat.id,
+            amount=Decimal("600.00"),
+            effective_from=date(2025, 1, 1),
+            effective_to=date(2025, 12, 31),
+        ),
+    )
+    assert budget.effective_to == date(2025, 12, 31)
+
+    # Passing effective_to=None explicitly should clear the field (model_fields_set check)
+    updated = await svc.update(ctx, budget.id, BudgetUpdate(effective_to=None))
+    assert updated.effective_to is None
+
+
+async def test_update_budget_effective_to_unchanged_when_not_in_payload(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    cat = await _make_category(db_session, household)
+
+    svc = BudgetService(db_session)
+    budget = await svc.create(
+        ctx,
+        BudgetCreate(
+            category_id=cat.id,
+            amount=Decimal("700.00"),
+            effective_from=date(2025, 1, 1),
+            effective_to=date(2025, 12, 31),
+        ),
+    )
+
+    # Updating only amount without mentioning effective_to must preserve it
+    updated = await svc.update(ctx, budget.id, BudgetUpdate(amount=Decimal("750.00")))
+    assert updated.effective_to == date(2025, 12, 31)
+
+
 async def test_delete_budget_not_found(
     db_session: AsyncSession,
     household: Household,

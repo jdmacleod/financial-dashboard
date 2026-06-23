@@ -91,7 +91,7 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
 
   it("renders page heading", () => {
     renderPage()
-    expect(screen.getByRole("heading", { name: "Cash flow" })).toBeInTheDocument()
+    expect(screen.getByRole("heading", { name: "Cash Flow" })).toBeInTheDocument()
   })
 
   it("shows Total income KPI", async () => {
@@ -162,8 +162,8 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
   it("shows period rows in table", async () => {
     renderPage()
     await waitFor(() => {
-      expect(screen.getByText("2026-01")).toBeInTheDocument()
-      expect(screen.getByText("2026-02")).toBeInTheDocument()
+      expect(screen.getByText("Jan 2026")).toBeInTheDocument()
+      expect(screen.getByText("Feb 2026")).toBeInTheDocument()
     })
   })
 

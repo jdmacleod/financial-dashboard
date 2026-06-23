@@ -3,6 +3,23 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.16.0.0] - 2026-06-23
+
+### Added
+
+- **Budgets range toggle.** Switch the Budgets tab between Month, YTD, 1Y, and All views. Range modes aggregate budget vs actuals across all months in parallel — the donut chart and totals update as each month loads.
+- **Budget donut chart.** A new visual overview shows top spending categories as a proportional donut, with a legend and total budgeted / spent / % used summary. Renders above the budget-vs-actuals list.
+- **Annual budget support.** Budgets can now be marked as annual. The backend prorates annual amounts to a monthly equivalent (÷12) in budget vs actuals reports. The "annual÷12" indicator appears on budget rows when viewing a single month.
+- **Full budget edit modal.** The inline amount-only editor is replaced by a full modal that lets you change the category, period (monthly / annual), amount, effective from date, and effective to date.
+
+### Fixed
+
+- Month navigation arrows (Previous / Next) no longer drift by one day in negative UTC-offset timezones due to UTC-midnight date parsing.
+- Parallel month fetch errors now surface a disclosure banner instead of silently showing incomplete totals.
+- Budget-vs-actuals query is now deterministic when two budgets for the same category share an `effective_from` date (stable `ORDER BY effective_from DESC, id DESC`).
+- The `month` query parameter for budget-vs-actuals now rejects out-of-range month values (e.g. `2024-00`, `2024-13`) with a 422 instead of a 500.
+- Negative budget amounts are now rejected at the API layer with a 422 instead of reaching the database as an integrity error.
+
 ## [0.15.0.0] - 2026-06-22
 
 ### Added
