@@ -34,9 +34,11 @@ async def login(
 ) -> TokenResponse:
     ip = request.client.host if request.client else None
     svc = AuthService(session)
-    access_token, refresh_token = await svc.login(data.email, data.password, ip)
+    access_token, refresh_token, must_change_password = await svc.login(
+        data.email, data.password, ip
+    )
     response.set_cookie(_COOKIE, refresh_token, **_COOKIE_OPTS)
-    return TokenResponse(access_token=access_token)
+    return TokenResponse(access_token=access_token, must_change_password=must_change_password)
 
 
 @router.post("/auth/refresh", response_model=TokenResponse)

@@ -37,7 +37,9 @@ class AuthService:
         )
         return result.scalar_one_or_none()
 
-    async def login(self, email: str, password: str, ip_address: str | None) -> tuple[str, str]:
+    async def login(
+        self, email: str, password: str, ip_address: str | None
+    ) -> tuple[str, str, bool]:
         result = await self.session.execute(select(User).where(User.email == email))
         user = result.scalar_one_or_none()
 
@@ -124,7 +126,7 @@ class AuthService:
                 ip_address=ip_address,
             )
         await self.session.commit()
-        return access_token, refresh_token
+        return access_token, refresh_token, user.must_change_password
 
     async def refresh(self, refresh_token: str) -> tuple[str, str]:
         try:
@@ -210,6 +212,7 @@ class AuthService:
 
         user.hashed_password = hash_password(new_password)
         user.last_password_change = datetime.now(UTC)
+        user.must_change_password = False  # forced reset satisfied
         user.refresh_token_hash = None  # invalidate existing sessions
         await self.session.flush()
         await self.audit_repo.write_auth_event(

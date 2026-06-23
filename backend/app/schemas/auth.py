@@ -10,6 +10,9 @@ class LoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"  # noqa: S105 — OAuth2 scheme name, not a credential
+    # True when the user signed in with a provisioned temporary password and must
+    # set their own before continuing. The frontend routes to the forced reset.
+    must_change_password: bool = False
 
 
 class ReauthRequest(BaseModel):

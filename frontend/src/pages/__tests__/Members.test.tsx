@@ -1,9 +1,10 @@
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 import { ApiError } from "@/api/client"
 import { membersApi } from "@/api/members"
+import { provisioningApi } from "@/api/provisioning"
 import type { MemberResponse } from "@/api/types"
 
 vi.mock("@/api/members", () => ({
@@ -11,6 +12,13 @@ vi.mock("@/api/members", () => ({
     list: vi.fn(),
     update: vi.fn(),
     create: vi.fn(),
+  },
+}))
+
+vi.mock("@/api/provisioning", () => ({
+  provisioningApi: {
+    provision: vi.fn(),
+    regenerateTemporaryPassword: vi.fn(),
   },
 }))
 
@@ -119,28 +127,52 @@ describe("Members page — MemberSlideOver", () => {
   })
 })
 
-describe("Members page — AddMemberModal primary warning", () => {
+describe("Members page — AddPersonSlideOver (provisioning)", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(membersApi.list).mockResolvedValue([partnerMember])
-    vi.mocked(membersApi.create).mockResolvedValue({ ...partnerMember, id: "member-3" })
   })
 
-  async function openAddModal() {
+  async function openAddPerson() {
     const Members = (await import("../Members")).default
     renderWithClient(<Members />)
-    await waitFor(() => screen.getByText("Add member"))
-    await userEvent.click(screen.getByRole("button", { name: /Add member/i }))
+    await waitFor(() => screen.getByRole("button", { name: /Add person/i }))
+    await userEvent.click(screen.getByRole("button", { name: /Add person/i }))
   }
 
-  it("does not show amber warning when role is partner (default)", async () => {
-    await openAddModal()
-    expect(screen.queryByText(/full admin access/i)).not.toBeInTheDocument()
+  it("reveals the one-time temporary password on success", async () => {
+    vi.mocked(provisioningApi.provision).mockResolvedValue({
+      member: { ...partnerMember, id: "member-3", display_name: "Newbie" },
+      user: {
+        id: "user-3",
+        member_id: "member-3",
+        email: "newbie@example.com",
+        is_active: true,
+        last_login: null,
+        created_at: "2025-01-01T00:00:00Z",
+      },
+      temporary_password: "Temp-Pass-XYZ123", // pragma: allowlist secret — test fixture
+    })
+    await openAddPerson()
+    const dialog = screen.getByRole("dialog")
+    await userEvent.type(within(dialog).getByLabelText(/Display name/i), "Newbie")
+    await userEvent.type(within(dialog).getByLabelText(/Email/i), "newbie@example.com")
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Add person$/i }))
+
+    await waitFor(() => expect(screen.getByText("Person added")).toBeInTheDocument())
+    expect(screen.getByDisplayValue("Temp-Pass-XYZ123")).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /Copy password/i })).toBeInTheDocument()
+    expect(screen.getByText(/shown once/i)).toBeInTheDocument()
   })
 
-  it("shows amber warning when role is set to primary", async () => {
-    await openAddModal()
-    await userEvent.selectOptions(screen.getByRole("combobox"), "primary")
-    expect(screen.getByText(/full admin access/i)).toBeInTheDocument()
+  it("shows an inline error when the email is already in use (409)", async () => {
+    vi.mocked(provisioningApi.provision).mockRejectedValue(new ApiError(409, "dup"))
+    await openAddPerson()
+    const dialog = screen.getByRole("dialog")
+    await userEvent.type(within(dialog).getByLabelText(/Display name/i), "Dupe")
+    await userEvent.type(within(dialog).getByLabelText(/Email/i), "primary@example.com")
+    await userEvent.click(within(dialog).getByRole("button", { name: /^Add person$/i }))
+    await waitFor(() => expect(screen.getByText(/already has a login/i)).toBeInTheDocument())
+    expect(provisioningApi.provision).toHaveBeenCalled()
   })
 })

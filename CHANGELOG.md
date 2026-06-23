@@ -3,6 +3,17 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.14.0.0] - 2026-06-22
+
+### Added
+
+- **One-action "Add person".** A primary or partner can now add a login-capable household member in a single step from the Members page. HearthLedger generates a temporary password, shows it once with a copy button and a "shown once" reminder (and a regenerate option), and the new person sets their own password the first time they sign in. No email or SMTP required. Only a primary can add another primary.
+- **Forced first-login password reset.** A member who signs in with a temporary password is taken straight to a "set your password" screen that blocks the rest of the app until they choose their own.
+
+### Changed
+
+- The "Add member" action on the Members page is now "Add person" and creates the member together with their sign-in, replacing the previous member-only dialog. (The member-only API endpoint is unchanged.)
+
 ## [0.13.0.0] - 2026-06-22
 
 ### Added

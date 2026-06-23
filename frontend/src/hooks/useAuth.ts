@@ -28,17 +28,25 @@ interface AuthState {
   isAuthenticated: boolean
   role: Role | null
   memberId: string | null
+  // True when the user signed in with a provisioned temporary password and must
+  // set their own before reaching the app. Persisted so a refresh mid-reset
+  // still gates. Cleared by clearMustChangePassword after a successful reset.
+  mustChangePassword: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   restoreToken: (token: string) => void
   clearAuth: () => void
+  clearMustChangePassword: () => void
 }
+
+const MCP_KEY = "must_change_password"
 
 export const useAuth = create<AuthState>((set) => ({
   token: null,
   isAuthenticated: false,
   role: null,
   memberId: null,
+  mustChangePassword: sessionStorage.getItem(MCP_KEY) === "true",
 
   restoreToken: (token: string) => {
     setAccessToken(token)
@@ -48,6 +56,7 @@ export const useAuth = create<AuthState>((set) => ({
       isAuthenticated: true,
       role: payload?.role ?? null,
       memberId: payload?.member_id ?? null,
+      mustChangePassword: sessionStorage.getItem(MCP_KEY) === "true",
     })
   },
 
@@ -55,12 +64,16 @@ export const useAuth = create<AuthState>((set) => ({
     const res = await authApi.login(email, password)
     setAccessToken(res.access_token)
     sessionStorage.setItem("access_token", res.access_token)
+    const mustChange = res.must_change_password === true
+    if (mustChange) sessionStorage.setItem(MCP_KEY, "true")
+    else sessionStorage.removeItem(MCP_KEY)
     const payload = decodeJwtPayload(res.access_token)
     set({
       token: res.access_token,
       isAuthenticated: true,
       role: payload?.role ?? null,
       memberId: payload?.member_id ?? null,
+      mustChangePassword: mustChange,
     })
   },
 
@@ -72,12 +85,31 @@ export const useAuth = create<AuthState>((set) => ({
     }
     setAccessToken(null)
     sessionStorage.removeItem("access_token")
-    set({ token: null, isAuthenticated: false, role: null, memberId: null })
+    sessionStorage.removeItem(MCP_KEY)
+    set({
+      token: null,
+      isAuthenticated: false,
+      role: null,
+      memberId: null,
+      mustChangePassword: false,
+    })
   },
 
   clearAuth: () => {
     setAccessToken(null)
     sessionStorage.removeItem("access_token")
-    set({ token: null, isAuthenticated: false, role: null, memberId: null })
+    sessionStorage.removeItem(MCP_KEY)
+    set({
+      token: null,
+      isAuthenticated: false,
+      role: null,
+      memberId: null,
+      mustChangePassword: false,
+    })
+  },
+
+  clearMustChangePassword: () => {
+    sessionStorage.removeItem(MCP_KEY)
+    set({ mustChangePassword: false })
   },
 }))

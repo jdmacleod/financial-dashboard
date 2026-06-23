@@ -1,15 +1,63 @@
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.visibility import VisibilityContext, get_visibility_ctx
 from app.db.base import get_session
 from app.db.models.member import HouseholdMember
 from app.schemas.member import DashboardLayoutUpdate, MemberCreate, MemberResponse, MemberUpdate
+from app.schemas.provisioning import (
+    ProvisionRequest,
+    ProvisionResponse,
+    TemporaryPasswordResponse,
+)
+from app.schemas.user import UserResponse
 from app.services.member import MemberService
+from app.services.provisioning import ProvisionService
 
 router = APIRouter()
+
+
+@router.post(
+    "/members/provision",
+    response_model=ProvisionResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def provision_member(
+    data: ProvisionRequest,
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> ProvisionResponse:
+    """Add a login-capable member in one action. Primary/partner only; only a
+    primary may provision another primary. Returns the temporary password once.
+    """
+    svc = ProvisionService(session)
+    result = await svc.provision(ctx, data)
+    await session.commit()
+    await session.refresh(result.member)
+    await session.refresh(result.user)
+    return ProvisionResponse(
+        member=MemberResponse.model_validate(result.member),
+        user=UserResponse.model_validate(result.user),
+        temporary_password=result.temporary_password,
+    )
+
+
+@router.post(
+    "/members/users/{user_id}/temporary-password",
+    response_model=TemporaryPasswordResponse,
+)
+async def regenerate_temporary_password(
+    user_id: uuid.UUID,
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> TemporaryPasswordResponse:
+    """Re-issue a temporary password for a not-yet-claimed provisioned user."""
+    svc = ProvisionService(session)
+    temporary_password = await svc.regenerate_temporary_password(ctx, user_id)
+    await session.commit()
+    return TemporaryPasswordResponse(temporary_password=temporary_password)
 
 
 @router.get("/members", response_model=list[MemberResponse])

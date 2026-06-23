@@ -38,7 +38,7 @@ async def test_login_success_returns_tokens_and_writes_audit_event(
     primary_user: User,
 ) -> None:
     service = AuthService(db_session)
-    access, refresh = await service.login(
+    access, refresh, _must_change = await service.login(
         primary_user.email, "CorrectHorse123!", ip_address="10.0.0.1"
     )
     assert decode_token(access, "access")["sub"] == str(primary_user.id)
@@ -106,7 +106,7 @@ async def test_login_succeeds_again_after_lockout_expires(
                 await service.login(primary_user.email, "wrong-password", ip_address="10.0.0.1")
 
         frozen.tick(timedelta(minutes=settings.lockout_minutes + 1))
-        access, _refresh = await service.login(
+        access, _refresh, _must_change = await service.login(
             primary_user.email, "CorrectHorse123!", ip_address="10.0.0.1"
         )
         assert decode_token(access, "access")["sub"] == str(primary_user.id)
@@ -120,7 +120,7 @@ async def test_refresh_rotates_tokens(
 ) -> None:
     service = AuthService(db_session)
     with freeze_time(datetime.now(UTC)) as frozen:
-        _, refresh_token = await service.login(
+        _, refresh_token, _must_change = await service.login(
             primary_user.email, "CorrectHorse123!", ip_address="10.0.0.1"
         )
         frozen.tick(timedelta(seconds=1))
@@ -221,7 +221,7 @@ async def test_change_password_updates_hash_and_invalidates_sessions(
     assert "auth.password_changed" in await _latest_audit_action(db_session, primary_user.id)
 
     new_service = AuthService(db_session)
-    access, _ = await new_service.login(
+    access, _, _must_change = await new_service.login(
         primary_user.email, "NewPassword456!", ip_address="10.0.0.1"
     )
     assert decode_token(access, "access")["sub"] == str(primary_user.id)

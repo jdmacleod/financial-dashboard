@@ -58,8 +58,12 @@ Creates the household, the primary member, and the first user account. Only avai
 **Response:**
 
 ```json
-{ "access_token": "<jwt>" }
+{ "access_token": "<jwt>", "token_type": "bearer", "must_change_password": false }
 ```
+
+`must_change_password` is `true` when the user signed in with a provisioned
+temporary password and must set their own via `POST /auth/change-password`
+before continuing (the frontend routes to a forced reset).
 
 Sets `refresh_token` HttpOnly cookie.
 
@@ -191,7 +195,7 @@ Lists all household members.
 
 ### `POST /members`
 
-Creates a new member. Primary only.
+Creates a new member (no login). Primary only.
 
 **Request body:**
 
@@ -202,6 +206,50 @@ Creates a new member. Primary only.
   "email": "jordan@example.com",
   "password": "<password>"
 }
+```
+
+### `POST /members/provision`
+
+Adds a login-capable member in one action: creates the member and their user
+with a server-generated temporary password (returned once). Primary or partner;
+only a primary may provision another `primary`. The provisioned user is created
+with `must_change_password = true` and is forced to set their own password on
+first login. Returns `409` if the email already has a login.
+
+**Request body:**
+
+```json
+{
+  "display_name": "Jamie",
+  "role": "partner",
+  "email": "jamie@example.com",
+  "date_of_birth": null
+}
+```
+
+**Response:** `201 Created`
+
+```json
+{
+  "member": { "id": "uuid", "display_name": "Jamie", "role": "partner", "...": "..." },
+  "user": { "id": "uuid", "member_id": "uuid", "email": "jamie@example.com", "...": "..." },
+  "temporary_password": "<shown once>"
+}
+```
+
+The temporary password is stored only as a bcrypt hash and never appears in the
+audit log; it is returned in plaintext exactly once.
+
+### `POST /members/users/{user_id}/temporary-password`
+
+Re-issues a temporary password for a provisioned user who has not yet set their
+own (i.e. `must_change_password` is still `true`). Primary/partner. Returns
+`409` if the user has already chosen their own password.
+
+**Response:**
+
+```json
+{ "temporary_password": "<shown once>" }
 ```
 
 ### `GET /members/{member_id}`
