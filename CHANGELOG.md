@@ -3,6 +3,17 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.17.0.0] - 2026-06-23
+
+### Added
+
+- **Sort and filter on the Budgets tab.** A filter bar below the donut chart lets you narrow both Budget vs Actuals and All Budgets by category name simultaneously. A "X of Y" count badge tracks how many actuals match. Each section has its own sort control: Budget vs Actuals sorts by % used (default), budget amount, actual spend, or name; All Budgets sorts by name (default), budget amount, or period.
+
+### Fixed
+
+- YTD range now anchors to the selected month's year rather than the current calendar year, so navigating to a prior month and switching to YTD shows data for that year's January through the selected month.
+- Budget amount of zero is now rejected in the Add and Edit forms instead of silently creating a budget that can never trigger an over-budget alert.
+
 ## [0.16.0.0] - 2026-06-23
 
 ### Added
