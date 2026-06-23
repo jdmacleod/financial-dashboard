@@ -179,8 +179,9 @@ class RealEstateService:
                 await self.account_repo.get_by_id(ctx, property_.linked_mortgage_account_id)
                 snap = await self.account_repo.latest_snapshot(property_.linked_mortgage_account_id)
                 if snap is not None:
-                    mortgage_balance, mortgage_balance_as_of = snap
-                    equity = latest.estimated_value - abs(mortgage_balance)
+                    raw_balance, mortgage_balance_as_of = snap
+                    mortgage_balance = abs(raw_balance)
+                    equity = latest.estimated_value - mortgage_balance
             except HTTPException as exc:
                 if exc.status_code == 404:
                     mortgage_balance_visible = False

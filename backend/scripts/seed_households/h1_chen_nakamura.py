@@ -29,6 +29,7 @@ from seed_households._util import (
     make_valuation,
     make_vesting_event,
     opening_balance_tx,
+    snapshot,
     transfer,
     tx,
 )
@@ -160,6 +161,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         build_snapshots(brokerage.id, D("51200.00"), brokerage_contribs, 0.09, dips_market)
     )
     session.add_all(build_snapshots(hsa.id, D("7600.00"), hsa_contribs, 0.09, dips_market))
+    session.add(snapshot(mortgage.id, last_day_of(2026, 5), D("-298700.00")))
 
     # ── Transaction generation ────────────────────────────────────────────────
     all_txns: list = []
