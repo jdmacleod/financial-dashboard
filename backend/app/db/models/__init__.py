@@ -13,7 +13,7 @@ from app.db.models.insurance_policy import InsurancePolicy
 from app.db.models.investment_lot import InvestmentLot
 from app.db.models.member import HouseholdMember
 from app.db.models.ownership_entity import OwnershipEntity
-from app.db.models.pension import PensionAccount
+from app.db.models.pension import PensionAccount, PensionEstimateHistory
 from app.db.models.property_valuation import PropertyValuation
 from app.db.models.real_estate import RealEstateProperty
 from app.db.models.snapshot import AccountSnapshot
@@ -38,6 +38,7 @@ __all__ = [
     "InvestmentLot",
     "OwnershipEntity",
     "PensionAccount",
+    "PensionEstimateHistory",
     "PropertyValuation",
     "RealEstateProperty",
     "Transaction",

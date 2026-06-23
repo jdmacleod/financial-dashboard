@@ -17,6 +17,15 @@ LOT_BASIS_TYPES = (
     "reinvested_dividend",
 )
 
+LOT_ASSET_CLASSES = (
+    "equity",
+    "fixed_income",
+    "cash",
+    "real_estate",
+    "alternative",
+    "other",
+)
+
 
 class InvestmentLot(Base):
     """Cost-basis lot for an individual security within an investment account.
@@ -38,5 +47,9 @@ class InvestmentLot(Base):
     basis_type: Mapped[str] = mapped_column(
         Enum(*LOT_BASIS_TYPES, name="lot_basis_type", create_type=False),
         nullable=False,
+    )
+    asset_class: Mapped[str | None] = mapped_column(
+        Enum(*LOT_ASSET_CLASSES, name="lot_asset_class", create_type=False),
+        nullable=True,
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
