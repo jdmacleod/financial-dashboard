@@ -552,7 +552,7 @@ class ReportService:
             income = periods[key]["income"]
             expenses = periods[key]["expenses"]
             net = income - expenses
-            savings_rate = float(net / income) if income > 0 else 0.0
+            savings_rate = float(net / income * 100) if income > 0 else 0.0
             series.append(
                 CashFlowPeriod(
                     period=key, income=income, expenses=expenses, net=net, savings_rate=savings_rate
@@ -562,7 +562,7 @@ class ReportService:
         total_income = sum((p.income for p in series), Decimal("0"))
         total_expenses = sum((p.expenses for p in series), Decimal("0"))
         total_net = total_income - total_expenses
-        total_savings_rate = float(total_net / total_income) if total_income > 0 else 0.0
+        total_savings_rate = float(total_net / total_income * 100) if total_income > 0 else 0.0
         totals = CashFlowTotals(
             income=total_income,
             expenses=total_expenses,
@@ -624,9 +624,21 @@ class ReportService:
             cat_id: (abs(total), count) for cat_id, total, count in result.all()
         }
 
+        # Build a child→parent index for rollup when showing top-level categories.
+        children_by_parent: dict[uuid.UUID, list[uuid.UUID]] = defaultdict(list)
+        if parent_category_id is None:
+            for c in cat_map.values():
+                if c.parent_category_id is not None:
+                    children_by_parent[c.parent_category_id].append(c.id)
+
         items = []
         for c in target_categories:
             amount, count = sums.get(c.id, (Decimal("0"), 0))
+            # Roll up child category amounts into the parent total.
+            for child_id in children_by_parent.get(c.id, []):
+                child_amount, child_count = sums.get(child_id, (Decimal("0"), 0))
+                amount += child_amount
+                count += child_count
             items.append(
                 SpendingCategoryItem(
                     category_id=c.id,

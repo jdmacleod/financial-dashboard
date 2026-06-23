@@ -257,7 +257,7 @@ export function AppLayout() {
           </svg>
           Retirement
         </SidebarNavLink>
-        <SidebarNavLink to="/assets" onClick={() => setSidebarOpen(false)}>
+        <SidebarNavLink to="/real-estate" onClick={() => setSidebarOpen(false)}>
           <svg
             width="15"
             height="15"
