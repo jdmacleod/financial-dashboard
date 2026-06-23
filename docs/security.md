@@ -21,7 +21,7 @@ HearthLedger uses short-lived JWTs for API authorization combined with HttpOnly 
 
 - Signed with `SECRET_KEY`, longer-lived
 - Contains `type: "refresh"` and a `jti` (JWT ID)
-- Stored in an `HttpOnly; SameSite=Lax` cookie — inaccessible to JavaScript
+- Stored in an `HttpOnly; SameSite=Lax` cookie: inaccessible to JavaScript
 - Expires in `REFRESH_TOKEN_EXPIRE_DAYS` (default: 30 days)
 - Rotated on every use: `POST /auth/refresh` issues a new access token AND a new refresh token, invalidating the old one
 
@@ -53,7 +53,7 @@ Failed login attempts are tracked per email address. After `MAX_LOGIN_ATTEMPTS` 
 
 Some operations require re-authentication even with a valid access token. Export requests, for example, require a `X-Reauth-Token` header.
 
-A reauth token is obtained via `POST /auth/reauth` (requires the user's current password). It is a short-lived JWT with `type: "reauth"` — typically valid for a few minutes and single-use for the operation it authorizes.
+A reauth token is obtained via `POST /auth/reauth` (requires the user's current password). It is a short-lived JWT with `type: "reauth"`, typically valid for a few minutes and single-use for the operation it authorizes.
 
 This prevents an unattended browser session from exporting or downloading sensitive data.
 
@@ -69,7 +69,7 @@ Each household member has a role:
 
 | Role        | Description                                     |
 | ----------- | ----------------------------------------------- |
-| `primary`   | Full access — only one per household            |
+| `primary`   | Full access: only one per household             |
 | `partner`   | Standard member with limited admin capabilities |
 | `dependent` | Read-only access to explicitly granted accounts |
 
@@ -104,7 +104,7 @@ class VisibilityContext:
     ip_address: str | None
 ```
 
-This context is passed to every service method. **All account queries go through `AccountRepository.get_visible(ctx)`** — no route handler queries the accounts table directly. This is a hard architectural rule enforced by convention and code review.
+This context is passed to every service method. **All account queries go through `AccountRepository.get_visible(ctx)`**: no route handler queries the accounts table directly. This is a hard architectural rule enforced by convention and code review.
 
 ### Access grants
 
@@ -132,7 +132,7 @@ Certain fields contain PII (personally identifiable information) and are stored 
 
 **At read time:** The application decrypts values when constructing API responses. Encrypted values are never exposed in their raw (encrypted) form in API responses.
 
-**Audit log exclusion:** Encrypted field values are **never** written to `audit_log.previous_value` or `audit_log.new_value` — not even in encrypted form. Audit entries for account mutations omit these fields entirely.
+**Audit log exclusion:** Encrypted field values are **never** written to `audit_log.previous_value` or `audit_log.new_value`: not even in encrypted form. Audit entries for account mutations omit these fields entirely.
 
 ---
 
@@ -144,16 +144,16 @@ HearthLedger maintains an append-only audit log of all data mutations.
 
 Every service method that mutates data is decorated with `@audit`. The decorator fires after a successful database commit and writes a row to `audit_log` with:
 
-- `actor_member_id` — who made the change
-- `entity_type` / `entity_id` — what was changed
-- `action` — `create`, `update`, or `delete`
-- `previous_value` / `new_value` — JSON snapshots of changed fields
-- `ip_address` — the requester's IP address
-- `created_at` — TIMESTAMPTZ
+- `actor_member_id`: who made the change
+- `entity_type` / `entity_id`: what was changed
+- `action`: `create`, `update`, or `delete`
+- `previous_value` / `new_value`: JSON snapshots of changed fields
+- `ip_address`: the requester's IP address
+- `created_at`: TIMESTAMPTZ
 
 ### Append-only enforcement
 
-The `audit_log` table is protected at the PostgreSQL permission level. The application's database role (`hearthledger_app`) has only `SELECT` and `INSERT` on this table — no `UPDATE`, `DELETE`, or `TRUNCATE`. This is enforced in the baseline Alembic migration and cannot be overridden through the application.
+The `audit_log` table is protected at the PostgreSQL permission level. The application's database role (`hearthledger_app`) has only `SELECT` and `INSERT` on this table: no `UPDATE`, `DELETE`, or `TRUNCATE`. This is enforced in the baseline Alembic migration and cannot be overridden through the application.
 
 ### Viewing the log
 
@@ -198,4 +198,4 @@ All secrets live in `.env`:
 **Rotation:**
 
 - Rotating `SECRET_KEY` invalidates all existing JWTs (all users are logged out).
-- Rotating `SECRET_ENCRYPTION_KEY` requires re-encrypting all encrypted database fields and all existing backup files — there is no automated migration for this; plan carefully.
+- Rotating `SECRET_ENCRYPTION_KEY` requires re-encrypting all encrypted database fields and all existing backup files: there is no automated migration for this; plan carefully.

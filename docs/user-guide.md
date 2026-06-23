@@ -10,27 +10,27 @@ The dashboard shows a real-time summary of your household finances. The page hea
 
 **Widgets:**
 
-- **KPI Cards** — net worth, MTD income, MTD expenses, savings rate
-- **Budget Alerts** — categories that have exceeded 90% of their monthly budget
-- **Net Worth Chart** — trailing 12-month trend line
-- **Spending by Category** — current month, donut chart
+- **KPI Cards**: net worth, MTD income, MTD expenses, savings rate
+- **Budget Alerts**: categories that have exceeded 90% of their monthly budget
+- **Net Worth Chart**: trailing 12-month trend line
+- **Spending by Category**: current month, donut chart
 
 **Customizing the layout:**
-Click the **Customize →** link in the top-right of the dashboard, or go to **Settings → Dashboard Layout**. You can toggle each widget on/off and reorder them with the ▲/▼ buttons. Click **Save layout** — preferences are stored per-member, so each household member can have their own layout.
+Click the **Customize →** link in the top-right of the dashboard, or go to **Settings → Dashboard Layout**. You can toggle each widget on/off and reorder them with the ▲/▼ buttons. Click **Save layout**. Preferences are stored per-member, so each household member can have their own layout.
 
 ---
 
 ## Accounts
 
-The Accounts page focuses on **transaction accounts** — the accounts where money flows in and out day to day: checking, savings, credit cards, mortgages, and loans.
+The Accounts page focuses on **transaction accounts**, the accounts where money flows in and out day to day: checking, savings, credit cards, mortgages, and loans.
 
-Real estate, pension, and investment/retirement accounts appear on the **Assets** page instead. See [Assets](#assets).
+Real estate accounts appear on the **Assets** page; pension, investment, and retirement accounts have their own pages. See [Assets](#assets).
 
 **Creating an account:**
 
 1. Go to **Accounts** in the sidebar.
 2. Click the **+** button on the relevant category group, or **+ Add account** in the page header.
-3. For **Banking & Cash** or **Liabilities** accounts, a form appears — set the nickname, type, institution, and optional account number, then click **Save**.
+3. For **Banking & Cash** or **Liabilities** accounts, a form appears: set the nickname, type, institution, and optional account number, then click **Save**.
 4. For **Retirement**, **Investments**, or **Real estate** accounts, clicking **+** navigates to the dedicated page for that account type, where you can add accounts of those kinds.
 
 Transaction account types (shown on the Accounts page):
@@ -47,20 +47,20 @@ Transaction account types (shown on the Accounts page):
 | `heloc` | Home equity line of credit |
 | `other_liability` | Any other liability |
 
-Asset account types (shown on the Assets page):
+Asset account types (managed on their dedicated pages):
 | Type | Description |
 |---|---|
 | `investment_brokerage` | Taxable brokerage account |
 | `retirement_401k` / `retirement_403b` / `retirement_ira` / `retirement_roth_ira` | Tax-advantaged retirement accounts |
 | `hsa` | Health savings account |
-| `pension` | Defined-benefit pension plan — see [Pension accounts](#pension-accounts) below |
-| `real_estate` | Real estate property — see [Real Estate](#real-estate) |
+| `pension` | Defined-benefit pension plan: see [Pension accounts](#pension-accounts) below |
+| `real_estate` | Real estate property: see [Real Estate](#real-estate) |
 
 **Access grants (partner visibility):**
 By default, partner members can only see accounts they own. The primary member can grant read access to an account: go to the account detail page and click **Manage access** to add or remove grants.
 
 **Balances for investment/retirement accounts:**
-Rather than individual holdings, HearthLedger uses balance snapshots. On the Assets page, click **Update value** on an investment or HSA account to record a balance as of any date. The net worth calculation uses the most recent snapshot.
+Rather than individual holdings, HearthLedger uses balance snapshots. Record a balance as of any date for an investment, retirement, or HSA account from its page on the Investments or Retirement report. The net worth calculation uses the most recent snapshot.
 
 **Deactivating an account:**
 Click the **…** menu on an account and choose **Deactivate**. Deactivated accounts are hidden from lists but historical data is preserved.
@@ -73,42 +73,34 @@ For a step-by-step walkthrough of each account category, see [How to add account
 
 When you create an account of type `pension`, a **Pension details** card appears on the account page. Click **Add pension details** (or the pencil icon) to record:
 
-| Field                        | Description                                                              |
-| ---------------------------- | ------------------------------------------------------------------------ |
-| **Plan name**                | Name of the plan (e.g. "State Teachers Pension Fund") — stored encrypted |
-| **Administrator**            | Plan administrator name — stored encrypted                               |
-| **Monthly benefit estimate** | Estimated monthly payout in retirement                                   |
-| **Eligibility age / date**   | When you can start drawing — set one or the other                        |
-| **COLA adjustment rate**     | Annual cost-of-living increase rate (default 2%)                         |
-| **Vested**                   | Toggle on when vesting requirements are met                              |
-| **Vesting date**             | Date vesting was achieved                                                |
-| **Survivor benefit %**       | Survivor benefit as a percentage (0–100%)                                |
-| **Notes**                    | Free-form notes — stored encrypted                                       |
+| Field                        | Description                                                             |
+| ---------------------------- | ----------------------------------------------------------------------- |
+| **Plan name**                | Name of the plan (e.g. "State Teachers Pension Fund"): stored encrypted |
+| **Administrator**            | Plan administrator name: stored encrypted                               |
+| **Monthly benefit estimate** | Estimated monthly payout in retirement                                  |
+| **Eligibility age / date**   | When you can start drawing: set one or the other                        |
+| **COLA adjustment rate**     | Annual cost-of-living increase rate (default 2%)                        |
+| **Vested**                   | Toggle on when vesting requirements are met                             |
+| **Vesting date**             | Date vesting was achieved                                               |
+| **Survivor benefit %**       | Survivor benefit as a percentage (0–100%)                               |
+| **Notes**                    | Free-form notes: stored encrypted                                       |
 
 The account's transaction list shows a **Defined-benefit summary card** above the transactions, with plan name, monthly benefit, eligibility info, and vested status. If no detail record exists yet, a prompt to "Add pension details →" is shown.
 
 The FIRE detector automatically creates a `pension` income stream for each vested pension with a non-zero monthly benefit estimate. See [Auto-detect income streams](#auto-detect-income-streams).
 
+A pension with a monthly benefit estimate also contributes a **present value** to your net worth, shown via the **Show PV** toggle on the [Net Worth report](#net-worth). Each estimate edit is recorded with an effective date, so changing the estimate doesn't rewrite historical net-worth points. See [How to set a pension's present value](howto-set-pension-present-value.md).
+
 ---
 
 ## Assets
 
-The Assets page collects all valuation-based accounts in one place: real estate properties, pension plans, and investment/retirement accounts.
+The Assets page is HearthLedger's real estate view. Each property shows its current value drawn from the latest property valuation (not from the snapshot table), so the balance stays current whenever your valuation provider refreshes. Equity is the property value minus any linked mortgage balance; a cash-purchased property with no linked mortgage shows its full value as equity. Add a property, record manual valuations, or archive a property here. See [Real Estate](#real-estate) for the full workflow.
 
-**Real estate section:**
-Shows each property with its balance drawn from the latest property valuation (not from the snapshot table). This keeps the balance current whenever your valuation provider refreshes.
+Investment, retirement, and pension balances are not on this page. They live elsewhere:
 
-**Pension section:**
-Shows each pension account with an estimated present value computed as:
-
-```
-PV ≈ monthly_benefit_estimate × 12 ÷ 4%
-```
-
-This is a simplified perpetuity estimate, labelled "~est. PV (4% discount)" to signal the approximation. For a more scenario-aware projection, use the FIRE planner's income streams.
-
-**Investment / retirement section:**
-Shows investment and retirement accounts with their most recent balance snapshot. Click **Update value** to record a new balance as of any date — a form appears with a date picker and amount field. The new snapshot is saved immediately and the displayed balance updates.
+- **Pension present value** appears on the [Net Worth report](#net-worth) via the **Show PV** toggle, valued as a finite life annuity (see [How to set a pension's present value](howto-set-pension-present-value.md)). A pension account's own page shows its monthly benefit estimate and annual equivalent; see [Pension accounts](#pension-accounts).
+- **Investment and retirement balances** appear on the [Investments](#investments) report (with a positions rollup and holdings mix) and the Retirement report, and feed net worth through balance snapshots.
 
 ---
 
@@ -128,7 +120,7 @@ Pagination defaults to 50 per page (up to 500 per page via the `page_size` query
 
 ### Adding a transaction manually
 
-Click **New entry** and fill in the date, amount, payee, memo, and optional category. The category field pre-selects a sensible default based on the account type — retirement accounts (401k, 403b, IRA, Roth IRA) default to "Contributions"; pension accounts default to "Income".
+Click **New entry** and fill in the date, amount, payee, memo, and optional category. The category field pre-selects a sensible default based on the account type: retirement accounts (401k, 403b, IRA, Roth IRA) default to "Contributions"; pension accounts default to "Income".
 
 ### Editing a transaction
 
@@ -144,8 +136,8 @@ Click **Import** on an account, then drag a file onto the uploader.
 
 **Supported formats:**
 
-- **CSV** — most banks export in this format. Required columns depend on the bank; use the column-mapping step if the importer asks you to match fields.
-- **OFX / QFX** — native financial data exchange format; no mapping needed.
+- **CSV**: most banks export in this format. Required columns depend on the bank; use the column-mapping step if the importer asks you to match fields.
+- **OFX / QFX**: native financial data exchange format; no mapping needed.
 
 The import runs as a background job. Watch the **Settings → Import History** page to track progress.
 
@@ -185,7 +177,7 @@ Budgets set monthly spending targets per category.
 1. Go to **Budgets** in the sidebar.
 2. Click **New budget**.
 3. Choose a category and set the monthly limit.
-4. Optionally set an `effective_from` date — budgets take effect from that date forward. An `effective_to` date can also be set to retire a budget at a future date without deleting it.
+4. Optionally set an `effective_from` date: budgets take effect from that date forward. An `effective_to` date can also be set to retire a budget at a future date without deleting it.
 
 The dashboard shows budget alerts for categories that have exceeded 90% of their limit. The **Budget vs Actuals** report (under Reports) shows a full breakdown for any month.
 
@@ -199,19 +191,30 @@ All reports are under the **Reports** menu in the top navigation.
 
 Shows total assets, total liabilities, and net worth over time. Configure:
 
-- **Date range** — start and end date
-- **Interval** — monthly, quarterly, or annual
+- **Date range**: start and end date
+- **Interval**: monthly, quarterly, or annual
 
 Assets include: account balances + property valuations. Liabilities include: credit card balances + loan balances.
 
-**Pension annotations:** Below the net worth chart, each pension account with a defined monthly benefit estimate is listed with annual benefit, eligibility info, and a **Show PV** toggle. Toggling on converts the annual benefit stream to present value using a 4% discount rate, giving you a sense of the economic value of the pension alongside your portfolio.
+**Pension annotations:** Below the net worth chart, each pension account with a defined monthly benefit estimate is listed with annual benefit, eligibility info, and a **Show PV** toggle. Toggling on shows the present value of the benefit, valued as a finite life annuity that accounts for COLA growth, the survivor benefit, and the years until you're eligible (a 4% discount rate), not the old "annual benefit ÷ 4%" perpetuity. Editing an estimate only changes the value from that point forward; past chart points keep the estimate that was in effect then. See [Why pension present value works the way it does](explanation-pension-present-value.md) and [How to set a pension's present value](howto-set-pension-present-value.md).
 
 ### Cash Flow
 
 Shows income and expenses grouped by time period. Configure:
 
 - **Date range**
-- **Group by** — month or quarter
+- **Group by**: month or quarter
+
+**Retirement income breakdown:** When the range includes retirement income, a **Retirement income** card breaks out **Social Security**, **Pension**, and **RMDs** (plus a total). These are a subset of total income, not an addition. The card hides itself when there's no retirement income. See [How to read the retirement income breakdown](howto-track-retirement-income.md).
+
+### Investments
+
+Shows your `investment_brokerage` accounts with balance history, plus, when you have cost-basis lots, a **Holdings** card:
+
+- **Top positions**: each ticker rolled up across accounts (shares and cost basis), ranked by cost basis.
+- **Holdings mix**: a donut of cost basis by asset class (Equity, Fixed income, Cash, Real estate, Alternatives, Other, Unclassified).
+
+Figures are cost basis, not market value; HearthLedger tracks no live prices. See [How to view your investment positions](howto-view-investment-positions.md).
 
 ### Spending by Category
 
@@ -235,16 +238,16 @@ FIRE (Financial Independence, Retire Early) scenarios let you model retirement t
 
 Click **New scenario** and fill in:
 
-- **Name** — e.g. "Lean FIRE at 45" or "Coast FIRE"
-- **Target annual spend** — estimated annual spending in retirement, in today's dollars
-- **Safe withdrawal rate** — the annual percentage you plan to withdraw from your portfolio (default 4%). Your FIRE number is computed as `target_annual_spend ÷ safe_withdrawal_rate`; at 4% and $48,000/year, the FIRE number is $1,200,000
-- **Expected annual return** — projected portfolio growth rate (default 7%)
-- **Expected inflation rate** — used to inflation-adjust your spend target each year in the projection (default 3%)
-- **Target retirement age** (optional) — shown on the projection chart
+- **Name**: e.g. "Lean FIRE at 45" or "Coast FIRE"
+- **Target annual spend**: estimated annual spending in retirement, in today's dollars
+- **Safe withdrawal rate**: the annual percentage you plan to withdraw from your portfolio (default 4%). Your FIRE number is computed as `target_annual_spend ÷ safe_withdrawal_rate`; at 4% and $48,000/year, the FIRE number is $1,200,000
+- **Expected annual return**: projected portfolio growth rate (default 7%)
+- **Expected inflation rate**: used to inflation-adjust your spend target each year in the projection (default 3%)
+- **Target retirement age** (optional): shown on the projection chart
 
 ### Income streams
 
-Each scenario tracks income streams — sources of money that affect your path to FIRE. Add them under the **Income Streams** section of the scenario editor.
+Each scenario tracks income streams: sources of money that affect your path to FIRE. Add them under the **Income Streams** section of the scenario editor.
 
 Each stream has:
 | Field | Description |
@@ -253,15 +256,15 @@ Each stream has:
 | **Type** | `salary`, `rental`, `consulting`, `pension`, `social_security`, `investment`, or `other` |
 | **Annual amount** | Gross annual amount in today's dollars |
 | **Annual growth rate** | How fast this income grows per year (e.g. `0.03` for 3%) |
-| **Start year / End year** | Active range — leave end year blank for indefinite |
+| **Start year / End year** | Active range: leave end year blank for indefinite |
 | **Pre-retirement?** | Toggle on for income you earn before FIRE; toggle off for post-retirement income (e.g. Social Security, pension). Post-retirement streams reduce your effective withdrawal need rather than boosting savings |
 | **Property link** | Rental streams can be linked to a real estate property |
 
-Consulting and other variable-income streams show a yellow "Variable income — review estimate" warning as a reminder to sanity-check the amount.
+Consulting and other variable-income streams show a yellow "Variable income: review estimate" warning as a reminder to sanity-check the amount.
 
 ### Auto-detect income streams
 
-Click **Auto-detect from transactions** to have HearthLedger analyse your actual transaction history and generate income stream entries automatically.
+Click **Auto-detect from transactions** to have HearthLedger analyze your actual transaction history and generate income stream entries automatically.
 
 The detector groups your income transactions by category (using the trailing 12 months by default), annualises them, and merges the results into your scenario. It also creates a `pension` income stream for each vested pension account that has a non-zero monthly benefit estimate, using the pension's eligibility age/date as the stream start year and its COLA rate as the annual growth rate. Streams detected this way are marked with a **Detected** badge and a timestamp.
 
@@ -277,9 +280,9 @@ Change the trailing window (1–60 months) to include more or less history befor
 
 After saving a scenario, the right panel shows the projection chart:
 
-- **Blue line** — projected portfolio value over time, starting from the detected or manually-entered current portfolio value
-- **Orange dashed line** — your FIRE number (grows with inflation each year)
-- **FIRE crossing annotation** — the year and age at which your portfolio crosses the FIRE number ("FIRE at age 52, 2039")
+- **Blue line**: projected portfolio value over time, starting from the detected or manually-entered current portfolio value
+- **Orange dashed line**: your FIRE number (grows with inflation each year)
+- **FIRE crossing annotation**: the year and age at which your portfolio crosses the FIRE number ("FIRE at age 52, 2039")
 
 Below the chart, a year-by-year table shows: year, age, portfolio value, annual income, annual savings, and effective withdrawal amount for each year.
 
@@ -303,7 +306,7 @@ The top of the page shows each of your active loan and credit accounts with:
 - Interest rate (APR)
 - Minimum monthly payment
 
-### Modelling extra payments
+### Modeling extra payments
 
 Enter an amount in the **Extra monthly payment** field to model paying more than the minimums. Both payoff plans update in real time as you type.
 
@@ -311,10 +314,10 @@ Enter an amount in the **Extra monthly payment** field to model paying more than
 
 The page shows both strategies side by side so you can compare them directly.
 
-| Strategy      | How it works                                                  | Best for                                       |
-| ------------- | ------------------------------------------------------------- | ---------------------------------------------- |
-| **Avalanche** | Directs extra payment to the highest-interest-rate debt first | Minimising total interest paid                 |
-| **Snowball**  | Directs extra payment to the lowest-balance debt first        | Motivation — individual debts disappear faster |
+| Strategy      | How it works                                                  | Best for                                      |
+| ------------- | ------------------------------------------------------------- | --------------------------------------------- |
+| **Avalanche** | Directs extra payment to the highest-interest-rate debt first | Minimising total interest paid                |
+| **Snowball**  | Directs extra payment to the lowest-balance debt first        | Motivation: individual debts disappear faster |
 
 When a debt reaches $0, its former minimum payment is automatically redirected to the next target debt (this is the "rollover" or "snowball roll" effect).
 
@@ -324,8 +327,8 @@ Each strategy panel shows:
 
 - **Months to payoff** and **Payoff date**
 - **Total interest paid** across all debts
-- **Payoff order** — the sequence in which individual debts are cleared
-- **Balance over time chart** — stacked area chart showing remaining balances by debt month by month
+- **Payoff order**: the sequence in which individual debts are cleared
+- **Balance over time chart**: stacked area chart showing remaining balances by debt month by month
 
 The avalanche strategy will always pay equal or less total interest than snowball when interest rates differ across your debts.
 
@@ -342,7 +345,7 @@ Click **New property** and enter:
 - Address (stored encrypted)
 - Property type: Primary Residence, Rental, Vacation, Commercial, Land, or Other
 - Purchase date and price
-- Current estimated value (or use a valuation provider — see below)
+- Current estimated value (or use a valuation provider: see below)
 
 The property type is displayed on the account list and transaction list banner, and is also available in the Property P&L report.
 
@@ -366,8 +369,8 @@ HearthLedger can export reports as PDF or Excel files.
 
 Go to **Reports**, then click **Export** on any report. Choose a format:
 
-- **PDF** — formatted report suitable for printing or sharing
-- **Excel** — raw data in `.xlsx` format for further analysis
+- **PDF**: formatted report suitable for printing or sharing
+- **Excel**: raw data in `.xlsx` format for further analysis
 
 **Executor re-authentication:** exports require re-entering your password (a short-lived `reauth_token` is issued and attached to the export request). This prevents an unattended logged-in session from exporting sensitive data.
 
@@ -416,7 +419,7 @@ HearthLedger supports multiple household members. Each member has a role:
 
 | Role        | Permissions                                                                                                   |
 | ----------- | ------------------------------------------------------------------------------------------------------------- |
-| `primary`   | Full access — all accounts, all data, backups, exports, member management                                     |
+| `primary`   | Full access: all accounts, all data, backups, exports, member management                                      |
 | `partner`   | Own accounts + any accounts explicitly granted; can import and export; cannot manage backups or other members |
 | `dependent` | Read-only access to accounts explicitly granted                                                               |
 
@@ -442,9 +445,9 @@ Settings are accessed via the **user menu** in the top-right of the navigation b
 
 Go to **Settings → Appearance** to choose a color scheme:
 
-- **Light** — always light
-- **Dark** — always dark
-- **System** — follows your OS preference
+- **Light**: always light
+- **Dark**: always dark
+- **System**: follows your OS preference
 
 The preference is stored locally in your browser.
 
@@ -454,11 +457,11 @@ Go to **Settings → Security** to change your password. You'll need to enter yo
 
 ### Security log
 
-Go to **Settings → Security** and scroll down to the **Login history** section to see your authentication event feed — logins, logouts, failed attempts, and password changes, with timestamps and IP address. Primary members can see all household members' auth events; other roles see only their own.
+Go to **Settings → Security** and scroll down to the **Login history** section to see your authentication event feed: logins, logouts, failed attempts, and password changes, with timestamps and IP address. Primary members can see all household members' auth events; other roles see only their own.
 
 ### Activity log
 
-Go to **Settings → Activity** to see the household audit log — a chronological feed of every data mutation (account created, transaction updated, category renamed, etc.) with timestamps, the actor, and before/after values. The list is filterable by member, entity type, and date range.
+Go to **Settings → Activity** to see the household audit log: a chronological feed of every data mutation (account created, transaction updated, category renamed, etc.) with timestamps, the actor, and before/after values. The list is filterable by member, entity type, and date range.
 
 The audit log is append-only and cannot be modified or deleted through the application.
 
@@ -466,4 +469,4 @@ Primary members see all household events. Partner and dependent members see even
 
 ### Per-record history
 
-On any transaction or account detail page, expand the **History** section (collapsible panel at the bottom) to see the full change history for that specific record — who changed what and when, displayed oldest-first as a timeline.
+On any transaction or account detail page, expand the **History** section (collapsible panel at the bottom) to see the full change history for that specific record: who changed what and when, displayed oldest-first as a timeline.

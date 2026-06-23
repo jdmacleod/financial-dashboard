@@ -148,10 +148,10 @@ Entrypoint: `python -m app.worker.main`.
 
 Registered task queues:
 
-- `import_queue` — CSV/OFX/QFX import jobs
-- `export_queue` — PDF and Excel export generation
-- `backup_queue` — DB dump, encrypt, prune
-- `valuation_queue` — real estate valuation API refresh
+- `import_queue`: CSV/OFX/QFX import jobs
+- `export_queue`: PDF and Excel export generation
+- `backup_queue`: DB dump, encrypt, prune
+- `valuation_queue`: real estate valuation API refresh
 
 Scheduled tasks (cron via APScheduler inside the worker):
 
