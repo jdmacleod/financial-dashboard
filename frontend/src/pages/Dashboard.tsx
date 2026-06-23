@@ -359,9 +359,9 @@ export default function Dashboard() {
             sub="checking + savings"
           />
           <KpiCard
-            label="Saved / mo"
-            value={formatCurrency(dash.cash_flow_mtd.net)}
-            sub="month to date"
+            label="Net saved"
+            value={cashFlowReport ? formatCurrency(cashFlowReport.totals.net) : "—"}
+            sub={range === "ytd" ? "year to date" : range === "1y" ? "trailing year" : "all time"}
           />
         </div>
       )}
@@ -578,7 +578,7 @@ export default function Dashboard() {
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              marginBottom: "14px",
+              marginBottom: "10px",
             }}
           >
             <SectionLabel>Cash flow</SectionLabel>
@@ -588,6 +588,40 @@ export default function Dashboard() {
             >
               Full report →
             </Link>
+          </div>
+          <div
+            style={{
+              display: "flex",
+              gap: "12px",
+              marginBottom: "10px",
+            }}
+          >
+            {[
+              { label: "Income", color: "var(--up)" },
+              { label: "Expenses", color: "var(--liab)" },
+            ].map(({ label, color }) => (
+              <span
+                key={label}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  fontSize: "11px",
+                  color: "var(--label)",
+                }}
+              >
+                <span
+                  style={{
+                    width: "8px",
+                    height: "8px",
+                    borderRadius: "2px",
+                    background: color,
+                    flexShrink: 0,
+                  }}
+                />
+                {label}
+              </span>
+            ))}
           </div>
           {cfChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={140}>
