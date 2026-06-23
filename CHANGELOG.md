@@ -3,6 +3,22 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.15.0.0] - 2026-06-22
+
+### Added
+
+- **Investment positions.** The Investments page now rolls your cost-basis lots up into a "Top positions" table (per-ticker shares and total cost basis) and a "Holdings mix" donut broken out by asset class. Backed by a new `GET /investment-positions` endpoint. Lots can carry an asset class, and the demo households classify common tickers so the mix is meaningful out of the box. Cost basis is shown rather than market value — HearthLedger tracks no live prices.
+- **Retirement income breakdown.** The cash-flow report now splits retirement income into labeled buckets — Social Security, pension, and required minimum distributions — shown as a panel that hides itself for households not yet drawing those benefits.
+- **Pension estimates keep their history.** Editing a pension's benefit estimate no longer rewrites past net-worth chart points: each point is valued from the estimate that was in effect on that date. Existing pensions are backfilled automatically.
+
+### Changed
+
+- **More accurate pension present value.** Net worth now values a defined-benefit pension as a finite life annuity that accounts for the years until eligibility, COLA growth, and the survivor benefit — replacing the old flat "annual benefit ÷ 4%" perpetuity. The net-worth report surfaces this value directly instead of recomputing it in the browser.
+
+### Fixed
+
+- The Assets page no longer risks a crash when showing equity for a cash-purchased property that has no linked mortgage.
+
 ## [0.14.0.0] - 2026-06-22
 
 ### Added

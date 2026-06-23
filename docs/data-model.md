@@ -321,6 +321,35 @@ or `eligibility_date`.
 
 ---
 
+## pension_estimate_history
+
+Point-in-time snapshots of a pension's present-value inputs. Net-worth points
+are valued from the estimate **in effect at that date**, so editing a benefit
+estimate does not retroactively rewrite historical chart points. `PensionService`
+appends a row on create and whenever a PV-relevant field changes (same-day edits
+upsert on `(pension_account_id, effective_date)`). For dates before the earliest
+row, the earliest (inception) estimate applies.
+
+```sql
+CREATE TABLE pension_estimate_history (
+    id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pension_account_id       UUID NOT NULL REFERENCES pension_accounts(id) ON DELETE CASCADE,
+    effective_date           DATE NOT NULL,
+    monthly_benefit_estimate NUMERIC(18,4),
+    cola_adjustment_rate     NUMERIC(5,4) NOT NULL DEFAULT 0.02,
+    survivor_benefit_percent NUMERIC(5,4),
+    eligibility_date         DATE,
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (pension_account_id, effective_date)
+);
+```
+
+The column set mirrors the present-value inputs on `pension_accounts` so the same
+valuation function (`app/services/pension_valuation.py`) values either a live
+pension or a historical snapshot.
+
+---
+
 ## debts
 
 Companion table to mortgage/loan accounts for payoff projection.
@@ -560,6 +589,7 @@ households
   │     ├── real_estate_properties
   │     │     └── property_valuations
   │     ├── pension_accounts
+  │     │     └── pension_estimate_history
   │     ├── debts
   │     └── import_jobs
   ├── categories (hierarchical)

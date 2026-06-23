@@ -16,62 +16,68 @@
 
 ---
 
-### Pension PV formula accuracy (post-Phase 8)
+### Investment positions — optional brokerage sync (residual)
 
-**What:** The current pension net worth formula uses a simplified perpetuity:
-`monthly_benefit_estimate × 12 / 0.04`. This ignores time-to-retirement (overestimates
-for young workers), survivorship benefit rates, and cola_adjustment_rate. Additionally,
-updating `monthly_benefit_estimate` retroactively changes ALL historical net worth chart
-points since there is no time-series of past estimates.
+**What:** Auto-populate positions from an external brokerage provider. The manual
+positions feature — per-ticker rollup ("Top positions") and "Holdings mix by asset class"
+donut — is implemented (see Completed below). Only the optional brokerage-sync leg of the
+original item remains.
 
-**Why:** The perpetuity formula gives useful directional signal but is less accurate for
-households far from retirement. The retroactive recalculation is a known data model
-limitation.
+**Why:** HearthLedger is a balance tracker with no external connections by design; a sync
+provider would require an API integration and credential handling, mirroring the real
+estate valuation provider pattern.
 
-**Pros:** A more accurate PV would use annuity factors with age and expected retirement
-date (as in the FIRE projector), making net worth more precise. Historical accuracy
-requires a new `PensionEstimateHistory` table.
+**Cons:** External API integration, credentials, and a scheduled sync task. Significant
+scope; out of scope for v1's no-connections stance.
 
-**Cons:** Significant scope increase. Requires a new DB table, migration, and service
-changes. The FIRE projector already has a more accurate model that could be reused.
+**Context:** Positions rollup built over the existing `investment_lot` (cost-basis) data
+with a new `asset_class` column (migration 0009), a `GET /investment-positions` endpoint,
+and an `InvestmentPositionsPanel` on the Investments page.
 
-**Context:** Acknowledged in Phase 8 design doc as a known limitation. The UI label
-"~$X estimated PV (4% discount, based on current benefit estimate)" signals the
-approximation to the user.
-
-**Depends on:** Phase 8 B2 complete.
-
----
-
-### Investment positions table (deferred from Wealth Dashboard redesign Phase 4)
-
-**What:** The Investments tab (`/reports/investments`) currently shows only account-level balances for `investment_brokerage` accounts. Add support for: (1) manual entry of individual holdings (ticker, shares, cost basis), (2) a Holdings mix by asset class breakdown, (3) optional brokerage sync for auto-populating positions.
-
-**Why:** The high-fidelity design's "Top positions" table (VTI 42 shares, NVDA 12 shares) and "Holdings mix" donut require per-security data that doesn't exist in the backend yet. HearthLedger is a balance tracker, not a brokerage integration — showing position-level data is a meaningful upgrade to investment insight.
-
-**Pros:** Closes the gap between HearthLedger and tools like Monarch Money for investment tracking. Manual entry works offline with no API keys required. Brokerage sync could auto-update positions if a provider is added.
-
-**Cons:** Requires a new `investment_positions` DB table, migration, CRUD API endpoints, and UI in the Investments tab. Brokerage sync would additionally require an external API integration. Significant scope increase.
-
-**Context:** Explicitly deferred as design decision D2 during the office-hours session (2026-06-19). The Investments tab was intentionally scoped to account-level data for the Phase 4 initial implementation. The TODO comment in `Investments.tsx` marks where this UI would go.
-
-**Depends on:** Wealth Dashboard Phase 4 complete. New `investment_positions` DB schema design (separate planning session needed).
-
----
-
-### Assets.test.tsx — null-mortgage equity test (Phase 11 deferred)
-
-**Priority:** P2
-
-**What:** Add a Vitest / React Testing Library test to `frontend/src/` that mocks `propertiesApi.getEquity` with `mortgage_balance_visible: false` and verifies the Assets page renders the Sarasota property equity figure without crashing. The Phase 11 design doc (section 2.5, verification checklist) explicitly lists this as a required test before the Phase 11 feature is considered complete.
-
-**Why:** H5 Langford's Sarasota primary home is a cash purchase (`linked_mortgage_account_id = null`). The equity display path for properties without a linked mortgage has not been exercised in the test suite. A crash in this code path would affect any user who creates a real estate account without a linked mortgage.
-
-**Depends on:** ~~Phase 11 H4/H5 seed modules merged~~ — fulfilled by v0.9.4.0. Ready to implement.
+**Depends on:** Positions rollup (done).
 
 ---
 
 ## Completed
+
+### Investment positions rollup — Top positions + Holdings mix
+
+**Completed:** v0.15.0.0 (2026-06-22) — Cost-basis lots
+now roll up into a per-ticker "Top positions" table and an asset-class "Holdings mix"
+donut on the Investments page. Added `investment_lot.asset_class` (migration 0009), a
+`GET /investment-positions` endpoint (`InvestmentLotService.positions_summary`), and
+typed frontend panel. Seed lots are auto-classified by ticker for a meaningful demo mix.
+Cost basis is used (no live prices). Optional brokerage sync remains deferred (above).
+
+### Pension PV formula rework + historical estimate time-series
+
+**Completed:** v0.15.0.0 (2026-06-22) — Replaced the
+perpetuity (`annual / 0.04`) with a model that discounts deferred benefits over the years
+to eligibility, models COLA growth as a growing annuity, values a finite life annuity, and
+adds the survivor benefit. Centralized in `app/services/pension_valuation.py`; the report
+layer and the net-worth UI now use the shared value (`PensionAnnotation.estimated_pv`).
+
+Added `PensionEstimateHistory` (migration 0010): `PensionService` records an estimate
+snapshot on create and whenever a PV-relevant field changes, and each net-worth point is
+valued from the estimate in effect at that date (`pension_value_at` / `effective_estimate`).
+Editing today's benefit estimate no longer rewrites historical chart points. Pensions
+predating the table fall back to current fields; existing rows were backfilled in the
+migration. This fully closes the original Phase 8 item.
+
+### Retirement income breakdown in cash-flow report
+
+**Completed:** v0.15.0.0 (2026-06-22) — The cash-flow
+report now breaks retirement income into labeled buckets (Social Security / Pension /
+RMDs) via `CashFlowReport.retirement_income`; the Cash flow page shows a panel that hides
+itself when the household draws no retirement income. (Phase 11 CEO plan, Phase 12
+candidate.)
+
+### Assets.test.tsx — null-mortgage equity test
+
+**Completed:** v0.15.0.0 (2026-06-22) — Added a Vitest
+case covering a cash-purchased property (`linked_mortgage_account_id: null`,
+`mortgage_balance_visible: false`): asserts the equity figure renders and no mortgage line
+appears. Closes the Phase 11 §2.5 verification item.
 
 ### Context-aware category add buttons on Accounts page (Phase 8 F6)
 
