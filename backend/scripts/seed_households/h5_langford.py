@@ -1205,10 +1205,13 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("electric", D("145.00"), date(2024, 1, 1)),
         ("internet", D("68.00"), date(2024, 1, 1)),
         ("cell_phone", D("75.00"), date(2024, 1, 1)),
-        # Healthcare
+        # Healthcare — Medicare amounts step up in 2026 to match actual transaction amounts
         ("medicare_part_b", D("280.00"), date(2024, 1, 1)),
+        ("medicare_part_b", D("284.10"), date(2026, 1, 1)),
         ("medicare_part_d", D("48.00"), date(2024, 1, 1)),
+        ("medicare_part_d", D("49.00"), date(2026, 1, 1)),
         ("medigap_supplement", D("192.00"), date(2024, 1, 1)),
+        ("medigap_supplement", D("198.00"), date(2026, 1, 1)),
         ("aca_premium", D("1165.00"), date(2024, 1, 1)),
         ("aca_premium", D("1245.00"), date(2025, 1, 1)),
         ("aca_premium", D("1310.00"), date(2026, 1, 1)),
