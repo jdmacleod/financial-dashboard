@@ -763,9 +763,25 @@ Net worth over time.
     "total_liabilities": "180000.0000",
     "net_worth": "70000.0000",
     "breakdown": { "...": "..." }
-  }
+  },
+  "pension_annotations": [
+    {
+      "account_id": "uuid",
+      "nickname": "State Pension",
+      "monthly_benefit": "2500.0000",
+      "eligibility_age": 65,
+      "eligibility_date": "2040-01-01",
+      "estimated_pv": "412300.0000"
+    }
+  ]
 }
 ```
+
+`pension_annotations[].estimated_pv` is the present value used for pension
+accounts in the net-worth totals. It accounts for time-to-eligibility, COLA
+growth, a finite life annuity, and the survivor benefit (see
+`app/services/pension_valuation.py`); it is `null` when no benefit estimate is
+recorded. Clients should display this rather than recompute a perpetuity.
 
 ### `GET /reports/cash-flow`
 
@@ -796,9 +812,21 @@ Income and expenses over time.
     "expenses": "3200.0000",
     "net": "2600.0000",
     "savings_rate": 44.8
+  },
+  "retirement_income": {
+    "social_security": "0.0000",
+    "pension": "0.0000",
+    "rmd": "0.0000",
+    "total": "0.0000",
+    "has_data": false
   }
 }
 ```
+
+`retirement_income` breaks period-total income into labeled retirement buckets
+(matched by category name: Social Security, Pension Income, Required Minimum
+Distribution). `has_data` is `false` when the household drew no retirement
+income in the range, letting clients hide the panel.
 
 ### `GET /reports/spending-by-category`
 
@@ -1275,6 +1303,7 @@ Lists cost-basis lots in accounts the caller can see, ordered by acquired date.
     "basis_per_share": "42.500000",
     "acquired_date": "2023-06-01",
     "basis_type": "purchase",
+    "asset_class": "equity",
     "created_at": "2026-01-15T10:00:00Z"
   }
 ]
@@ -1282,6 +1311,31 @@ Lists cost-basis lots in accounts the caller can see, ordered by acquired date.
 
 Basis types: `purchase`, `rsu_vest`, `espp`, `inherited_stepup`,
 `gift_carryover`, `reinvested_dividend`.
+
+Asset classes (nullable): `equity`, `fixed_income`, `cash`, `real_estate`,
+`alternative`, `other`.
+
+#### `GET /investment-positions`
+
+Rolls up every visible cost-basis lot into per-ticker positions and an
+asset-class mix, for the Investments page's "Top positions" table and "Holdings
+mix" donut. Cost basis is used throughout — HearthLedger tracks no live market
+prices, so there is no market-value field.
+
+**Response:** `PositionsSummary`
+
+```json
+{
+  "positions": [
+    { "ticker": "VTI", "shares": "42.000000", "cost_basis": "9000.0000", "lot_count": 2 }
+  ],
+  "holdings_mix": [{ "asset_class": "equity", "cost_basis": "9000.0000", "percentage": 90.0 }],
+  "total_cost_basis": "10000.0000"
+}
+```
+
+`positions` and `holdings_mix` are sorted by cost basis descending. Lots with no
+`asset_class` are grouped under the `"unclassified"` mix slice.
 
 #### `POST /investment-lots`
 

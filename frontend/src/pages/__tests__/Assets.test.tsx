@@ -213,6 +213,61 @@ describe("Assets — Real estate tab (Phase 6)", () => {
     })
   })
 
+  it("renders equity for a property with no linked mortgage (cash purchase)", async () => {
+    // H5 Langford's Sarasota home is a cash purchase: linked_mortgage_account_id
+    // is null and the equity endpoint reports no mortgage balance. The equity
+    // display must render the full property value as equity without a mortgage
+    // line and without crashing.
+    const { accountsApi: accounts } = await import("@/api/accounts")
+    const { propertiesApi: properties } = await import("@/api/properties")
+    ;(accounts.list as ReturnType<typeof vi.fn>).mockResolvedValue([
+      {
+        id: "re-2",
+        nickname: "Sarasota Home",
+        account_type: "real_estate",
+        owner_member_id: "m1",
+        institution_name: null,
+        account_number_last4: null,
+        include_in_net_worth: true,
+        is_active: true,
+        current_balance: "650000.00",
+        balance_as_of: "2026-06-01",
+        created_at: "2018-03-01T00:00:00Z",
+        updated_at: "2026-06-01T00:00:00Z",
+      },
+    ])
+    ;(properties.getByAccountId as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...mockProperty,
+      id: "prop-2",
+      account_id: "re-2",
+      nickname: "Sarasota Home",
+      address: "456 Beach Dr, Sarasota",
+      linked_mortgage_account_id: null,
+      purchase_price: "650000.00",
+      current_estimated_value: "650000.00",
+      gain_loss: "0.00",
+      gain_loss_pct: "0.00",
+    })
+    ;(properties.getEquity as ReturnType<typeof vi.fn>).mockResolvedValue({
+      property_value: "650000.00",
+      valuation_date: "2026-06-01",
+      valuation_source: "manual",
+      mortgage_balance: null,
+      mortgage_balance_as_of: null,
+      mortgage_balance_visible: false,
+      equity: "650000.00",
+    })
+    ;(properties.listValuations as ReturnType<typeof vi.fn>).mockResolvedValue([])
+
+    renderPage()
+
+    await waitFor(() => {
+      expect(screen.getAllByText("$650,000.00").length).toBeGreaterThan(0)
+    })
+    // No mortgage line should be rendered for a cash-purchased property.
+    expect(screen.queryByText(/mortgage/i)).toBeNull()
+  })
+
   it("shows empty state when no real estate accounts", async () => {
     const { accountsApi: mock } = await import("@/api/accounts")
     ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([])

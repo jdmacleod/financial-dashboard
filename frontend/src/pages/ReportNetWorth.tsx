@@ -19,8 +19,6 @@ import { lastNMonthsRange, lastNYearsRange } from "@/lib/dateRange"
 type Interval = "monthly" | "quarterly" | "annual"
 type Preset = "1y" | "2y" | "5y"
 
-const PENSION_PV_DISCOUNT_RATE = 0.04
-
 const ASSET_BUCKETS: { key: keyof NetWorthBreakdown; label: string }[] = [
   { key: "checking_savings", label: "Cash & Savings" },
   { key: "investment", label: "Investments" },
@@ -289,8 +287,7 @@ export default function ReportNetWorth() {
             {data.pension_annotations.map((ann) => {
               const annualBenefit =
                 ann.monthly_benefit != null ? Number(ann.monthly_benefit) * 12 : null
-              const presentValue =
-                annualBenefit != null ? annualBenefit / PENSION_PV_DISCOUNT_RATE : null
+              const presentValue = ann.estimated_pv != null ? Number(ann.estimated_pv) : null
               return (
                 <div
                   key={ann.account_id}
@@ -332,8 +329,8 @@ export default function ReportNetWorth() {
           </div>
           {showPV && (
             <p className="mt-3 text-xs text-gray-400">
-              Present value estimated using {PENSION_PV_DISCOUNT_RATE * 100}% discount rate (annual
-              benefit ÷ {PENSION_PV_DISCOUNT_RATE}).
+              Present value estimated with a 4% discount rate, COLA growth, and time until
+              eligibility — a finite life annuity, not a perpetuity.
             </p>
           )}
         </div>

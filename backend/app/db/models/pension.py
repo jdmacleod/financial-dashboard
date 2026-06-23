@@ -29,3 +29,27 @@ class PensionAccount(Base):
     notes_enc: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class PensionEstimateHistory(Base):
+    """A point-in-time snapshot of the present-value inputs for a pension.
+
+    Net-worth points are valued from the estimate in effect at each date, so
+    editing a benefit estimate today no longer rewrites historical chart points.
+    A row is appended on create and whenever a PV-relevant field changes; the
+    column names mirror PensionAccount so the same valuation function values
+    either object (see app.services.pension_valuation).
+    """
+
+    __tablename__ = "pension_estimate_history"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    pension_account_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    effective_date: Mapped[date] = mapped_column(Date, nullable=False)
+    monthly_benefit_estimate: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
+    cola_adjustment_rate: Mapped[Decimal] = mapped_column(
+        Numeric(5, 4), nullable=False, default=Decimal("0.02")
+    )
+    survivor_benefit_percent: Mapped[Decimal | None] = mapped_column(Numeric(5, 4), nullable=True)
+    eligibility_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

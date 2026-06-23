@@ -9,10 +9,21 @@ from app.schemas.investment_lot import (
     InvestmentLotCreate,
     InvestmentLotResponse,
     InvestmentLotUpdate,
+    PositionsSummary,
 )
 from app.services.investment_lot import InvestmentLotService
 
 router = APIRouter()
+
+
+@router.get("/investment-positions", response_model=PositionsSummary)
+async def get_investment_positions(
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> PositionsSummary:
+    """Per-ticker positions and asset-class mix rolled up from cost-basis lots."""
+    svc = InvestmentLotService(session)
+    return await svc.positions_summary(ctx)
 
 
 @router.get("/investment-lots", response_model=list[InvestmentLotResponse])

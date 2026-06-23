@@ -14,6 +14,7 @@ import { subDays, subYears, startOfYear, format } from "date-fns"
 import { accountsApi } from "@/api/accounts"
 import { snapshotsApi } from "@/api/snapshots"
 import { EquityGrantsPanel } from "@/components/app/EquityGrantsPanel"
+import { InvestmentPositionsPanel } from "@/components/app/InvestmentPositionsPanel"
 import { InvestmentLotsPanel } from "@/components/app/InvestmentLotsPanel"
 import { CapitalCommitmentsPanel } from "@/components/app/CapitalCommitmentsPanel"
 import { BROKERAGE_ACCOUNT_TYPES } from "@/lib/accountTypes"
@@ -339,6 +340,7 @@ export default function Investments() {
 
       {/* Demo-data extension surfaces — each renders nothing when empty. */}
       <div style={{ display: "flex", flexDirection: "column", gap: "20px", marginTop: "20px" }}>
+        <InvestmentPositionsPanel />
         <EquityGrantsPanel />
         <InvestmentLotsPanel />
         <CapitalCommitmentsPanel />

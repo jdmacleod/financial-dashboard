@@ -28,6 +28,13 @@ const mockCashFlow = {
     net: "4900.00",
     savings_rate: 44.5,
   },
+  retirement_income: {
+    social_security: "0.00",
+    pension: "0.00",
+    rmd: "0.00",
+    total: "0.00",
+    has_data: false,
+  },
 }
 
 const mockSpending = {
@@ -199,5 +206,33 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
     expect(Math.abs(fromDate.getTime() - oneYearAgo.getTime())).toBeLessThan(
       2 * 24 * 60 * 60 * 1000,
     )
+  })
+
+  it("hides the retirement income panel when there is no retirement income", async () => {
+    renderPage()
+    await waitFor(() => screen.getByText("Total income"))
+    expect(screen.queryByText("Retirement income")).toBeNull()
+  })
+
+  it("shows the retirement income breakdown when the household draws benefits", async () => {
+    const { reportsApi: mock } = await import("@/api/reports")
+    ;(mock.cashFlow as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...mockCashFlow,
+      retirement_income: {
+        social_security: "4886.00",
+        pension: "4000.00",
+        rmd: "9000.00",
+        total: "17886.00",
+        has_data: true,
+      },
+    })
+    renderPage()
+    await waitFor(() => {
+      expect(screen.getByText("Retirement income")).toBeInTheDocument()
+    })
+    expect(screen.getByText("Social Security")).toBeInTheDocument()
+    expect(screen.getByText("Pension")).toBeInTheDocument()
+    expect(screen.getByText("RMDs")).toBeInTheDocument()
+    expect(screen.getByText("$17,886.00")).toBeInTheDocument()
   })
 })
