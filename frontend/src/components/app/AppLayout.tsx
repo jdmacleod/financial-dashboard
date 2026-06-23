@@ -271,7 +271,7 @@ export function AppLayout() {
             <path d="M1.5 7.5L8 2l6.5 5.5" />
             <path d="M3.5 6.5V14H6.5V10.5H9.5V14H12.5V6.5" />
           </svg>
-          Real estate
+          Real Estate
         </SidebarNavLink>
         <SidebarNavLink to="/reports/cash-flow" onClick={() => setSidebarOpen(false)}>
           <svg
@@ -287,7 +287,7 @@ export function AppLayout() {
             <circle cx="8" cy="8" r="6.5" />
             <path d="M8 4.5v7M6 6.5a2 2 0 0 1 2-1.5h.5a1.5 1.5 0 0 1 0 3h-1a1.5 1.5 0 0 0 0 3H8a2 2 0 0 0 2-1.5" />
           </svg>
-          Cash flow
+          Cash Flow
         </SidebarNavLink>
       </nav>
 

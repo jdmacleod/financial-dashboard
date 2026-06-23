@@ -326,7 +326,7 @@ export default function Assets() {
         }}
       >
         <h1 style={{ fontSize: "22px", fontWeight: 700, color: "var(--text)", margin: 0 }}>
-          Real estate
+          Real Estate
         </h1>
         {isPrimary && (
           <button

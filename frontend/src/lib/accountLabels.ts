@@ -26,7 +26,7 @@ export const ACCOUNT_CATEGORY_COLORS: Record<string, string> = {
   "Banking & Cash": "#46b888",
   Retirement: "#d9b96a",
   Investments: "#6c97c4",
-  "Real estate": "#a9743f",
+  "Real Estate": "#a9743f",
   Liabilities: "#e0b48a",
 }
 

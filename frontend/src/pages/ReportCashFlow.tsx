@@ -118,6 +118,16 @@ function CategoryBar({
   )
 }
 
+function formatPeriodLabel(period: string): string {
+  if (period.includes("-Q")) {
+    const [year, q] = period.split("-")
+    return `${q} ${year}`
+  }
+  const [year, month] = period.split("-")
+  const d = new Date(Number(year), Number(month) - 1, 1)
+  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" })
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ReportCashFlow() {
@@ -162,7 +172,7 @@ export default function ReportCashFlow() {
       {/* Header */}
       <div style={{ marginBottom: "20px" }}>
         <h1 style={{ fontSize: "22px", fontWeight: 700, color: "var(--text)", margin: 0 }}>
-          Cash flow
+          Cash Flow
         </h1>
       </div>
 
@@ -254,6 +264,7 @@ export default function ReportCashFlow() {
                     tick={{ fontSize: 10, fill: "var(--muted)" }}
                     tickLine={false}
                     axisLine={false}
+                    tickFormatter={formatPeriodLabel}
                   />
                   <YAxis
                     tick={{ fontSize: 10, fill: "var(--muted)" }}
@@ -447,7 +458,7 @@ export default function ReportCashFlow() {
                           <td
                             style={{ padding: "7px 12px", fontSize: "12px", color: "var(--muted)" }}
                           >
-                            {p.period.slice(0, 7)}
+                            {formatPeriodLabel(p.period.slice(0, 7))}
                           </td>
                           <td
                             style={{
