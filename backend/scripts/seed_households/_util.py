@@ -351,6 +351,8 @@ def make_insurance_policy(
     insured_member_id: uuid.UUID | None = None,
     owner_ownership_entity_id: uuid.UUID | None = None,
     cash_value_account_id: uuid.UUID | None = None,
+    carrier: str | None = None,
+    policy_number: str | None = None,
     metadata: dict | None = None,
 ) -> InsurancePolicy:
     return InsurancePolicy(
@@ -363,6 +365,8 @@ def make_insurance_policy(
         premium_amount=premium_amount,
         premium_cadence=premium_cadence,
         cash_value_account_id=cash_value_account_id,
+        carrier=carrier,
+        policy_number=policy_number,
         policy_metadata=metadata or {},
         created_at=utcnow(),
     )

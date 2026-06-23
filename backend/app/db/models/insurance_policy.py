@@ -54,4 +54,6 @@ class InsurancePolicy(Base):
     policy_metadata: Mapped[dict[str, Any]] = mapped_column(
         "metadata", JSONB, nullable=False, default=dict
     )
+    carrier: Mapped[str | None] = mapped_column(nullable=True)
+    policy_number: Mapped[str | None] = mapped_column(nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

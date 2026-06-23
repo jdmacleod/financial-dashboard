@@ -90,6 +90,8 @@ class InsurancePolicyService:
             premium_amount=data.premium_amount,
             premium_cadence=data.premium_cadence,
             cash_value_account_id=data.cash_value_account_id,
+            carrier=data.carrier,
+            policy_number=data.policy_number,
             policy_metadata=data.metadata,
             created_at=datetime.now(UTC),
         )
@@ -123,6 +125,10 @@ class InsurancePolicyService:
             policy.premium_cadence = data.premium_cadence
         if data.cash_value_account_id is not None:
             policy.cash_value_account_id = data.cash_value_account_id
+        if data.carrier is not None:
+            policy.carrier = data.carrier
+        if data.policy_number is not None:
+            policy.policy_number = data.policy_number
         if data.metadata is not None:
             policy.policy_metadata = data.metadata
         await self.session.flush()

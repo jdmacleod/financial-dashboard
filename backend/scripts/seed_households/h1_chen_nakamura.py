@@ -486,6 +486,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             D("1000000"),
             D("228"),
             "annual",
+            carrier="USAA",
+            policy_number="UMB-2021-0044821",
             metadata={"underlying": ["auto", "home"]},
         )
     )
@@ -497,6 +499,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             D("142"),
             "monthly",
             insured_member_id=wei.id,
+            carrier="Guardian",
+            policy_number="GDI-0089-4412",
             metadata={"benefit_period": "to_age_65", "elimination_days": 90},
         )
     )
