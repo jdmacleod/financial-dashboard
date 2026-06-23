@@ -72,13 +72,13 @@ The calculation runs in three moves:
    (1.04) ^ (years until eligibility)
 ```
 
-A benefit already in payment (no future eligibility date) skips step 3 — there is
-nothing to wait for. A benefit that starts in 25 years gets divided by
+A benefit already in payment (no future eligibility date) skips step 3, since
+there is nothing to wait for. A benefit that starts in 25 years gets divided by
 `1.04^25 ≈ 2.67`, so it is worth far less today than the same benefit in payment.
 That is the behavior the perpetuity could not express.
 
 For the same $4,000/month benefit already in payment with a 2% COLA, the finite
-model lands well under the old `$1,200,000` — a finite life annuity is worth
+model lands well under the old `$1,200,000`: a finite life annuity is worth
 strictly less than an infinite one. You can see this trade-off directly in the
 unit tests (`backend/tests/unit/test_pension_valuation.py`):
 `test_finite_annuity_is_less_than_perpetuity` and
@@ -89,7 +89,7 @@ unit tests (`backend/tests/unit/test_pension_valuation.py`):
 The net-worth chart plots one point per month. A pension contributes its PV to
 every point. If the PV were always computed from **today's** estimate, then the
 day you bump your benefit estimate from $2,000 to $2,500, **every historical
-point on the chart would jump** — as if you had always had the higher benefit.
+point on the chart would jump**, as if you had always had the higher benefit.
 That is misleading: last March your best estimate really was $2,000.
 
 `PensionEstimateHistory` (migration 0010) fixes this. Each row is a snapshot of
@@ -102,7 +102,7 @@ effective_date   monthly_benefit_estimate   ...
 ```
 
 When the report values a pension at a given date, it picks the snapshot **in
-effect at that date** — the latest row whose `effective_date` is on or before the
+effect at that date**: the latest row whose `effective_date` is on or before the
 point (`effective_estimate` in `pension_valuation.py`). So:
 
 - March 2025 is valued from the $2,000 snapshot.
@@ -113,7 +113,7 @@ point (`effective_estimate` in `pension_valuation.py`). So:
 `PensionService` writes a snapshot on create and again whenever a PV-relevant
 field changes (same-day edits update the existing row rather than stacking). The
 column names mirror `pension_accounts` on purpose, so the same valuation function
-values either a live pension or a historical snapshot — no duplicate math.
+values either a live pension or a historical snapshot, with no duplicate math.
 
 ## Trade-offs
 

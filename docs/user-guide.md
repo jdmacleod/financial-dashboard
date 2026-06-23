@@ -107,7 +107,7 @@ Shows each pension account with an estimated present value computed as:
 PV ≈ monthly_benefit_estimate × 12 ÷ 4%
 ```
 
-This is a simplified perpetuity estimate, labelled "~est. PV (4% discount)" to signal the approximation. For a more scenario-aware projection, use the FIRE planner's income streams.
+This is a simplified perpetuity estimate, labeled "~est. PV (4% discount)" to signal the approximation. For a more scenario-aware projection, use the FIRE planner's income streams.
 
 **Investment / retirement section:**
 Shows investment and retirement accounts with their most recent balance snapshot. Click **Update value** to record a new balance as of any date — a form appears with a date picker and amount field. The new snapshot is saved immediately and the displayed balance updates.
@@ -206,7 +206,7 @@ Shows total assets, total liabilities, and net worth over time. Configure:
 
 Assets include: account balances + property valuations. Liabilities include: credit card balances + loan balances.
 
-**Pension annotations:** Below the net worth chart, each pension account with a defined monthly benefit estimate is listed with annual benefit, eligibility info, and a **Show PV** toggle. Toggling on shows the present value of the benefit, valued as a finite life annuity that accounts for COLA growth, the survivor benefit, and the years until you're eligible (a 4% discount rate) — not the old "annual benefit ÷ 4%" perpetuity. Editing an estimate only changes the value from that point forward; past chart points keep the estimate that was in effect then. See [Why pension present value works the way it does](explanation-pension-present-value.md) and [How to set a pension's present value](howto-set-pension-present-value.md).
+**Pension annotations:** Below the net worth chart, each pension account with a defined monthly benefit estimate is listed with annual benefit, eligibility info, and a **Show PV** toggle. Toggling on shows the present value of the benefit, valued as a finite life annuity that accounts for COLA growth, the survivor benefit, and the years until you're eligible (a 4% discount rate), not the old "annual benefit ÷ 4%" perpetuity. Editing an estimate only changes the value from that point forward; past chart points keep the estimate that was in effect then. See [Why pension present value works the way it does](explanation-pension-present-value.md) and [How to set a pension's present value](howto-set-pension-present-value.md).
 
 ### Cash Flow
 
@@ -219,12 +219,12 @@ Shows income and expenses grouped by time period. Configure:
 
 ### Investments
 
-Shows your `investment_brokerage` accounts with balance history, plus — when you have cost-basis lots — a **Holdings** card:
+Shows your `investment_brokerage` accounts with balance history, plus, when you have cost-basis lots, a **Holdings** card:
 
-- **Top positions** — each ticker rolled up across accounts (shares and cost basis), ranked by cost basis.
-- **Holdings mix** — a donut of cost basis by asset class (Equity, Fixed income, Cash, Real estate, Alternatives, Other, Unclassified).
+- **Top positions**: each ticker rolled up across accounts (shares and cost basis), ranked by cost basis.
+- **Holdings mix**: a donut of cost basis by asset class (Equity, Fixed income, Cash, Real estate, Alternatives, Other, Unclassified).
 
-Figures are cost basis, not market value — HearthLedger tracks no live prices. See [How to view your investment positions](howto-view-investment-positions.md).
+Figures are cost basis, not market value; HearthLedger tracks no live prices. See [How to view your investment positions](howto-view-investment-positions.md).
 
 ### Spending by Category
 
@@ -274,7 +274,7 @@ Consulting and other variable-income streams show a yellow "Variable income — 
 
 ### Auto-detect income streams
 
-Click **Auto-detect from transactions** to have HearthLedger analyse your actual transaction history and generate income stream entries automatically.
+Click **Auto-detect from transactions** to have HearthLedger analyze your actual transaction history and generate income stream entries automatically.
 
 The detector groups your income transactions by category (using the trailing 12 months by default), annualises them, and merges the results into your scenario. It also creates a `pension` income stream for each vested pension account that has a non-zero monthly benefit estimate, using the pension's eligibility age/date as the stream start year and its COLA rate as the annual growth rate. Streams detected this way are marked with a **Detected** badge and a timestamp.
 
@@ -316,7 +316,7 @@ The top of the page shows each of your active loan and credit accounts with:
 - Interest rate (APR)
 - Minimum monthly payment
 
-### Modelling extra payments
+### Modeling extra payments
 
 Enter an amount in the **Extra monthly payment** field to model paying more than the minimums. Both payoff plans update in real time as you type.
 

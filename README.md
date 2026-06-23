@@ -13,18 +13,18 @@ Self-hosted household financial tracking. Runs entirely on your own machine — 
 
 ## Features
 
-- **Accounts** — checking, savings, credit, HSA, mortgage, and loans (transaction accounts)
-- **Assets** — real estate (valuations), pensions (present-value estimate), and investment/retirement accounts (balance snapshots) on a dedicated page
-- **Transactions** — manual entry, edit, and delete; CSV and OFX/QFX import; bulk categorize; duplicate detection
-- **Budgets** — monthly limits per category with dashboard alerts
-- **Reports** — net worth (with pension present-value annotations), cash flow (with a Social Security / pension / RMD retirement-income breakdown), investments (top positions + holdings mix by asset class), spending by category, budget vs actuals, property P&L
-- **FIRE planning** — retirement projections with multiple income streams and scenario modeling; auto-detects vested pension income
-- **Debt payoff** — avalanche/snowball comparison with extra payment modeling
-- **Real estate** — property type selection (primary, rental, vacation, commercial, land); manual or API-driven valuations (ATTOM, Estated)
-- **Exports** — PDF and Excel reports with executor re-authentication gate
-- **Backups** — scheduled and manual database backups, AES-256-GCM encrypted
-- **Multi-member** — primary + partner + dependent roles with per-account access grants
-- **Dark mode** — system, light, or dark; per-member dashboard layout customization
+- **Accounts**: checking, savings, credit, HSA, mortgage, and loans (transaction accounts)
+- **Assets**: real estate (valuations), pensions (present-value estimate), and investment/retirement accounts (balance snapshots) on a dedicated page
+- **Transactions**: manual entry, edit, and delete; CSV and OFX/QFX import; bulk categorize; duplicate detection
+- **Budgets**: monthly limits per category with dashboard alerts
+- **Reports**: net worth (with pension present-value annotations), cash flow (with a Social Security / pension / RMD retirement-income breakdown), investments (top positions + holdings mix by asset class), spending by category, budget vs actuals, property P&L
+- **FIRE planning**: retirement projections with multiple income streams and scenario modeling; auto-detects vested pension income
+- **Debt payoff**: avalanche/snowball comparison with extra payment modeling
+- **Real estate**: property type selection (primary, rental, vacation, commercial, land); manual or API-driven valuations (ATTOM, Estated)
+- **Exports**: PDF and Excel reports with executor re-authentication gate
+- **Backups**: scheduled and manual database backups, AES-256-GCM encrypted
+- **Multi-member**: primary + partner + dependent roles with per-account access grants
+- **Dark mode**: system, light, or dark; per-member dashboard layout customization
 
 ## Quickstart
 
@@ -93,15 +93,15 @@ See [docs/demo-quickstart.md](docs/demo-quickstart.md) for all ten credentials a
 
 ## Documentation
 
-- [Getting Started](docs/getting-started.md) — install, configure, first run
-- [Demo Quickstart](docs/demo-quickstart.md) — seed demo data and explore with sample households
-- [User Guide](docs/user-guide.md) — all features
-- [Tutorial: portfolio and retirement insights](docs/tutorial-portfolio-and-retirement-insights.md) — positions, retirement income, and pension PV on demo data
-- How-to guides — [investment positions](docs/howto-view-investment-positions.md), [retirement income](docs/howto-track-retirement-income.md), [pension present value](docs/howto-set-pension-present-value.md), [adding accounts](docs/howto-add-accounts.md)
-- [Why pension present value works this way](docs/explanation-pension-present-value.md) — the valuation model and estimate history
-- [API Reference](docs/api-reference.md) — REST API
-- [Security](docs/security.md) — auth, encryption, audit log
-- [Contributing](CONTRIBUTING.md) — dev setup, pre-commit hooks, running tests
+- [Getting Started](docs/getting-started.md): install, configure, first run
+- [Demo Quickstart](docs/demo-quickstart.md): seed demo data and explore with sample households
+- [User Guide](docs/user-guide.md): all features
+- [Tutorial: portfolio and retirement insights](docs/tutorial-portfolio-and-retirement-insights.md): positions, retirement income, and pension PV on demo data
+- How-to guides: [investment positions](docs/howto-view-investment-positions.md), [retirement income](docs/howto-track-retirement-income.md), [pension present value](docs/howto-set-pension-present-value.md), [adding accounts](docs/howto-add-accounts.md)
+- [Why pension present value works this way](docs/explanation-pension-present-value.md): the valuation model and estimate history
+- [API Reference](docs/api-reference.md): REST API
+- [Security](docs/security.md): auth, encryption, audit log
+- [Contributing](CONTRIBUTING.md): dev setup, pre-commit hooks, running tests
 
 ## License
 

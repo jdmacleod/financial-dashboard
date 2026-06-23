@@ -30,7 +30,7 @@ report.
    | **RMDs**            | Income in the "Required Minimum Distribution" category |
    | **Total**           | The three buckets added together                       |
 
-The buckets are a subset of the **Total income** KPI at the top — they break out
+The buckets are a subset of the **Total income** KPI at the top; they break out
 the retirement slice of your income, they do not add to it.
 
 ## How the buckets are filled
@@ -54,7 +54,7 @@ curl -s "http://localhost/api/v1/reports/cash-flow?from=2025-01-01&to=2025-12-31
 ```
 
 You should see `social_security`, `pension`, `rmd`, `total`, and `has_data`.
-`has_data` is `true` only when `total` is greater than zero — the same flag the
+`has_data` is `true` only when `total` is greater than zero, the same flag the
 page uses to decide whether to render the card.
 
 ## Troubleshooting

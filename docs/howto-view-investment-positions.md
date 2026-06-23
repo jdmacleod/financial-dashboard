@@ -8,32 +8,32 @@ class ("Holdings mix") on the Investments page.
 - HearthLedger running at `http://localhost`
 - Logged in as any member who can see at least one `investment_brokerage` account
 - At least one **cost-basis lot** recorded against a brokerage account (see
-  [Where positions come from](#where-positions-come-from) below — the demo data
-  already includes lots)
+  [Where positions come from](#where-positions-come-from) below, though the demo
+  data already includes lots)
 
 ## What you'll see
 
 Open **Reports → Investments** (`/reports/investments`). Below the account cards,
 a **Holdings** card appears with two halves:
 
-- **Top positions** — a table with one row per ticker, showing **Ticker**,
+- **Top positions**: a table with one row per ticker, showing **Ticker**,
   **Shares**, and **Cost basis**. Lots for the same ticker across different
   accounts are summed into a single row, ranked by cost basis (largest first),
   capped at the top 10.
-- **Holdings mix** — a donut plus legend that groups your cost basis by asset
+- **Holdings mix**: a donut plus legend that groups your cost basis by asset
   class (Equity, Fixed income, Cash, Real estate, Alternatives, Other, or
   Unclassified), with each slice's share of the total.
 
 > The figures are **cost basis**, not market value. HearthLedger does not track
-> live prices, so there is no "current value" or gain/loss on this card. The note
-> "Cost basis shown — HearthLedger does not track live market prices" appears
-> under the table.
+> live prices, so there is no "current value" or gain/loss on this card. A note
+> under the table reminds you that cost basis is shown because there are no live
+> market prices.
 
 The whole Holdings card stays hidden until at least one lot exists.
 
 ## Where positions come from
 
-Positions are rolled up from **cost-basis lots** — individual purchase records
+Positions are rolled up from **cost-basis lots**: individual purchase records
 (ticker, shares, basis per share, acquired date). Lots are created two ways:
 
 1. **Demo data.** The Chen-Nakamura, Whitfield-Torres, Park-Cole, and Castellano
@@ -41,7 +41,7 @@ Positions are rolled up from **cost-basis lots** — individual purchase records
    demo data. Common tickers (VTI, BND, NVDA, and so on) are auto-classified, so
    the Holdings mix is meaningful out of the box.
 2. **The API.** Add a lot with a `POST` to `/investment-lots`. There is no
-   add-a-lot form in the UI yet — the existing **Cost-basis lots** card on the
+   add-a-lot form in the UI yet. The existing **Cost-basis lots** card on the
    Investments page is read-only.
 
 To add a lot with an asset class so it lands in the right Holdings-mix slice:

@@ -16,7 +16,7 @@ tracking system.
 | `docs/howto-set-pension-present-value.md`            | How to record a pension benefit estimate and see its present value on net worth   |
 | `docs/tutorial-portfolio-and-retirement-insights.md` | Hands-on walkthrough of positions, retirement income, and pension PV on demo data |
 | `docs/explanation-pension-present-value.md`          | Why pensions are valued as a finite life annuity, and how estimate history works  |
-| `docs/api-reference.md`                              | REST API reference — all endpoints, parameters, and response shapes               |
+| `docs/api-reference.md`                              | REST API reference: all endpoints, parameters, and response shapes                |
 | `docs/security.md`                                   | Authentication, RBAC, encryption, audit log, and secrets management               |
 
 ## Implementation spec (developer reference)

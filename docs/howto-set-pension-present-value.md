@@ -36,9 +36,10 @@ edits don't rewrite your history.
 4. **View the present value.** Open **Reports → Net Worth**
    (`/reports/net-worth`). Below the chart, the pension is listed with its annual
    benefit. Click **Show PV** to switch the figure from `$48,000 / yr` to its
-   present value, e.g. `$690,000 PV`. The note explains the model: "Present value
-   estimated with a 4% discount rate, COLA growth, and time until eligibility — a
-   finite life annuity, not a perpetuity."
+   present value, e.g. `$690,000 PV`. A note beneath the list explains the model:
+   the present value uses a 4% discount rate, COLA growth, and the time until
+   eligibility, valuing the benefit as a finite life annuity rather than a
+   perpetuity.
 
 The PV is also added into the pension's contribution to **total net worth**, so
 the headline number reflects it whether or not the toggle is on.
@@ -52,7 +53,7 @@ in effect **then**, not today's number. So bumping your estimate from $2,000 to
 $2,500 today raises the value from today forward and **leaves last year's chart
 points untouched**.
 
-You don't manage these snapshots — they're written automatically on create and on
+You don't manage these snapshots; they're written automatically on create and on
 each PV-relevant edit. See
 [Why pension present value works the way it does](./explanation-pension-present-value.md)
 for the model and the history design.
@@ -66,7 +67,7 @@ curl -s "http://localhost/api/v1/reports/net-worth?from=2025-01-01&to=2025-12-31
   -H "Authorization: Bearer $TOKEN" | jq '.pension_annotations'
 ```
 
-Each pension with an estimate has an `estimated_pv` field — the same number the
+Each pension with an estimate has an `estimated_pv` field, the same number the
 **Show PV** toggle displays. It is `null` when no benefit estimate is recorded.
 
 ## Troubleshooting
@@ -74,7 +75,7 @@ Each pension with an estimate has an `estimated_pv` field — the same number th
 - **No "Show PV" toggle appears.** The pension has no monthly benefit estimate.
   Open the pension details editor and set one.
 - **The PV looks low for a young worker.** That's expected. A benefit that starts
-  in 20+ years is discounted heavily back to today — the deferral is the point.
+  in 20+ years is discounted heavily back to today, and that deferral is the point.
 - **An old chart point changed after I edited the estimate.** It shouldn't, for
   dates after the original estimate was recorded. If you edited a pension created
   before v0.15.0.0 that had no snapshots, the first edit establishes the baseline;
