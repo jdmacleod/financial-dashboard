@@ -397,6 +397,43 @@ def make_equity_grant(
     )
 
 
+# Asset-class hints for the common tickers used across the demo households, so
+# the Investments "Holdings mix" donut shows a meaningful breakdown. Unknown
+# tickers fall through to None (surfaced as "Unclassified").
+_TICKER_ASSET_CLASS: dict[str, str] = {
+    # Broad equity ETFs and individual stocks
+    "VTI": "equity",
+    "VOO": "equity",
+    "VXUS": "equity",
+    "VEA": "equity",
+    "VWO": "equity",
+    "SPY": "equity",
+    "QQQ": "equity",
+    "ITOT": "equity",
+    "AAPL": "equity",
+    "NVDA": "equity",
+    "NFLX": "equity",
+    "MSFT": "equity",
+    "AMZN": "equity",
+    "GOOGL": "equity",
+    "TSLA": "equity",
+    # Fixed income
+    "BND": "fixed_income",
+    "BNDX": "fixed_income",
+    "AGG": "fixed_income",
+    "VTEB": "fixed_income",
+    "VCIT": "fixed_income",
+    "TLT": "fixed_income",
+    # Real estate
+    "VNQ": "real_estate",
+    "VNQI": "real_estate",
+    # Cash / money market
+    "VMFXX": "cash",
+    "SPAXX": "cash",
+    "SWVXX": "cash",
+}
+
+
 def make_investment_lot(
     account_id: uuid.UUID,
     ticker: str,
@@ -404,6 +441,7 @@ def make_investment_lot(
     basis_per_share: Decimal,
     acquired_date: date,
     basis_type: str,
+    asset_class: str | None = None,
 ) -> InvestmentLot:
     return InvestmentLot(
         id=uuid.uuid4(),
@@ -413,6 +451,7 @@ def make_investment_lot(
         basis_per_share=basis_per_share,
         acquired_date=acquired_date,
         basis_type=basis_type,
+        asset_class=asset_class or _TICKER_ASSET_CLASS.get(ticker.upper()),
         created_at=utcnow(),
     )
 

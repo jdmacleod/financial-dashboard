@@ -15,6 +15,7 @@ from app.db.models.account import Account
 from app.db.models.category import Category
 from app.db.models.debt import Debt
 from app.db.models.member import HouseholdMember
+from app.db.models.pension import PensionAccount, PensionEstimateHistory
 from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
@@ -44,13 +45,26 @@ from app.schemas.report import (
     PropertyMonthlyPoint,
     PropertyPnLPeriod,
     PropertyPnLReport,
+    RetirementIncomeBreakdown,
     SpendingByCategoryReport,
     SpendingCategoryItem,
 )
+from app.services.pension_valuation import pension_present_value, pension_value_at
 
 Interval = Literal["monthly", "quarterly", "annual"]
 
-PENSION_DISCOUNT_RATE = Decimal("0.04")
+# A pension plus its estimate history, used to value the account from the
+# estimate in effect at each net-worth date.
+_PensionData = tuple[PensionAccount | None, list[PensionEstimateHistory]]
+
+# Maps retirement-income category names (see seed shared_categories.py) to the
+# labeled buckets surfaced in the cash-flow report. Matched by category name
+# because categories carry no stable slug column.
+RETIREMENT_INCOME_CATEGORIES = {
+    "Social Security": "social_security",
+    "Pension Income": "pension",
+    "Required Minimum Distribution": "rmd",
+}
 
 # Federal estate-tax parameters. The 2025 OBBBA made the higher unified credit
 # permanent and set the per-decedent exemption at $15,000,000 for 2026 (indexed
@@ -183,7 +197,7 @@ class ReportService:
         account: Account,
         as_of: date,
         property_values: dict[uuid.UUID, Decimal] | None = None,
-        pension_values: dict[uuid.UUID, Decimal] | None = None,
+        pension_data_by_account: dict[uuid.UUID, _PensionData] | None = None,
     ) -> Decimal:
         snap = await self._snapshot_balance_at(account.id, as_of)
         if snap is not None:
@@ -195,12 +209,14 @@ class ReportService:
                 return property_values.get(account.id, Decimal("0"))
             return await self._property_value_at(account.id, as_of)
         if account.account_type == "pension":
-            if pension_values is not None:
-                return pension_values.get(account.id, Decimal("0"))
-            pension = await self.pension_repo.get_by_account_id(account.id)
-            if pension and pension.monthly_benefit_estimate:
-                return pension.monthly_benefit_estimate * 12 / PENSION_DISCOUNT_RATE
-            return Decimal("0")
+            if pension_data_by_account is not None:
+                pension, history = pension_data_by_account.get(account.id, (None, []))
+            else:
+                pension = await self.pension_repo.get_by_account_id(account.id)
+                history = (
+                    await self.pension_repo.get_estimate_history(pension.id) if pension else []
+                )
+            return pension_value_at(pension, history, as_of)
         return Decimal("0")
 
     async def _liability_value_at(
@@ -234,7 +250,7 @@ class ReportService:
         accounts: list[Account],
         as_of: date,
         property_values: dict[uuid.UUID, Decimal] | None = None,
-        pension_values: dict[uuid.UUID, Decimal] | None = None,
+        pension_data_by_account: dict[uuid.UUID, _PensionData] | None = None,
         txn_sums: dict[uuid.UUID, Decimal] | None = None,
     ) -> NetWorthPoint:
         breakdown = {key: Decimal("0") for key in BREAKDOWN_KEYS}
@@ -242,7 +258,9 @@ class ReportService:
         total_liabilities = Decimal("0")
         for account in accounts:
             if account.account_type in ASSET_TYPES:
-                value = await self._asset_value_at(account, as_of, property_values, pension_values)
+                value = await self._asset_value_at(
+                    account, as_of, property_values, pension_data_by_account
+                )
                 breakdown[ASSET_BUCKET[account.account_type]] += value
                 total_assets += value
             elif account.account_type in LIABILITY_TYPES:
@@ -257,20 +275,27 @@ class ReportService:
             breakdown=NetWorthBreakdown(**breakdown),
         )
 
+    async def _pension_data_for_accounts(
+        self, accounts: list[Account]
+    ) -> dict[uuid.UUID, _PensionData]:
+        """Map account_id -> (pension, estimate history) for the pension accounts
+        in ``accounts``. The history lets each net-worth date be valued from the
+        estimate in effect then."""
+        pension_account_ids = [a.id for a in accounts if a.account_type == "pension"]
+        if not pension_account_ids:
+            return {}
+        pensions = await self.pension_repo.get_by_account_ids(pension_account_ids)
+        hist_map = await self.pension_repo.get_estimate_history_for_pensions(
+            [p.id for p in pensions]
+        )
+        return {p.account_id: (p, hist_map.get(p.id, [])) for p in pensions}
+
     async def current_net_worth(self, ctx: VisibilityContext, as_of: date) -> NetWorthPoint:
         accounts = await self._net_worth_accounts(ctx)
-        pension_account_ids = [a.id for a in accounts if a.account_type == "pension"]
-        pensions = (
-            await self.pension_repo.get_by_account_ids(pension_account_ids)
-            if pension_account_ids
-            else []
+        pension_data_by_account = await self._pension_data_for_accounts(accounts)
+        return await self._net_worth_point(
+            accounts, as_of, pension_data_by_account=pension_data_by_account
         )
-        pension_values = {
-            p.account_id: p.monthly_benefit_estimate * 12 / PENSION_DISCOUNT_RATE
-            for p in pensions
-            if p.monthly_benefit_estimate
-        }
-        return await self._net_worth_point(accounts, as_of, pension_values=pension_values)
 
     async def net_worth(
         self,
@@ -294,19 +319,11 @@ class ReportService:
         props = await self.property_repo.list_for_accounts(re_account_ids) if re_account_ids else []
         account_to_prop_id = {p.account_id: p.id for p in props}
 
-        # Pre-fetch pension PV once — PensionAccount data is static (no per-date history).
-        # Avoids NxM queries (N pensions x M date points) for data that doesn't change.
-        pension_account_ids = [a.id for a in accounts if a.account_type == "pension"]
-        pensions = (
-            await self.pension_repo.get_by_account_ids(pension_account_ids)
-            if pension_account_ids
-            else []
-        )
-        pension_values = {
-            p.account_id: p.monthly_benefit_estimate * 12 / PENSION_DISCOUNT_RATE
-            for p in pensions
-            if p.monthly_benefit_estimate
-        }
+        # Pre-fetch pension records and their estimate history once to avoid NxM
+        # queries (N pensions x M date points). The present value is still
+        # computed per date point because both a deferred pension's PV and the
+        # estimate in effect change over time.
+        pension_data_by_account = await self._pension_data_for_accounts(accounts)
 
         # Batch transaction sums for ALL liability accounts per date point.
         # credit_card/heloc use them directly; mortgage/loan/etc. fall back to them
@@ -340,10 +357,10 @@ class ReportService:
 
             series.append(
                 await self._net_worth_point(
-                    accounts, as_of, property_values, pension_values, txn_sums
+                    accounts, as_of, property_values, pension_data_by_account, txn_sums
                 )
             )
-        pension_annotations = await self._pension_annotations(ctx, accounts)
+        pension_annotations = await self._pension_annotations(ctx, accounts, to_date)
         return NetWorthReport(
             series=series,
             current=series[-1] if series else None,
@@ -351,7 +368,7 @@ class ReportService:
         )
 
     async def _pension_annotations(
-        self, ctx: VisibilityContext, accounts: list[Account]
+        self, ctx: VisibilityContext, accounts: list[Account], as_of: date
     ) -> list[PensionAnnotation]:
         pension_account_ids = [a.id for a in accounts if a.account_type == "pension"]
         if not pension_account_ids:
@@ -365,6 +382,9 @@ class ReportService:
                 monthly_benefit=p.monthly_benefit_estimate,
                 eligibility_age=p.eligibility_age,
                 eligibility_date=p.eligibility_date,
+                estimated_pv=(
+                    pension_present_value(p, as_of) if p.monthly_benefit_estimate else None
+                ),
             )
             for p in pensions
             if p.account_id in account_map
@@ -405,19 +425,9 @@ class ReportService:
         accounts = await self._visible_accounts(ctx)
         entity_map = await self.entity_repo.get_map(ctx.household_id)
 
-        # Pre-compute pension PVs so pension accounts value identically to the
+        # Pre-compute pension data so pension accounts value identically to the
         # net-worth report.
-        pension_account_ids = [a.id for a in accounts if a.account_type == "pension"]
-        pensions = (
-            await self.pension_repo.get_by_account_ids(pension_account_ids)
-            if pension_account_ids
-            else []
-        )
-        pension_values = {
-            p.account_id: p.monthly_benefit_estimate * 12 / PENSION_DISCOUNT_RATE
-            for p in pensions
-            if p.monthly_benefit_estimate
-        }
+        pension_data_by_account = await self._pension_data_for_accounts(accounts)
 
         # Accumulate assets and liabilities per titling bucket. Key is the
         # ownership_entity_id, or None for directly-owned holdings.
@@ -427,7 +437,7 @@ class ReportService:
             bucket = account.ownership_entity_id
             if account.account_type in ASSET_TYPES:
                 assets[bucket] += await self._asset_value_at(
-                    account, as_of, pension_values=pension_values
+                    account, as_of, pension_data_by_account=pension_data_by_account
                 )
             elif account.account_type in LIABILITY_TYPES:
                 liabilities[bucket] += await self._liability_value_at(account, as_of)
@@ -496,7 +506,17 @@ class ReportService:
             zero = CashFlowTotals(
                 income=Decimal("0"), expenses=Decimal("0"), net=Decimal("0"), savings_rate=0.0
             )
-            return CashFlowReport(series=[], totals=zero)
+            return CashFlowReport(
+                series=[],
+                totals=zero,
+                retirement_income=RetirementIncomeBreakdown(
+                    social_security=Decimal("0"),
+                    pension=Decimal("0"),
+                    rmd=Decimal("0"),
+                    total=Decimal("0"),
+                    has_data=False,
+                ),
+            )
 
         cat_map = await self._category_map(ctx)
         result = await self.session.execute(
@@ -511,6 +531,7 @@ class ReportService:
         periods: dict[str, dict[str, Decimal]] = defaultdict(
             lambda: {"income": Decimal("0"), "expenses": Decimal("0")}
         )
+        retirement = {bucket: Decimal("0") for bucket in RETIREMENT_INCOME_CATEGORIES.values()}
         for txn_date, amount, category_id in result.all():
             category = cat_map.get(category_id)
             is_income = category.is_income if category else False
@@ -520,6 +541,9 @@ class ReportService:
                 key = _period_key(txn_date)
             if is_income:
                 periods[key]["income"] += amount
+                bucket = category and RETIREMENT_INCOME_CATEGORIES.get(category.name)
+                if bucket:
+                    retirement[bucket] += amount
             elif amount < 0:
                 periods[key]["expenses"] += -amount
 
@@ -545,7 +569,15 @@ class ReportService:
             net=total_net,
             savings_rate=total_savings_rate,
         )
-        return CashFlowReport(series=series, totals=totals)
+        retirement_total = sum(retirement.values(), Decimal("0"))
+        retirement_income = RetirementIncomeBreakdown(
+            social_security=retirement["social_security"],
+            pension=retirement["pension"],
+            rmd=retirement["rmd"],
+            total=retirement_total,
+            has_data=retirement_total > 0,
+        )
+        return CashFlowReport(series=series, totals=totals, retirement_income=retirement_income)
 
     # --- Spending by category --------------------------------------------
 

@@ -1,5 +1,5 @@
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy.exc import IntegrityError
@@ -8,13 +8,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.audit import AUDIT_EXCLUDED_FIELDS, AuditRepository, _snapshot
 from app.core.encryption import decrypt, encrypt
 from app.core.visibility import VisibilityContext
-from app.db.models.pension import PensionAccount
+from app.db.models.pension import PensionAccount, PensionEstimateHistory
 from app.repositories.account import AccountRepository
 from app.repositories.pension import PensionRepository
 from app.schemas.pension import (
     PensionAccountCreate,
     PensionAccountResponse,
     PensionAccountUpdate,
+)
+
+# PensionAccount fields that drive present value. A change to any of these
+# appends a PensionEstimateHistory row so past net-worth points keep their
+# original valuation.
+_PV_FIELDS = (
+    "monthly_benefit_estimate",
+    "cola_adjustment_rate",
+    "survivor_benefit_percent",
+    "eligibility_date",
 )
 
 
@@ -44,6 +54,23 @@ class PensionService:
         self.account_repo = AccountRepository(session)
         self.pension_repo = PensionRepository(session)
         self.audit_repo = AuditRepository(session)
+
+    async def _record_estimate(self, pension: PensionAccount, effective_date: date) -> None:
+        """Append (or update, if one already exists for ``effective_date``) a
+        present-value snapshot for this pension."""
+        row = await self.pension_repo.get_estimate_on(pension.id, effective_date)
+        if row is None:
+            row = PensionEstimateHistory(
+                pension_account_id=pension.id,
+                effective_date=effective_date,
+                created_at=datetime.now(UTC),
+            )
+            self.session.add(row)
+        row.monthly_benefit_estimate = pension.monthly_benefit_estimate
+        row.cola_adjustment_rate = pension.cola_adjustment_rate
+        row.survivor_benefit_percent = pension.survivor_benefit_percent
+        row.eligibility_date = pension.eligibility_date
+        await self.session.flush()
 
     async def get(self, ctx: VisibilityContext, account_id: uuid.UUID) -> PensionAccountResponse:
         await self.account_repo.get_by_id(
@@ -100,6 +127,10 @@ class PensionService:
             ) from None
         await self.session.refresh(pension)
 
+        # Seed the estimate history so net-worth points before any later edit
+        # use this original estimate.
+        await self._record_estimate(pension, datetime.now(UTC).date())
+
         await self.audit_repo.write(
             ctx=ctx,
             action="pension.created",
@@ -144,6 +175,12 @@ class PensionService:
 
         curr = _snapshot(pension, exclude=AUDIT_EXCLUDED_FIELDS)
         changed_keys = {k for k in set(prev) | set(curr) if prev.get(k) != curr.get(k)}
+
+        # Record a new estimate snapshot only when a present-value input changed,
+        # so historical net-worth points keep their original valuation.
+        if any(prev.get(f) != curr.get(f) for f in _PV_FIELDS):
+            await self._record_estimate(pension, datetime.now(UTC).date())
+
         await self.audit_repo.write(
             ctx=ctx,
             action="pension.updated",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -12,6 +13,7 @@ from app.core.visibility import VisibilityContext
 from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
 from app.db.models.user import User
+from app.repositories.pension import PensionRepository
 from app.schemas.account import AccountCreate, AccountType
 from app.schemas.pension import PensionAccountCreate, PensionAccountUpdate
 from app.services.account import AccountService
@@ -325,3 +327,68 @@ async def test_create_pension_rbac_denied_for_partner_private(
     with pytest.raises(HTTPException) as exc_info:
         await svc.create(partner_ctx, account.id, PensionAccountCreate())
     assert exc_info.value.status_code == 404
+
+
+# --- Estimate history -------------------------------------------------------
+
+
+async def test_create_records_initial_estimate(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx)
+    svc = PensionService(db_session)
+    pension = await svc.create(
+        ctx, account.id, PensionAccountCreate(monthly_benefit_estimate=Decimal("3500.00"))
+    )
+
+    history = await PensionRepository(db_session).get_estimate_history(pension.id)
+    assert len(history) == 1
+    assert history[0].monthly_benefit_estimate == Decimal("3500.00")
+    assert history[0].effective_date == datetime.now(UTC).date()
+
+
+async def test_update_estimate_records_new_snapshot(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx)
+    svc = PensionService(db_session)
+    pension = await svc.create(
+        ctx, account.id, PensionAccountCreate(monthly_benefit_estimate=Decimal("3500.00"))
+    )
+
+    await svc.update(
+        ctx, account.id, PensionAccountUpdate(monthly_benefit_estimate=Decimal("4000.00"))
+    )
+
+    history = await PensionRepository(db_session).get_estimate_history(pension.id)
+    # Create + same-day update upsert to one row carrying the latest estimate.
+    assert history[-1].monthly_benefit_estimate == Decimal("4000.00")
+
+
+async def test_update_non_pv_field_does_not_change_estimate(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await _make_account(db_session, ctx)
+    svc = PensionService(db_session)
+    pension = await svc.create(
+        ctx, account.id, PensionAccountCreate(monthly_benefit_estimate=Decimal("3500.00"))
+    )
+
+    # Editing a non-PV field (notes) must not alter the recorded estimate.
+    await svc.update(ctx, account.id, PensionAccountUpdate(notes="reviewed"))
+
+    history = await PensionRepository(db_session).get_estimate_history(pension.id)
+    assert len(history) == 1
+    assert history[0].monthly_benefit_estimate == Decimal("3500.00")

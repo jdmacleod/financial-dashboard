@@ -11,6 +11,10 @@ class PensionAnnotation(BaseModel):
     monthly_benefit: Decimal | None
     eligibility_age: int | None
     eligibility_date: date | None
+    # Present value used in the net-worth report. Accounts for time-to-eligibility,
+    # COLA growth, a finite life annuity, and the survivor benefit (see
+    # app.services.pension_valuation). None when no benefit estimate is recorded.
+    estimated_pv: Decimal | None
 
 
 class NetWorthBreakdown(BaseModel):
@@ -53,9 +57,22 @@ class CashFlowTotals(BaseModel):
     savings_rate: float
 
 
+class RetirementIncomeBreakdown(BaseModel):
+    """Period totals for retirement-specific income streams, broken out as
+    labeled buckets. ``has_data`` lets the UI hide the panel for households with
+    no retirement income (e.g. anyone not yet drawing benefits)."""
+
+    social_security: Decimal
+    pension: Decimal
+    rmd: Decimal
+    total: Decimal
+    has_data: bool
+
+
 class CashFlowReport(BaseModel):
     series: list[CashFlowPeriod]
     totals: CashFlowTotals
+    retirement_income: RetirementIncomeBreakdown
 
 
 class SpendingCategoryItem(BaseModel):

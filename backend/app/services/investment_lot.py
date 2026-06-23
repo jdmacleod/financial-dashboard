@@ -1,5 +1,6 @@
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -9,7 +10,21 @@ from app.core.audit import AuditRepository, _snapshot, audit
 from app.core.visibility import VisibilityContext
 from app.db.models.investment_lot import InvestmentLot
 from app.repositories.account import AccountRepository
-from app.schemas.investment_lot import InvestmentLotCreate, InvestmentLotUpdate
+from app.schemas.investment_lot import (
+    HoldingsMixSlice,
+    InvestmentLotCreate,
+    InvestmentLotUpdate,
+    PositionRollup,
+    PositionsSummary,
+)
+
+# Currency convention: NUMERIC(18,4). Lot cost = shares(6dp) * price(6dp) carries
+# excess precision, so quantize the rollup to 4 places for clean, consistent output.
+_CENTS = Decimal("0.0001")
+
+
+def _money(value: Decimal) -> Decimal:
+    return value.quantize(_CENTS)
 
 
 class InvestmentLotService:
@@ -63,6 +78,7 @@ class InvestmentLotService:
             basis_per_share=data.basis_per_share,
             acquired_date=data.acquired_date,
             basis_type=data.basis_type,
+            asset_class=data.asset_class,
             created_at=datetime.now(UTC),
         )
         self.session.add(lot)
@@ -88,9 +104,61 @@ class InvestmentLotService:
             lot.acquired_date = data.acquired_date
         if data.basis_type is not None:
             lot.basis_type = data.basis_type
+        if data.asset_class is not None:
+            lot.asset_class = data.asset_class
         await self.session.flush()
         await self.session.refresh(lot)
         return lot
+
+    async def positions_summary(self, ctx: VisibilityContext) -> PositionsSummary:
+        """Roll up every visible lot into per-ticker positions and an
+        asset-class mix. Cost basis = sum(shares * basis_per_share)."""
+        lots = await self.list_lots(ctx)
+
+        by_ticker: dict[str, dict[str, Decimal]] = {}
+        by_class: dict[str, Decimal] = {}
+        total = Decimal("0")
+        for lot in lots:
+            cost = lot.shares * lot.basis_per_share
+            total += cost
+            agg = by_ticker.setdefault(
+                lot.ticker,
+                {"shares": Decimal("0"), "cost_basis": Decimal("0"), "lot_count": Decimal("0")},
+            )
+            agg["shares"] += lot.shares
+            agg["cost_basis"] += cost
+            agg["lot_count"] += 1
+            klass = lot.asset_class or "unclassified"
+            by_class[klass] = by_class.get(klass, Decimal("0")) + cost
+
+        positions = sorted(
+            (
+                PositionRollup(
+                    ticker=ticker,
+                    shares=agg["shares"],
+                    cost_basis=_money(agg["cost_basis"]),
+                    lot_count=int(agg["lot_count"]),
+                )
+                for ticker, agg in by_ticker.items()
+            ),
+            key=lambda p: p.cost_basis,
+            reverse=True,
+        )
+        holdings_mix = sorted(
+            (
+                HoldingsMixSlice(
+                    asset_class=klass,
+                    cost_basis=_money(cost),
+                    percentage=float(cost / total * 100) if total > 0 else 0.0,
+                )
+                for klass, cost in by_class.items()
+            ),
+            key=lambda s: s.cost_basis,
+            reverse=True,
+        )
+        return PositionsSummary(
+            positions=positions, holdings_mix=holdings_mix, total_cost_basis=_money(total)
+        )
 
     async def delete(self, ctx: VisibilityContext, lot_id: uuid.UUID) -> None:
         if not ctx.can_write:

@@ -14,14 +14,17 @@ from app.db.models.category import Category
 from app.db.models.debt import Debt
 from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
+from app.db.models.pension import PensionEstimateHistory
 from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
+from app.repositories.pension import PensionRepository
 from app.schemas.account import AccountCreate
 from app.schemas.pension import PensionAccountCreate
 from app.schemas.real_estate import PropertyCreate, ValuationCreate
 from app.services.account import AccountService
 from app.services.pension import PensionService
+from app.services.pension_valuation import pension_present_value
 from app.services.real_estate import RealEstateService
 from app.services.report import ReportService
 
@@ -444,12 +447,16 @@ async def test_asset_value_at_pension_uses_pv(
     primary_user: User,
 ) -> None:
     ctx = _ctx(household, primary_member, primary_user)
-    await _make_pension_account(db_session, ctx, Decimal("3000.00"))
+    account = await _make_pension_account(db_session, ctx, Decimal("3000.00"))
 
     svc = ReportService(db_session)
     point = await svc.current_net_worth(ctx, date(2025, 6, 30))
 
-    expected_pv = Decimal("3000.00") * 12 / PENSION_DISCOUNT
+    pension = await PensionRepository(db_session).get_by_account_id(account.id)
+    expected_pv = pension_present_value(pension, date(2025, 6, 30))
+    assert expected_pv > 0
+    # A finite life annuity is worth less than the old perpetuity (annual / 0.04).
+    assert expected_pv < Decimal("3000.00") * 12 / PENSION_DISCOUNT
     assert point.total_assets == expected_pv
     assert point.breakdown.retirement == expected_pv
 
@@ -479,12 +486,13 @@ async def test_current_net_worth_includes_pension_pv(
     ctx = _ctx(household, primary_member, primary_user)
     checking = await _make_account(db_session, ctx, "checking", "Checking")
     await _add_snapshot(db_session, checking.id, date(2025, 6, 30), Decimal("10000"))
-    await _make_pension_account(db_session, ctx, Decimal("2000.00"))
+    account = await _make_pension_account(db_session, ctx, Decimal("2000.00"))
 
     svc = ReportService(db_session)
     point = await svc.current_net_worth(ctx, date(2025, 6, 30))
 
-    pension_pv = Decimal("2000.00") * 12 / PENSION_DISCOUNT
+    pension = await PensionRepository(db_session).get_by_account_id(account.id)
+    pension_pv = pension_present_value(pension, date(2025, 6, 30))
     assert point.total_assets == Decimal("10000") + pension_pv
     assert point.breakdown.checking_savings == Decimal("10000")
     assert point.breakdown.retirement == pension_pv
@@ -497,13 +505,15 @@ async def test_net_worth_time_series_pension_pv(
     primary_user: User,
 ) -> None:
     ctx = _ctx(household, primary_member, primary_user)
-    await _make_pension_account(db_session, ctx, Decimal("1500.00"))
+    account = await _make_pension_account(db_session, ctx, Decimal("1500.00"))
 
     svc = ReportService(db_session)
     # Two monthly points — pension PV should appear in both
     report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 2, 28))
 
-    expected_pv = Decimal("1500.00") * 12 / PENSION_DISCOUNT
+    # No eligibility date on this pension, so its PV is constant across points.
+    pension = await PensionRepository(db_session).get_by_account_id(account.id)
+    expected_pv = pension_present_value(pension, date(2025, 2, 28))
     assert len(report.series) == 2
     assert report.series[0].breakdown.retirement == expected_pv
     assert report.series[1].breakdown.retirement == expected_pv
@@ -527,6 +537,55 @@ async def test_net_worth_pension_annotations_populated(
     assert len(report.pension_annotations) == 1
     ann = report.pension_annotations[0]
     assert ann.monthly_benefit == Decimal("2500.00")
+    # PV is now surfaced on the annotation so the UI does not recompute it.
+    assert ann.estimated_pv is not None
+    assert ann.estimated_pv > 0
+
+
+async def test_net_worth_uses_estimate_in_effect_per_date(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A later estimate increase must NOT rewrite earlier net-worth points: each
+    point is valued from the PensionEstimateHistory row in effect at that date."""
+    ctx = _ctx(household, primary_member, primary_user)
+    # Current estimate is $2500 (service also records a row effective today).
+    account = await _make_pension_account(db_session, ctx, Decimal("2500.00"))
+    pension = await PensionRepository(db_session).get_by_account_id(account.id)
+
+    # Backdated history: $2000 from 2024, bumped to $2500 from June 2025.
+    h_low = PensionEstimateHistory(
+        pension_account_id=pension.id,
+        effective_date=date(2024, 1, 1),
+        monthly_benefit_estimate=Decimal("2000.00"),
+        cola_adjustment_rate=Decimal("0.02"),
+        survivor_benefit_percent=None,
+        eligibility_date=None,
+        created_at=_now(),
+    )
+    h_high = PensionEstimateHistory(
+        pension_account_id=pension.id,
+        effective_date=date(2025, 6, 1),
+        monthly_benefit_estimate=Decimal("2500.00"),
+        cola_adjustment_rate=Decimal("0.02"),
+        survivor_benefit_percent=None,
+        eligibility_date=None,
+        created_at=_now(),
+    )
+    db_session.add_all([h_low, h_high])
+    await db_session.flush()
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 12, 31), interval="quarterly")
+    by_date = {p.date: p.breakdown.retirement for p in report.series}
+
+    # Q1 2025 predates the bump → valued from the $2000 estimate, NOT the current $2500.
+    assert by_date[date(2025, 3, 31)] == pension_present_value(h_low, date(2025, 3, 31))
+    # Q4 2025 is after the bump → valued from the $2500 estimate.
+    assert by_date[date(2025, 12, 31)] == pension_present_value(h_high, date(2025, 12, 31))
+    assert by_date[date(2025, 12, 31)] > by_date[date(2025, 3, 31)]
 
 
 # ---------------------------------------------------------------------------
@@ -564,6 +623,62 @@ async def test_cash_flow_with_transactions(
     assert report.totals.net == Decimal("3050")
     assert len(report.series) == 1
     assert report.series[0].period == "2025-01"
+
+
+async def test_cash_flow_retirement_income_breakdown(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "Retiree Checking")
+    ss_cat = await _add_category(db_session, household.id, "Social Security", is_income=True)
+    pension_cat = await _add_category(db_session, household.id, "Pension Income", is_income=True)
+    rmd_cat = await _add_category(
+        db_session, household.id, "Required Minimum Distribution", is_income=True
+    )
+    salary_cat = await _add_category(db_session, household.id, "Salary", is_income=True)
+
+    await _add_transaction(db_session, account.id, date(2025, 1, 3), Decimal("4886"), ss_cat.id)
+    await _add_transaction(
+        db_session, account.id, date(2025, 1, 1), Decimal("4000"), pension_cat.id
+    )
+    await _add_transaction(db_session, account.id, date(2025, 1, 15), Decimal("9000"), rmd_cat.id)
+    # Ordinary income should not land in any retirement bucket.
+    await _add_transaction(
+        db_session, account.id, date(2025, 1, 20), Decimal("1000"), salary_cat.id
+    )
+
+    svc = ReportService(db_session)
+    report = await svc.cash_flow(ctx, date(2025, 1, 1), date(2025, 1, 31))
+
+    ri = report.retirement_income
+    assert ri.has_data is True
+    assert ri.social_security == Decimal("4886")
+    assert ri.pension == Decimal("4000")
+    assert ri.rmd == Decimal("9000")
+    assert ri.total == Decimal("17886")
+    # Retirement buckets are a subset of total income.
+    assert report.totals.income == Decimal("18886")
+
+
+async def test_cash_flow_retirement_income_absent_when_no_retirement(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "Worker Checking")
+    salary_cat = await _add_category(db_session, household.id, "Salary", is_income=True)
+    await _add_transaction(db_session, account.id, date(2025, 1, 5), Decimal("5000"), salary_cat.id)
+
+    svc = ReportService(db_session)
+    report = await svc.cash_flow(ctx, date(2025, 1, 1), date(2025, 1, 31))
+
+    assert report.retirement_income.has_data is False
+    assert report.retirement_income.total == Decimal("0")
 
 
 async def test_cash_flow_empty_accounts(

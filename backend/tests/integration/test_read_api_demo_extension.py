@@ -228,6 +228,53 @@ async def test_list_investment_lots_for_account(
     assert body[0]["basis_type"] == "inherited_stepup"
 
 
+async def test_investment_positions_rollup(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    from datetime import date
+
+    acct = await _account(db_session, household, "investment_brokerage")
+    db_session.add_all(
+        [
+            InvestmentLot(
+                account_id=acct.id,
+                ticker="VTI",
+                shares=Decimal("30"),
+                basis_per_share=Decimal("200"),  # 6,000
+                acquired_date=date(2022, 1, 1),
+                basis_type="purchase",
+                asset_class="equity",
+                created_at=_now(),
+            ),
+            InvestmentLot(
+                account_id=acct.id,
+                ticker="BND",
+                shares=Decimal("100"),
+                basis_per_share=Decimal("10"),  # 1,000
+                acquired_date=date(2023, 1, 1),
+                basis_type="purchase",
+                asset_class="fixed_income",
+                created_at=_now(),
+            ),
+        ]
+    )
+    await db_session.flush()
+
+    headers = auth_headers(primary_user, primary_member, "primary")
+    resp = await client.get("/api/v1/investment-positions", headers=headers)
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["total_cost_basis"] == "7000.0000"
+    assert [p["ticker"] for p in body["positions"]] == ["VTI", "BND"]
+    mix = {s["asset_class"]: s for s in body["holdings_mix"]}
+    assert mix["equity"]["cost_basis"] == "6000.0000"
+    assert mix["fixed_income"]["cost_basis"] == "1000.0000"
+
+
 async def test_list_capital_commitments_decrypts_fund_name(
     client: AsyncClient,
     db_session: AsyncSession,
