@@ -89,6 +89,8 @@ The account's transaction list shows a **Defined-benefit summary card** above th
 
 The FIRE detector automatically creates a `pension` income stream for each vested pension with a non-zero monthly benefit estimate. See [Auto-detect income streams](#auto-detect-income-streams).
 
+A pension with a monthly benefit estimate also contributes a **present value** to your net worth, shown via the **Show PV** toggle on the [Net Worth report](#net-worth). Each estimate edit is recorded with an effective date, so changing the estimate doesn't rewrite historical net-worth points. See [How to set a pension's present value](howto-set-pension-present-value.md).
+
 ---
 
 ## Assets
@@ -204,7 +206,7 @@ Shows total assets, total liabilities, and net worth over time. Configure:
 
 Assets include: account balances + property valuations. Liabilities include: credit card balances + loan balances.
 
-**Pension annotations:** Below the net worth chart, each pension account with a defined monthly benefit estimate is listed with annual benefit, eligibility info, and a **Show PV** toggle. Toggling on converts the annual benefit stream to present value using a 4% discount rate, giving you a sense of the economic value of the pension alongside your portfolio.
+**Pension annotations:** Below the net worth chart, each pension account with a defined monthly benefit estimate is listed with annual benefit, eligibility info, and a **Show PV** toggle. Toggling on shows the present value of the benefit, valued as a finite life annuity that accounts for COLA growth, the survivor benefit, and the years until you're eligible (a 4% discount rate) — not the old "annual benefit ÷ 4%" perpetuity. Editing an estimate only changes the value from that point forward; past chart points keep the estimate that was in effect then. See [Why pension present value works the way it does](explanation-pension-present-value.md) and [How to set a pension's present value](howto-set-pension-present-value.md).
 
 ### Cash Flow
 
@@ -212,6 +214,17 @@ Shows income and expenses grouped by time period. Configure:
 
 - **Date range**
 - **Group by** — month or quarter
+
+**Retirement income breakdown:** When the range includes retirement income, a **Retirement income** card breaks out **Social Security**, **Pension**, and **RMDs** (plus a total). These are a subset of total income, not an addition. The card hides itself when there's no retirement income. See [How to read the retirement income breakdown](howto-track-retirement-income.md).
+
+### Investments
+
+Shows your `investment_brokerage` accounts with balance history, plus — when you have cost-basis lots — a **Holdings** card:
+
+- **Top positions** — each ticker rolled up across accounts (shares and cost basis), ranked by cost basis.
+- **Holdings mix** — a donut of cost basis by asset class (Equity, Fixed income, Cash, Real estate, Alternatives, Other, Unclassified).
+
+Figures are cost basis, not market value — HearthLedger tracks no live prices. See [How to view your investment positions](howto-view-investment-positions.md).
 
 ### Spending by Category
 

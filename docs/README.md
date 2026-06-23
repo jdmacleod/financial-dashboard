@@ -5,14 +5,19 @@ tracking system.
 
 ## User documentation
 
-| File                         | Purpose                                                             |
-| ---------------------------- | ------------------------------------------------------------------- |
-| `docs/getting-started.md`    | Install, configure, and run HearthLedger for the first time         |
-| `docs/demo-quickstart.md`    | Seed demo data and log in with the five sample households           |
-| `docs/user-guide.md`         | Complete guide to every feature                                     |
-| `docs/howto-add-accounts.md` | How to add accounts across all five category groups                 |
-| `docs/api-reference.md`      | REST API reference — all endpoints, parameters, and response shapes |
-| `docs/security.md`           | Authentication, RBAC, encryption, audit log, and secrets management |
+| File                                                 | Purpose                                                                           |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `docs/getting-started.md`                            | Install, configure, and run HearthLedger for the first time                       |
+| `docs/demo-quickstart.md`                            | Seed demo data and log in with the five sample households                         |
+| `docs/user-guide.md`                                 | Complete guide to every feature                                                   |
+| `docs/howto-add-accounts.md`                         | How to add accounts across all five category groups                               |
+| `docs/howto-view-investment-positions.md`            | How to read the Top positions table and Holdings mix on the Investments page      |
+| `docs/howto-track-retirement-income.md`              | How to read the Social Security / pension / RMD breakdown on the Cash Flow report |
+| `docs/howto-set-pension-present-value.md`            | How to record a pension benefit estimate and see its present value on net worth   |
+| `docs/tutorial-portfolio-and-retirement-insights.md` | Hands-on walkthrough of positions, retirement income, and pension PV on demo data |
+| `docs/explanation-pension-present-value.md`          | Why pensions are valued as a finite life annuity, and how estimate history works  |
+| `docs/api-reference.md`                              | REST API reference — all endpoints, parameters, and response shapes               |
+| `docs/security.md`                                   | Authentication, RBAC, encryption, audit log, and secrets management               |
 
 ## Implementation spec (developer reference)
 
