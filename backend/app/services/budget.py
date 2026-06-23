@@ -60,11 +60,13 @@ class BudgetService:
         budget = await self._get_or_404(ctx, budget_id)
         self._prev_snapshot = _snapshot(budget)
 
+        if data.period is not None:
+            budget.period = data.period
         if data.amount is not None:
             budget.amount = data.amount
         if data.effective_from is not None:
             budget.effective_from = data.effective_from
-        if data.effective_to is not None:
+        if "effective_to" in data.model_fields_set:
             budget.effective_to = data.effective_to
 
         await self.session.flush()

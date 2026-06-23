@@ -17,6 +17,7 @@ class BudgetCreate(BaseModel):
 
 
 class BudgetUpdate(BaseModel):
+    period: BudgetPeriod | None = None
     amount: Decimal | None = None
     effective_from: date | None = None
     effective_to: date | None = None

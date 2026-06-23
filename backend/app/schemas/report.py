@@ -96,6 +96,7 @@ class BudgetVsActualsItem(BaseModel):
     actual: Decimal
     remaining: Decimal
     percentage_used: float
+    period: str = "monthly"
 
 
 class BudgetVsActualsReport(BaseModel):

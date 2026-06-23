@@ -717,15 +717,22 @@ class ReportService:
         for category_id, budget in chosen.items():
             category = cat_map.get(category_id)
             actual = actuals.get(category_id, Decimal("0"))
-            remaining = budget.amount - actual
-            pct = float(actual / budget.amount * 100) if budget.amount > 0 else 0.0
+            # Annual budgets are prorated to a monthly amount for comparison
+            monthly_budget = (
+                (budget.amount / Decimal("12")).quantize(Decimal("0.01"))
+                if budget.period == "annual"
+                else budget.amount
+            )
+            remaining = monthly_budget - actual
+            pct = float(actual / monthly_budget * 100) if monthly_budget > 0 else 0.0
             best[category_id] = BudgetVsActualsItem(
                 category_id=category_id,
                 name=category.name if category else "Unknown",
-                budget=budget.amount,
+                budget=monthly_budget,
                 actual=actual,
                 remaining=remaining,
                 percentage_used=pct,
+                period=budget.period,
             )
 
         items = sorted(best.values(), key=lambda i: i.percentage_used, reverse=True)
