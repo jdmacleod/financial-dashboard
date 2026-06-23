@@ -307,21 +307,107 @@ export function AppLayout() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
           <SidebarNavLink to="/fire" onClick={() => setSidebarOpen(false)}>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M8 2C8 5 5 7 4 9C3 11.5 5 14 8 14C11 14 13 11.5 12 9C11 7 8 5 8 2Z" />
+            </svg>
             FIRE
           </SidebarNavLink>
           <SidebarNavLink to="/debt" onClick={() => setSidebarOpen(false)}>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="1.5" y="4" width="13" height="9" rx="1.5" />
+              <line x1="1.5" y1="7.5" x2="14.5" y2="7.5" />
+              <line x1="4" y1="10.5" x2="7" y2="10.5" />
+            </svg>
             Debt
           </SidebarNavLink>
           <SidebarNavLink to="/budgets" onClick={() => setSidebarOpen(false)}>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="3.5" y1="13.5" x2="3.5" y2="9" />
+              <line x1="8" y1="13.5" x2="8" y2="6" />
+              <line x1="12.5" y1="13.5" x2="12.5" y2="3" />
+              <line x1="1.5" y1="13.5" x2="14.5" y2="13.5" />
+            </svg>
             Budgets
           </SidebarNavLink>
           <SidebarNavLink to="/insights" onClick={() => setSidebarOpen(false)}>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <circle cx="8" cy="6" r="4" />
+              <line x1="6" y1="9.5" x2="6" y2="11.5" />
+              <line x1="10" y1="9.5" x2="10" y2="11.5" />
+              <line x1="6" y1="11.5" x2="10" y2="11.5" />
+              <line x1="6.5" y1="13" x2="9.5" y2="13" />
+            </svg>
             Insights
           </SidebarNavLink>
           <SidebarNavLink to="/estate" onClick={() => setSidebarOpen(false)}>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 1.5h6l2.5 2.5V14.5H4V1.5z" />
+              <path d="M10 1.5V4H12.5" />
+              <line x1="6" y1="7" x2="10.5" y2="7" />
+              <line x1="6" y1="9.5" x2="10.5" y2="9.5" />
+              <line x1="6" y1="12" x2="8.5" y2="12" />
+            </svg>
             Estate
           </SidebarNavLink>
           <SidebarNavLink to="/insurance" onClick={() => setSidebarOpen(false)}>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M8 2L3 4.5V9c0 3 2.5 5 5 5s5-2 5-5V4.5L8 2z" />
+              <polyline points="5.5,8.5 7.5,10.5 11,6.5" />
+            </svg>
             Insurance
           </SidebarNavLink>
         </div>
