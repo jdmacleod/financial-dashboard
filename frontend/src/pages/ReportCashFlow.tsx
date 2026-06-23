@@ -300,6 +300,67 @@ export default function ReportCashFlow() {
             )}
           </div>
 
+          {/* Retirement income breakdown — hidden unless the household draws
+              Social Security, a pension, or RMDs. */}
+          {data.retirement_income?.has_data && (
+            <div
+              style={{
+                background: "var(--card)",
+                border: "1px solid var(--bd)",
+                borderRadius: "14px",
+                padding: "18px 20px",
+                marginBottom: "16px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "11px",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--faint)",
+                  marginBottom: "14px",
+                }}
+              >
+                Retirement income
+              </div>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gap: "12px",
+                }}
+              >
+                {[
+                  { label: "Social Security", value: data.retirement_income.social_security },
+                  { label: "Pension", value: data.retirement_income.pension },
+                  { label: "RMDs", value: data.retirement_income.rmd },
+                  { label: "Total", value: data.retirement_income.total, accent: true },
+                ].map((bucket) => (
+                  <div key={bucket.label}>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "var(--faint)",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      {bucket.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: 700,
+                        color: bucket.accent ? "var(--up)" : "var(--text)",
+                      }}
+                    >
+                      {formatCurrency(bucket.value)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Bottom row: category breakdown + period table */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "14px" }}>
             {/* Spending by category */}

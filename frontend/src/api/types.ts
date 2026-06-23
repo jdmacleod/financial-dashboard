@@ -332,6 +332,7 @@ export interface PensionAnnotation {
   monthly_benefit: string | null
   eligibility_age: number | null
   eligibility_date: string | null
+  estimated_pv: string | null
 }
 
 export interface NetWorthReport {
@@ -348,9 +349,18 @@ export interface CashFlowPeriod {
   savings_rate: number
 }
 
+export interface RetirementIncomeBreakdown {
+  social_security: string
+  pension: string
+  rmd: string
+  total: string
+  has_data: boolean
+}
+
 export interface CashFlowReport {
   series: CashFlowPeriod[]
   totals: CashFlowPeriod
+  retirement_income: RetirementIncomeBreakdown
 }
 
 export interface SpendingCategoryItem {
@@ -698,7 +708,27 @@ export interface InvestmentLotResponse {
   basis_per_share: string
   acquired_date: string
   basis_type: string
+  asset_class: string | null
   created_at: string
+}
+
+export interface PositionRollup {
+  ticker: string
+  shares: string
+  cost_basis: string
+  lot_count: number
+}
+
+export interface HoldingsMixSlice {
+  asset_class: string
+  cost_basis: string
+  percentage: number
+}
+
+export interface PositionsSummary {
+  positions: PositionRollup[]
+  holdings_mix: HoldingsMixSlice[]
+  total_cost_basis: string
 }
 
 export interface CapitalCommitmentResponse {

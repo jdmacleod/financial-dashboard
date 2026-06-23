@@ -41,7 +41,12 @@ vi.mock("@/api/equityGrants", () => ({
   equityGrantsApi: { list: vi.fn(() => Promise.resolve([])) },
 }))
 vi.mock("@/api/investmentLots", () => ({
-  investmentLotsApi: { list: vi.fn(() => Promise.resolve([])) },
+  investmentLotsApi: {
+    list: vi.fn(() => Promise.resolve([])),
+    positions: vi.fn(() =>
+      Promise.resolve({ positions: [], holdings_mix: [], total_cost_basis: "0" }),
+    ),
+  },
 }))
 vi.mock("@/api/capitalCommitments", () => ({
   capitalCommitmentsApi: { list: vi.fn(() => Promise.resolve([])) },
