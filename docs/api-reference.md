@@ -41,7 +41,7 @@ Creates the household, the primary member, and the first user account. Only avai
 }
 ```
 
-**Response:** `TokenResponse` — an access token is returned and a `refresh_token` HttpOnly cookie is set.
+**Response:** `TokenResponse`: an access token is returned and a `refresh_token` HttpOnly cookie is set.
 
 ---
 
@@ -67,7 +67,7 @@ before continuing (the frontend routes to a forced reset).
 
 Sets `refresh_token` HttpOnly cookie.
 
-**Errors:** `401` — invalid credentials. `423` — account locked after too many failed attempts.
+**Errors:** `401`: invalid credentials. `423`: account locked after too many failed attempts.
 
 ### `POST /auth/refresh`
 
@@ -355,7 +355,7 @@ Creates an account owned by the current member.
 
 Sensitive fields (`institution_name`, `account_number`, `routing_number`, `notes`) are stored encrypted.
 
-**Response:** `AccountResponse` — `201 Created`
+**Response:** `AccountResponse`: `201 Created`
 
 ### `GET /accounts/{account_id}`
 
@@ -476,7 +476,7 @@ Creates a transaction.
 }
 ```
 
-**Response:** `TransactionResponse` — `201 Created`
+**Response:** `TransactionResponse`: `201 Created`
 
 ### `GET /transactions/{transaction_id}`
 
@@ -696,7 +696,7 @@ Starts an import job. Send as `multipart/form-data`.
 | `file` | file | CSV or OFX/QFX file |
 | `mapping` | string (JSON) | Optional column mapping for CSV files |
 
-**Response:** `ImportJobResponse` — `201 Created`
+**Response:** `ImportJobResponse`: `201 Created`
 
 ```json
 {
@@ -897,7 +897,7 @@ Income vs. expenses for a real estate property.
 
 ### `GET /reports/estate-exposure`
 
-Computed federal estate-exposure report. Groups visible accounts by titling, nets liabilities against assets per bucket, and splits the total into the taxable estate (directly-owned holdings plus revocable-trust-titled accounts) versus holdings removed from the estate (ILIT / irrevocable trust / CRT, where the ownership entity's `is_in_taxable_estate` is `false`). The gross taxable estate is compared against the applicable federal exemption — one per `primary`/`partner` member, capped at two for portability.
+Computed federal estate-exposure report. Groups visible accounts by titling, nets liabilities against assets per bucket, and splits the total into the taxable estate (directly-owned holdings plus revocable-trust-titled accounts) versus holdings removed from the estate (ILIT / irrevocable trust / CRT, where the ownership entity's `is_in_taxable_estate` is `false`). The gross taxable estate is compared against the applicable federal exemption: one per `primary`/`partner` member, capped at two for portability.
 
 This lens ignores `include_in_net_worth` / `counts_in_personal_net_worth`: estate inclusion follows legal titling, not net-worth display preference.
 
@@ -1034,7 +1034,7 @@ Creates an ownership entity. `primary`/`partner` only.
 belong to the household. `is_in_taxable_estate` and `counts_in_personal_net_worth`
 default to `true`.
 
-**Response:** `OwnershipEntityResponse` — `201 Created`
+**Response:** `OwnershipEntityResponse`: `201 Created`
 
 #### `PATCH /ownership-entities/{entity_id}`
 
@@ -1104,7 +1104,7 @@ Creates an advisory note. `primary`/`partner` only.
 `ownership_entity_id` are optional anchors; each must belong to the household,
 and `account_id` must be an account the caller can see.
 
-**Response:** `AdvisoryNoteResponse` — `201 Created`
+**Response:** `AdvisoryNoteResponse`: `201 Created`
 
 #### `PATCH /advisory-notes/{note_id}`
 
@@ -1173,7 +1173,7 @@ required. `insured_member_id`, `owner_ownership_entity_id`, and
 `cash_value_account_id` are optional and must belong to the household (the
 account must be visible to the caller). `metadata` defaults to `{}`.
 
-**Response:** `InsurancePolicyResponse` — `201 Created`
+**Response:** `InsurancePolicyResponse`: `201 Created`
 
 #### `PATCH /insurance-policies/{policy_id}`
 
@@ -1261,7 +1261,7 @@ Creates an equity grant (without vesting events). `primary`/`partner` only.
 `shares_granted` (> 0), and `ticker` are required. `vesting_schedule` defaults
 to `{}`.
 
-**Response:** `EquityGrantResponse` — `201 Created`
+**Response:** `EquityGrantResponse`: `201 Created`
 
 #### `PATCH /equity-grants/{grant_id}`
 
@@ -1271,7 +1271,7 @@ Updates a grant's fields (not its owning member). All fields optional.
 #### `DELETE /equity-grants/{grant_id}`
 
 Deletes a grant. `primary`/`partner` only. Returns `409 Conflict` if the grant
-has recorded vesting events — those carry posted income transactions and
+has recorded vesting events: those carry posted income transactions and
 cost-basis lots and must not be cascaded away.
 
 **Response:** `204 No Content`
@@ -1319,7 +1319,7 @@ Asset classes (nullable): `equity`, `fixed_income`, `cash`, `real_estate`,
 
 Rolls up every visible cost-basis lot into per-ticker positions and an
 asset-class mix, for the Investments page's "Top positions" table and "Holdings
-mix" donut. Cost basis is used throughout — HearthLedger tracks no live market
+mix" donut. Cost basis is used throughout: HearthLedger tracks no live market
 prices, so there is no market-value field.
 
 **Response:** `PositionsSummary`
@@ -1357,7 +1357,7 @@ visible to the caller.
 
 All fields required; `shares` must be `> 0`.
 
-**Response:** `InvestmentLotResponse` — `201 Created`
+**Response:** `InvestmentLotResponse`: `201 Created`
 
 #### `PATCH /investment-lots/{lot_id}`
 
@@ -1416,7 +1416,7 @@ Creates a capital commitment. `primary`/`partner` only.
 `fund_name`, `committed_amount` (> 0), `nav_account_id` (must be visible to the
 caller), and `vintage_year` are required. `called_to_date` defaults to `0`.
 
-**Response:** `CapitalCommitmentResponse` — `201 Created`
+**Response:** `CapitalCommitmentResponse`: `201 Created`
 
 #### `PATCH /capital-commitments/{commitment_id}`
 
@@ -1485,7 +1485,7 @@ Income stream `type` values: `salary`, `rental`, `consulting`, `pension`, `socia
 
 Safe withdrawal rate defaults to `0.04` (4%) if omitted. Expected return defaults to `0.07` (7%); inflation defaults to `0.03` (3%).
 
-**Response:** `FireScenarioResponse` — `201 Created`
+**Response:** `FireScenarioResponse`: `201 Created`
 
 ```json
 {
@@ -1554,7 +1554,7 @@ Runs `FireInputDetector` against the member's transaction history and merges the
 **Query parameters:**
 | Parameter | Type | Description |
 |---|---|---|
-| `trailing_months` | int | Months of history to analyse (default: 12, range: 1–60) |
+| `trailing_months` | int | Months of history to analyze (default: 12, range: 1–60) |
 
 **Response:** `FireDetectionResponse`
 
@@ -1648,7 +1648,7 @@ Returns a side-by-side avalanche and snowball payoff analysis for all loan and c
 | Parameter | Type | Description |
 |---|---|---|
 | `extra_monthly_payment` | decimal | Additional monthly payment applied on top of all minimums (default: `0`) |
-| `strategy` | string | `avalanche` or `snowball` — if supplied, only that plan is computed; both are returned when omitted |
+| `strategy` | string | `avalanche` or `snowball`: if supplied, only that plan is computed; both are returned when omitted |
 
 **Response:** `DebtPayoffComparisonResponse`
 
@@ -1701,8 +1701,8 @@ Returns a side-by-side avalanche and snowball payoff analysis for all loan and c
 
 **Strategies:**
 
-- **Avalanche** — directs extra payment to the highest-interest-rate debt first. Minimises total interest paid.
-- **Snowball** — directs extra payment to the lowest-balance debt first. Provides earlier psychological wins as individual debts clear sooner.
+- **Avalanche**: directs extra payment to the highest-interest-rate debt first. Minimises total interest paid.
+- **Snowball**: directs extra payment to the lowest-balance debt first. Provides earlier psychological wins as individual debts clear sooner.
 
 When a debt reaches $0 its former minimum payment is automatically rolled into the extra pool for the next target debt.
 
@@ -1730,7 +1730,7 @@ The `address` field is stored encrypted.
 
 Valid `property_type` values: `primary_residence`, `rental`, `vacation`, `commercial`, `land`, `other`. Defaults to `primary_residence`.
 
-**Response:** `PropertyResponse` — `201 Created`
+**Response:** `PropertyResponse`: `201 Created`
 
 ### `GET /properties/{property_id}`
 
@@ -1744,7 +1744,7 @@ Updates a property. All fields optional. Sending `property_type: null` is treate
 
 Returns the real estate property record linked to a `real_estate` account. Useful for navigating from account context to property detail.
 
-**Response:** `PropertyResponse` — `404` if the account has no linked property record.
+**Response:** `PropertyResponse`: `404` if the account has no linked property record.
 
 ### `GET /properties/{property_id}/valuations`
 
@@ -1818,7 +1818,7 @@ Creates the pension detail record. Only valid for accounts of type `pension`. Re
 
 `plan_name`, `administrator`, and `notes` are stored AES-256-GCM encrypted. `cola_adjustment_rate` defaults to `0.02` (2%). `eligibility_age` range: 50–90.
 
-**Response:** `PensionAccountResponse` — `201 Created`
+**Response:** `PensionAccountResponse`: `201 Created`
 
 ### `PATCH /accounts/{account_id}/pension`
 
@@ -1903,7 +1903,7 @@ Lists backup jobs, newest first. Primary only.
 
 Triggers a manual backup job. Primary only.
 
-**Response:** `BackupJobResponse` — `201 Created`
+**Response:** `BackupJobResponse`: `201 Created`
 
 ### `GET /backups/{job_id}/download`
 

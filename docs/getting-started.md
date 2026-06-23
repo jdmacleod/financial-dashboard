@@ -1,6 +1,6 @@
 # Getting Started with HearthLedger
 
-HearthLedger is a self-hosted household financial tracking system. It runs entirely on your own machine inside Docker — nothing is sent to the cloud.
+HearthLedger is a self-hosted household financial tracking system. It runs entirely on your own machine inside Docker: nothing is sent to the cloud.
 
 ## Prerequisites
 
@@ -73,12 +73,12 @@ docker compose up -d
 
 This starts six services:
 
-- `db` — PostgreSQL 18
-- `redis` — Redis 8
-- `backend` — FastAPI application
-- `worker` — ARQ background job worker
-- `frontend` — React/Vite build
-- `nginx` — Reverse proxy on port 80
+- `db`: PostgreSQL 18
+- `redis`: Redis 8
+- `backend`: FastAPI application
+- `worker`: ARQ background job worker
+- `frontend`: React/Vite build
+- `nginx`: Reverse proxy on port 80
 
 Wait about 20–30 seconds for PostgreSQL to initialize and Alembic migrations to run.
 
@@ -96,10 +96,10 @@ Open your browser to `http://localhost`.
 
 On first launch HearthLedger detects that no household exists and redirects you to the setup page. Fill in:
 
-- **Household name** — e.g. "Smith Family"
-- **Your name** — e.g. "Alex"
-- **Email** — your login email
-- **Password** — choose a strong password
+- **Household name**: e.g. "Smith Family"
+- **Your name**: e.g. "Alex"
+- **Email**: your login email
+- **Password**: choose a strong password
 
 Click **Create household**. You are automatically logged in as the Primary member.
 
@@ -111,9 +111,9 @@ the **+** on the category that matches your account.
 
 For a first account, click **+** on **Banking & Cash** and fill in:
 
-- **Nickname** — e.g. "Chase Checking"
-- **Type** — `checking`, `savings`, or `other_asset`
-- **Institution** — e.g. "Chase Bank"
+- **Nickname**: e.g. "Chase Checking"
+- **Type**: `checking`, `savings`, or `other_asset`
+- **Institution**: e.g. "Chase Bank"
 
 Click **Save**. Your account appears in the Banking & Cash group.
 
@@ -126,8 +126,8 @@ For all account types and categories, see [How to add accounts](howto-add-accoun
 
 From the **Transactions** page for an account, click **Import**. HearthLedger accepts:
 
-- **CSV** — exported from your bank (Chase, Bank of America, Fidelity, and most others)
-- **OFX/QFX** — Quicken/Microsoft Money format
+- **CSV**: exported from your bank (Chase, Bank of America, Fidelity, and most others)
+- **OFX/QFX**: Quicken/Microsoft Money format
 
 The import runs as a background job. Refresh the page after a few seconds to see your transactions.
 
@@ -173,7 +173,7 @@ docker compose logs nginx       # Access logs
 
 ## Next steps
 
-- [Demo Quickstart](demo-quickstart.md) — load three sample households and explore all features with real data
-- [User Guide](user-guide.md) — all features explained
-- [API Reference](api-reference.md) — REST API documentation
-- [Security](security.md) — how authentication and encryption work
+- [Demo Quickstart](demo-quickstart.md): load three sample households and explore all features with real data
+- [User Guide](user-guide.md): all features explained
+- [API Reference](api-reference.md): REST API documentation
+- [Security](security.md): how authentication and encryption work

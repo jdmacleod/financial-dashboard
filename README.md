@@ -9,7 +9,7 @@
 [![Docker](https://img.shields.io/badge/Docker-Compose-2496ed.svg)](https://docs.docker.com/compose/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Self-hosted household financial tracking. Runs entirely on your own machine — no cloud, no subscriptions.
+Self-hosted household financial tracking. Runs entirely on your own machine: no cloud, no subscriptions.
 
 ## Features
 
@@ -61,7 +61,7 @@ See [docs/getting-started.md](docs/getting-started.md) for the full walkthrough.
 
 ## Try it with demo data
 
-Once the stack is running, load five pre-built households — 30 months of
+Once the stack is running, load five pre-built households: 30 months of
 realistic transactions, budgets, FIRE scenarios, and real estate:
 
 ```bash

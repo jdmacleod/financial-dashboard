@@ -1,8 +1,8 @@
 # Demo Quickstart
 
 HearthLedger ships with a seed script that populates the system with five
-fictitious US households — from late-20s Nashville renters paying down debt to
-a high-net-worth Sarasota retirement couple. Use it to explore every feature
+fictitious US households, ranging from late-20s Nashville renters paying down
+debt to a high-net-worth Sarasota retirement couple. Use it to explore every feature
 without entering your own data.
 
 > **Demo environments only.** The production architecture is one household per
@@ -15,11 +15,11 @@ without entering your own data.
 
 HearthLedger must already be running. If you haven't started it yet, follow
 [Getting Started](getting-started.md) through step 4 (docker compose up) and
-stop before the setup wizard — the seed script creates the households for you.
+stop before the setup wizard: the seed script creates the households for you.
 
 ---
 
-## Step 1 — Seed the demo data
+## Step 1: Seed the demo data
 
 Run this from the project root (PostgreSQL is inside Docker and only reachable
 via `docker-compose exec`):
@@ -62,12 +62,12 @@ docker-compose exec backend python scripts/seed_demo_data.py --household 1
 
 ---
 
-## Step 2 — Open the app and log in
+## Step 2: Open the app and log in
 
 Open `http://localhost` and sign in with any credential from the table below.
 All accounts share the same password: **`HearthDemo1!`**
 
-### Household 1 — Chen-Nakamura (Round Rock, TX)
+### Household 1: Chen-Nakamura (Round Rock, TX)
 
 _Dual-income couple, no dependents. Net worth ~$899K._
 
@@ -85,7 +85,7 @@ What this household demonstrates:
 - Single primary residence with 10 quarterly valuations
 - Seasonal spending (travel, holiday gifts, annual service contracts)
 
-### Household 2 — Okonkwo-Rivera (Naperville, IL)
+### Household 2: Okonkwo-Rivera (Naperville, IL)
 
 _Senior law partner + school district administrator, two teenage dependents. Net worth ~$3.4M._
 
@@ -95,7 +95,7 @@ _Senior law partner + school district administrator, two teenage dependents. Net
 | Partner | carmen@okonkwo-rivera.local | HearthDemo1! |
 
 > Dependents Emma and Noah have `household_members` records but no login
-> credentials — they view joint accounts via RBAC, not via direct login.
+> credentials: they view joint accounts via RBAC, not via direct login.
 
 What this household demonstrates:
 
@@ -109,7 +109,7 @@ What this household demonstrates:
 - Illinois income and property tax patterns
 - Budget history: `restaurants` budget increases from $550 → $650 in March 2025
 
-### Household 3 — Whitfield-Torres (Brentwood, LA)
+### Household 3: Whitfield-Torres (Brentwood, LA)
 
 _Entertainment law firm founder + real estate development consultant, two dependents. Net worth ~$9.5M._
 
@@ -135,7 +135,7 @@ What this household demonstrates:
 - Annual lump-sum retirement contributions (SEP-IRA, profit-sharing 401k)
 - Budget history: `restaurants` budget increases from $2,000 → $2,400 in June 2025
 
-### Household 4 — Park-Cole (East Nashville, TN)
+### Household 4: Park-Cole (East Nashville, TN)
 
 _Late-20s dual-income renters. Net worth ~$155K._
 
@@ -153,7 +153,7 @@ What this household demonstrates:
 - Zoe's student loan income-driven cascade (payment increases after grace period ends)
 - Nashville cost-of-living spending patterns
 
-### Household 5 — Langford (Sarasota, FL)
+### Household 5: Langford (Sarasota, FL)
 
 _Retired couple; SS + pension + RMDs + LLC income. Net worth ~$12.9M._
 
@@ -208,7 +208,7 @@ docker-compose exec backend python scripts/seed_demo_data.py \
   --household 5 --action reset
 ```
 
-The delete and reseed run in a single transaction — if the reseed fails, the
+The delete and reseed run in a single transaction; if the reseed fails, the
 delete is rolled back and the household is restored. Add `--yes` to skip the
 confirmation prompt (useful in scripts).
 
@@ -221,7 +221,7 @@ docker-compose exec backend python scripts/seed_demo_data.py \
 
 ### Full reset (nuclear option)
 
-Use this when you want a completely clean database — for example, after a
+Use this when you want a completely clean database: for example, after a
 schema migration that changes existing tables.
 
 ```bash
@@ -243,8 +243,8 @@ docker-compose exec backend python scripts/seed_demo_data.py --household all
 
 ## Related
 
-- [Getting Started](getting-started.md) — install and run HearthLedger from scratch
-- [User Guide](user-guide.md) — walkthrough of every feature
-- [Demo Dataset Specification](hearthledger-demo-data-spec.md) — full data definitions (income patterns, accounts, FIRE scenarios) for H1–H3
-- [Demo Dataset Specification — Revised](hearthledger-demo-data-spec-revised.md) — expanded spec incorporating H4 and H5 alongside H1–H3
-- [Phase 11 Design Doc](phase-11-demo-households-h4-h5.md) — H4 Park-Cole and H5 Langford implementation spec
+- [Getting Started](getting-started.md): install and run HearthLedger from scratch
+- [User Guide](user-guide.md): walkthrough of every feature
+- [Demo Dataset Specification](hearthledger-demo-data-spec.md): full data definitions (income patterns, accounts, FIRE scenarios) for H1–H3
+- [Demo Dataset Specification: Revised](hearthledger-demo-data-spec-revised.md): expanded spec incorporating H4 and H5 alongside H1–H3
+- [Phase 11 Design Doc](phase-11-demo-households-h4-h5.md): H4 Park-Cole and H5 Langford implementation spec

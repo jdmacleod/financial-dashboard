@@ -1,7 +1,7 @@
 # How to add accounts to HearthLedger
 
-Add any account type — checking, credit card, retirement, investment, real
-estate, or loan — using the category-aware "+" buttons on the Accounts page.
+Add any account type (checking, credit card, retirement, investment, real
+estate, or loan) using the category-aware "+" buttons on the Accounts page.
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ The Accounts page organizes accounts into five category groups. Each group's
 | Investments    | Takes you to the Investments report | `investment_brokerage`                                                                              |
 | Real estate    | Takes you to the Assets page        | `real_estate`                                                                                       |
 
-The page header also has a **+ Add account** button — it opens the same add
+The page header also has a **+ Add account** button: it opens the same add
 form as Banking & Cash / Liabilities, but with no pre-filtering.
 
 ---
@@ -36,8 +36,8 @@ form as Banking & Cash / Liabilities, but with no pre-filtering.
    | ------------------ | --------------------------------------- |
    | **Nickname**       | e.g. "Chase Checking"                   |
    | **Type**           | `checking`, `savings`, or `other_asset` |
-   | **Institution**    | e.g. "Chase Bank" — stored encrypted    |
-   | **Account number** | Optional — stored encrypted             |
+   | **Institution**    | e.g. "Chase Bank": stored encrypted     |
+   | **Account number** | Optional: stored encrypted              |
 
 4. Click **Save**.
 
@@ -59,8 +59,8 @@ HELOCs. All share the same add form.
    | ------------------ | ------------------------------------------------------------------------------------------------------ |
    | **Nickname**       | e.g. "Chase Sapphire" or "Primary Mortgage"                                                            |
    | **Type**           | `credit_card`, `mortgage`, `auto_loan`, `personal_loan`, `student_loan`, `heloc`, or `other_liability` |
-   | **Institution**    | Lender or card issuer — stored encrypted                                                               |
-   | **Account number** | Optional — stored encrypted                                                                            |
+   | **Institution**    | Lender or card issuer: stored encrypted                                                                |
+   | **Account number** | Optional: stored encrypted                                                                             |
 
 4. Click **Save**.
 
@@ -131,7 +131,7 @@ to grant you access.
 **I used the header button and can't find my account type.**
 The header **+ Add account** button shows only transaction account types
 (Banking & Cash and Liabilities). For retirement, investment, and real estate
-types, use the per-category "+" button — it navigates to the correct page.
+types, use the per-category "+" button: it navigates to the correct page.
 
 **My account shows $0.00 balance after adding.**
 That's expected. For Banking & Cash and Liability accounts, import a
