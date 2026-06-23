@@ -43,14 +43,14 @@ const ACCOUNTS_PAGE_TYPES: AccountType[] = [
   "other_liability",
 ]
 
-type CategoryName = "Banking & Cash" | "Retirement" | "Investments" | "Real estate" | "Liabilities"
+type CategoryName = "Banking & Cash" | "Retirement" | "Investments" | "Real Estate" | "Liabilities"
 
 function categorise(accounts: AccountResponse[]): Record<CategoryName, AccountResponse[]> {
   const result: Record<CategoryName, AccountResponse[]> = {
     "Banking & Cash": [],
     Retirement: [],
     Investments: [],
-    "Real estate": [],
+    "Real Estate": [],
     Liabilities: [],
   }
   for (const a of accounts) {
@@ -62,7 +62,7 @@ function categorise(accounts: AccountResponse[]): Record<CategoryName, AccountRe
     )
       result.Retirement.push(a)
     else if (BROKERAGE_ACCOUNT_TYPES.includes(a.account_type)) result.Investments.push(a)
-    else if (REAL_ESTATE_TYPES.includes(a.account_type)) result["Real estate"].push(a)
+    else if (REAL_ESTATE_TYPES.includes(a.account_type)) result["Real Estate"].push(a)
     else if (LIABILITY_TYPES.includes(a.account_type)) result.Liabilities.push(a)
   }
   return result
@@ -621,7 +621,7 @@ export default function Accounts() {
     },
     Retirement: () => navigate({ to: "/reports/retirement" }),
     Investments: () => navigate({ to: "/reports/investments" }),
-    "Real estate": () => navigate({ to: "/real-estate" }),
+    "Real Estate": () => navigate({ to: "/real-estate" }),
     Liabilities: () => {
       setAddFilter("liabilities")
       setShowAdd(true)
@@ -632,7 +632,7 @@ export default function Accounts() {
     "Banking & Cash",
     "Retirement",
     "Investments",
-    "Real estate",
+    "Real Estate",
     "Liabilities",
   ]
 

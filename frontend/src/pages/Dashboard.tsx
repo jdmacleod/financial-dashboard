@@ -140,7 +140,7 @@ const DONUT_COLORS: Record<string, string> = {
   Banking: "#46d39a",
   Investments: "#6c97c4",
   Retirement: "#46b888",
-  "Real estate": "#d9b96a",
+  "Real Estate": "#d9b96a",
   HSA: "#9fb3a8",
   Other: "#6f897c",
 }
@@ -228,7 +228,7 @@ export default function Dashboard() {
       { name: "Banking", value: Number(b.checking_savings) },
       { name: "Investments", value: Number(b.investment) },
       { name: "Retirement", value: Number(b.retirement) },
-      { name: "Real estate", value: Number(b.real_estate) },
+      { name: "Real Estate", value: Number(b.real_estate) },
       { name: "HSA", value: Number(b.hsa) },
       { name: "Other", value: Number(b.other_assets) },
     ]
@@ -581,7 +581,7 @@ export default function Dashboard() {
               marginBottom: "10px",
             }}
           >
-            <SectionLabel>Cash flow</SectionLabel>
+            <SectionLabel>Cash Flow</SectionLabel>
             <Link
               to="/reports/cash-flow"
               style={{ fontSize: "11px", color: "var(--label)", textDecoration: "none" }}

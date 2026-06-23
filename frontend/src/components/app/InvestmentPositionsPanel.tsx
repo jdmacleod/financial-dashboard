@@ -7,7 +7,7 @@ const ASSET_CLASS_LABELS: Record<string, string> = {
   equity: "Equity",
   fixed_income: "Fixed income",
   cash: "Cash",
-  real_estate: "Real estate",
+  real_estate: "Real Estate",
   alternative: "Alternatives",
   other: "Other",
   unclassified: "Unclassified",
