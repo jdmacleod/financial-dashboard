@@ -1,5 +1,59 @@
 # TODOS
 
+### DESIGN.md — HearthLedger design system document
+
+**What:** Run `/design-consultation` to produce a `DESIGN.md` at the repo root documenting HearthLedger-specific design tokens: type scale (Archivo headings, Spectral body), color palette (indigo-600 accent, gray-200 borders), component vocabulary (section header pattern, range toggle pill style, modal pattern), and spacing rules.
+
+**Why:** Without a design system document, each new UI feature is reviewed against universal principles instead of HearthLedger-specific conventions. The `plan-design-review` skill flagged its absence during the Budgets sort/filter design review. Without it, decisions like "what should the sort select look like?" get made ad-hoc instead of from a documented token.
+
+**Pros:** Future UI reviews become faster and more precise. New contributors have a reference. Prevents design drift as the feature set grows.
+
+**Cons:** Takes one session. Requires keeping the document current as the design evolves.
+
+**Depends on:** Nothing.
+
+---
+
+### Sort/filter state persistence — Budgets tab (Deferred from v0.17.0.0)
+
+**What:** After the Budgets tab sort/filter controls ship, optionally persist the user's chosen sort keys (for Budget vs Actuals and All Budgets) to `localStorage`. Currently session-only React state that resets on navigation.
+
+**Why:** A household that always reviews budgets in "Name A-Z" order has to re-apply the sort every visit. A power user with 20+ categories finds alphabetical scanning essential and would benefit from the preference being remembered. Raised during the sort/filter design review.
+
+**Pros:** ~15 lines of `useEffect` code. No schema or backend changes. Purely additive.
+
+**Cons:** localStorage has no cross-device sync. If the sort option keys ever change, stored values become stale (would need versioning or fallback). Adds a `useEffect` dependency to the component.
+
+**Context:** Session-only state was the v0.17.0.0 choice because it covers the common case with zero overhead. Persistence is a progressive enhancement for power users.
+
+**Depends on:** Budgets sort/filter feature shipped (v0.17.0.0).
+
+---
+
+### Quarterly budget period — Budgets tab (Deferred from v0.16.0.0)
+
+**What:** Add `"quarterly"` as a valid budget period alongside `"monthly"` and `"annual"`. The Budgets tab would show a `÷3` monthly proration badge and the backend would divide by 3 in the budget-vs-actuals report.
+
+**Why:** The original devex review request mentioned "quarterly or yearly items." Only annual was implemented because it covers the most common case (annual subscriptions, insurance, property tax).
+
+**Cons:** Adds a third enum value that must be threaded through schema, service, DB migration, and UI radio buttons. Modest scope but requires an Alembic migration to update the `budgetperiod` Postgres enum.
+
+**Depends on:** v0.16.0.0 shipped.
+
+---
+
+### Unique constraint on (household_id, category_id, effective_from) in budgets table
+
+**What:** Add a DB-level unique constraint to prevent two budgets for the same category and start date. Currently prevented only by application logic; a race condition could create duplicates.
+
+**Why:** Adversarial review (v0.16.0.0) identified that `list_active_for_period` returns all matching budgets and the service discards duplicates with last-wins dict behavior. A uniqueness constraint enforces the intent at the DB layer.
+
+**Cons:** Requires an Alembic migration. May need a data cleanup pass if any households have existing duplicates.
+
+**Depends on:** v0.16.0.0 shipped.
+
+---
+
 ### WCAG 2.1 AA accessibility audit — HearthLedger v1 (Post-Phase 7)
 
 **What:** Run a full WCAG 2.1 AA audit across all HearthLedger pages: color contrast ratios (4.5:1 body text, 3:1 large text), screen reader label completeness, keyboard navigation order, and focus indicator visibility.

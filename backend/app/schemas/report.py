@@ -1,8 +1,11 @@
 import uuid
 from datetime import date
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
+
+BudgetPeriod = Literal["monthly", "annual"]
 
 
 class PensionAnnotation(BaseModel):
@@ -96,6 +99,7 @@ class BudgetVsActualsItem(BaseModel):
     actual: Decimal
     remaining: Decimal
     percentage_used: float
+    period: BudgetPeriod = "monthly"
 
 
 class BudgetVsActualsReport(BaseModel):

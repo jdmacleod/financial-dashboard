@@ -385,6 +385,7 @@ export interface BudgetVsActualsItem {
   actual: string
   remaining: string
   percentage_used: number
+  period: "monthly" | "annual"
 }
 
 export interface BudgetVsActualsReport {

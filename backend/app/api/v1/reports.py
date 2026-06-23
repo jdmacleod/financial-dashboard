@@ -59,7 +59,7 @@ async def spending_by_category_report(
 
 @router.get("/reports/budget-vs-actuals", response_model=BudgetVsActualsReport)
 async def budget_vs_actuals_report(
-    month: str = Query(..., pattern=r"^\d{4}-\d{2}$"),
+    month: str = Query(..., pattern=r"^\d{4}-(0[1-9]|1[0-2])$"),
     ctx: VisibilityContext = Depends(get_visibility_ctx),
     session: AsyncSession = Depends(get_session),
 ) -> BudgetVsActualsReport:

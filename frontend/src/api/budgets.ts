@@ -20,7 +20,12 @@ export const budgetsApi = {
 
   update: (
     id: string,
-    data: Partial<{ amount: string; effective_from: string; effective_to: string | null }>,
+    data: Partial<{
+      amount: string
+      period: BudgetPeriod
+      effective_from: string
+      effective_to: string | null
+    }>,
   ) => api.patch<BudgetResponse>(`/budgets/${id}`, data),
 
   delete: (id: string) => api.delete(`/budgets/${id}`),
