@@ -1,6 +1,6 @@
 import { useMemo } from "react"
 import { Link } from "@tanstack/react-router"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueries } from "@tanstack/react-query"
 import {
   AreaChart,
   Area,
@@ -18,6 +18,7 @@ import {
 import { useRouterState } from "@tanstack/react-router"
 import { reportsApi } from "@/api/reports"
 import { accountsApi } from "@/api/accounts"
+import { propertiesApi } from "@/api/properties"
 import { advisoryNotesApi } from "@/api/advisoryNotes"
 import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
 import { ADVISORY_CATEGORY_ORDER, advisoryCategoryMeta } from "@/lib/advisoryCategories"
@@ -266,6 +267,27 @@ export default function Dashboard() {
       .sort((a, b) => Number(b.current_balance) - Number(a.current_balance))
       .slice(0, 5)
   }, [accounts])
+
+  // Fetch property addresses for any real estate accounts in topHoldings
+  const realEstateHoldings = useMemo(
+    () => topHoldings.filter((a) => a.account_type === "real_estate"),
+    [topHoldings],
+  )
+  const propertyQueries = useQueries({
+    queries: realEstateHoldings.map((a) => ({
+      queryKey: ["property-by-account", a.id],
+      queryFn: () => propertiesApi.getByAccountId(a.id),
+      staleTime: 60_000,
+    })),
+  })
+  const propertyAddressByAccountId = useMemo(() => {
+    const map = new Map<string, string>()
+    realEstateHoldings.forEach((a, i) => {
+      const address = propertyQueries[i]?.data?.address
+      if (address) map.set(a.id, address)
+    })
+    return map
+  }, [realEstateHoldings, propertyQueries])
 
   const donutTotal = useMemo(() => donutData.reduce((s, d) => s + d.value, 0), [donutData])
 
@@ -721,16 +743,32 @@ export default function Dashboard() {
                   key={a.id}
                   style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
                 >
-                  <div>
+                  <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: "12.5px", color: "var(--text3)", fontWeight: 500 }}>
                       {a.nickname}
                     </div>
-                    {(a.institution_name || a.account_number_last4) && (
-                      <div style={{ fontSize: "10px", color: "var(--muted)" }}>
-                        {[a.institution_name, formatMaskedAccountNumber(a.account_number_last4)]
-                          .filter(Boolean)
-                          .join(" · ")}
+                    {a.account_type === "real_estate" && propertyAddressByAccountId.get(a.id) ? (
+                      <div
+                        style={{
+                          fontSize: "10px",
+                          color: "var(--muted)",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          maxWidth: "160px",
+                        }}
+                        title={propertyAddressByAccountId.get(a.id)}
+                      >
+                        {propertyAddressByAccountId.get(a.id)}
                       </div>
+                    ) : (
+                      (a.institution_name || a.account_number_last4) && (
+                        <div style={{ fontSize: "10px", color: "var(--muted)" }}>
+                          {[a.institution_name, formatMaskedAccountNumber(a.account_number_last4)]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </div>
+                      )
                     )}
                   </div>
                   <div style={{ fontSize: "12.5px", fontWeight: 600, color: "var(--text)" }}>
