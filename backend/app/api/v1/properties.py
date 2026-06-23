@@ -18,6 +18,15 @@ from app.services.real_estate import RealEstateService
 router = APIRouter()
 
 
+@router.get("/properties", response_model=list[PropertyResponse])
+async def list_properties(
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> list[PropertyResponse]:
+    svc = RealEstateService(session)
+    return await svc.list_all(ctx)
+
+
 @router.get("/accounts/{account_id}/property", response_model=PropertyResponse)
 async def get_property_by_account(
     account_id: uuid.UUID,

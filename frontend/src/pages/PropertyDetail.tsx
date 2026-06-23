@@ -18,6 +18,7 @@ import {
 import { accountsApi } from "@/api/accounts"
 import { propertiesApi } from "@/api/properties"
 import { reportsApi } from "@/api/reports"
+import { insurancePoliciesApi } from "@/api/insurancePolicies"
 import type { PropertyResponse, PropertyType } from "@/api/types"
 import { formatCurrency, formatDate } from "@/lib/formatters"
 import { lastNMonthsRange } from "@/lib/dateRange"
@@ -304,6 +305,23 @@ function AddValuationModal({ propertyId, onClose }: { propertyId: string; onClos
   )
 }
 
+const POLICY_TYPE_LABELS: Record<string, string> = {
+  term_life: "Term Life",
+  permanent_life: "Permanent Life",
+  umbrella_liability: "Umbrella Liability",
+  disability: "Disability",
+  long_term_care: "Long-Term Care",
+  scheduled_specialty: "Scheduled / Specialty",
+  homeowners: "Homeowners",
+  renters: "Renters",
+}
+
+const CADENCE_LABELS: Record<string, string> = {
+  monthly: "/mo",
+  quarterly: "/qtr",
+  annual: "/yr",
+}
+
 export default function PropertyDetail() {
   const { propertyId } = useParams({ strict: false }) as { propertyId: string }
   const [tab, setTab] = useState<Tab>("valuations")
@@ -315,6 +333,11 @@ export default function PropertyDetail() {
   const { data: property, isLoading: propLoading } = useQuery({
     queryKey: ["property", propertyId],
     queryFn: () => propertiesApi.get(propertyId),
+  })
+
+  const { data: allPolicies } = useQuery({
+    queryKey: ["insurance-policies"],
+    queryFn: insurancePoliciesApi.list,
   })
 
   const { data: valuations } = useQuery({
@@ -345,6 +368,8 @@ export default function PropertyDetail() {
 
   const gainLoss = property.gain_loss !== null ? Number(property.gain_loss) : null
   const gainLossPct = property.gain_loss_pct !== null ? Number(property.gain_loss_pct) : null
+
+  const linkedPolicies = allPolicies?.filter((p) => p.insured_real_estate_id === propertyId) ?? []
 
   const valuationChartData = valuations
     ?.slice()
@@ -403,6 +428,46 @@ export default function PropertyDetail() {
           Edit details
         </button>
       </div>
+
+      {linkedPolicies.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+            Insurance
+          </p>
+          <div className="space-y-2">
+            {linkedPolicies.map((pol) => (
+              <div key={pol.id} className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <span className="text-sm font-medium text-gray-800">
+                    {POLICY_TYPE_LABELS[pol.policy_type] ?? pol.policy_type}
+                  </span>
+                  {pol.carrier && (
+                    <span className="ml-2 text-xs text-gray-500">
+                      {pol.carrier}
+                      {pol.policy_number && (
+                        <span className="ml-1 font-mono opacity-75">#{pol.policy_number}</span>
+                      )}
+                    </span>
+                  )}
+                  {pol.technical_notes && (
+                    <p className="text-xs text-gray-400 italic mt-0.5">{pol.technical_notes}</p>
+                  )}
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <span className="text-sm text-gray-700">
+                    {formatCurrency(pol.coverage_amount)}
+                  </span>
+                  <span className="text-xs text-gray-400 ml-1">coverage</span>
+                  <p className="text-xs text-gray-400">
+                    {formatCurrency(pol.premium_amount)}
+                    {CADENCE_LABELS[pol.premium_cadence] ?? ""}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-1 border-b border-gray-200">
         {(

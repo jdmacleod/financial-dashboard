@@ -6,6 +6,7 @@ import { z } from "zod"
 import { insurancePoliciesApi } from "@/api/insurancePolicies"
 import { membersApi } from "@/api/members"
 import { ownershipEntitiesApi } from "@/api/ownershipEntities"
+import { propertiesApi } from "@/api/properties"
 import { QueryGuard } from "@/components/app/QueryGuard"
 import { formatCurrency } from "@/lib/formatters"
 import type { InsurancePolicyResponse } from "@/api/types"
@@ -19,6 +20,8 @@ const POLICY_TYPES = [
   "disability",
   "long_term_care",
   "scheduled_specialty",
+  "homeowners",
+  "renters",
 ] as const
 
 type PolicyType = (typeof POLICY_TYPES)[number]
@@ -30,6 +33,8 @@ const POLICY_TYPE_LABELS: Record<string, string> = {
   disability: "Disability",
   long_term_care: "Long-Term Care",
   scheduled_specialty: "Scheduled / Specialty",
+  homeowners: "Homeowners",
+  renters: "Renters",
 }
 
 const CADENCE_LABELS: Record<string, string> = {
@@ -37,6 +42,20 @@ const CADENCE_LABELS: Record<string, string> = {
   quarterly: "/qtr",
   annual: "/yr",
 }
+
+// Policy types for which a specific member is insured
+const MEMBER_INSURED_TYPES: PolicyType[] = [
+  "term_life",
+  "permanent_life",
+  "disability",
+  "long_term_care",
+]
+
+// Policy types for which an entity can own the policy
+const ENTITY_OWNER_TYPES: PolicyType[] = ["term_life", "permanent_life"]
+
+// Policy types that can be linked to a real estate property
+const PROPERTY_LINKED_TYPES: PolicyType[] = ["homeowners", "renters"]
 
 type PolicySort = "type_asc" | "coverage_desc" | "premium_desc"
 
@@ -65,6 +84,8 @@ const policySchema = z.object({
   premium_cadence: z.enum(["monthly", "quarterly", "annual"]),
   carrier: z.string().nullable(),
   policy_number: z.string().nullable(),
+  technical_notes: z.string().nullable(),
+  insured_real_estate_id: z.string().nullable(),
   insured_member_id: z.string().nullable(),
   owner_ownership_entity_id: z.string().nullable(),
 })
@@ -81,6 +102,10 @@ function AddPolicyModal({ onClose }: { onClose: () => void }) {
     queryKey: ["ownership-entities"],
     queryFn: ownershipEntitiesApi.list,
   })
+  const { data: properties } = useQuery({
+    queryKey: ["properties"],
+    queryFn: propertiesApi.list,
+  })
 
   const {
     register,
@@ -96,6 +121,8 @@ function AddPolicyModal({ onClose }: { onClose: () => void }) {
       premium_amount: "",
       carrier: null,
       policy_number: null,
+      technical_notes: null,
+      insured_real_estate_id: null,
       insured_member_id: null,
       owner_ownership_entity_id: null,
     },
@@ -115,6 +142,8 @@ function AddPolicyModal({ onClose }: { onClose: () => void }) {
         cash_value_account_id: null,
         carrier: data.carrier || null,
         policy_number: data.policy_number || null,
+        technical_notes: data.technical_notes || null,
+        insured_real_estate_id: data.insured_real_estate_id || null,
         metadata: {},
       }),
     onSuccess: () => {
@@ -128,7 +157,7 @@ function AddPolicyModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-xl p-6">
+      <div className="w-full max-w-sm bg-white rounded-xl shadow-xl p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Add Policy</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -207,10 +236,40 @@ function AddPolicyModal({ onClose }: { onClose: () => void }) {
             />
           </div>
 
-          {(policyType === "term_life" ||
-            policyType === "permanent_life" ||
-            policyType === "disability" ||
-            policyType === "long_term_care") && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Technical notes <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              {...register("technical_notes")}
+              placeholder="e.g. Comprehensive, flood rider, earthquake endorsement"
+              rows={2}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            />
+          </div>
+
+          {PROPERTY_LINKED_TYPES.includes(policyType as PolicyType) &&
+            properties &&
+            properties.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Covered property <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <select
+                  {...register("insured_real_estate_id")}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">None</option>
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nickname}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+          {MEMBER_INSURED_TYPES.includes(policyType as PolicyType) && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Insured member <span className="text-gray-400 font-normal">(optional)</span>
@@ -229,7 +288,7 @@ function AddPolicyModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          {(policyType === "term_life" || policyType === "permanent_life") && (
+          {ENTITY_OWNER_TYPES.includes(policyType as PolicyType) && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Trust / entity owner{" "}
@@ -282,9 +341,15 @@ function EditPolicyModal({
   const queryClient = useQueryClient()
   const [error, setError] = useState<string | null>(null)
 
+  const { data: properties } = useQuery({
+    queryKey: ["properties"],
+    queryFn: propertiesApi.list,
+  })
+
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<PolicyForm>({
     resolver: zodResolver(policySchema),
@@ -295,10 +360,14 @@ function EditPolicyModal({
       premium_cadence: policy.premium_cadence as "monthly" | "quarterly" | "annual",
       carrier: policy.carrier,
       policy_number: policy.policy_number,
+      technical_notes: policy.technical_notes,
+      insured_real_estate_id: policy.insured_real_estate_id,
       insured_member_id: policy.insured_member_id,
       owner_ownership_entity_id: policy.owner_ownership_entity_id,
     },
   })
+
+  const policyType = watch("policy_type")
 
   const update = useMutation({
     mutationFn: (data: PolicyForm) =>
@@ -309,6 +378,8 @@ function EditPolicyModal({
         premium_cadence: data.premium_cadence,
         carrier: data.carrier || null,
         policy_number: data.policy_number || null,
+        technical_notes: data.technical_notes || null,
+        insured_real_estate_id: data.insured_real_estate_id || null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["insurance-policies"] })
@@ -319,7 +390,7 @@ function EditPolicyModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="w-full max-w-sm bg-white rounded-xl shadow-xl p-6">
+      <div className="w-full max-w-sm bg-white rounded-xl shadow-xl p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-1">
           <h2 className="text-lg font-semibold">Edit Policy</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
@@ -396,6 +467,39 @@ function EditPolicyModal({
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Technical notes <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              {...register("technical_notes")}
+              placeholder="e.g. Comprehensive, flood rider, earthquake endorsement"
+              rows={2}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+            />
+          </div>
+
+          {PROPERTY_LINKED_TYPES.includes(policyType as PolicyType) &&
+            properties &&
+            properties.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Covered property <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <select
+                  {...register("insured_real_estate_id")}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  <option value="">None</option>
+                  {properties.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.nickname}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
           {error && (
             <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
               {error}
@@ -431,12 +535,14 @@ function PolicyCard({
   memberName,
   entityName,
   entityCountsInNW,
+  propertyNickname,
   onDelete,
 }: {
   policy: InsurancePolicyResponse
   memberName: string | null
   entityName: string | null
   entityCountsInNW: boolean | null
+  propertyNickname: string | null
   onDelete: () => void
 }) {
   const [editing, setEditing] = useState(false)
@@ -469,9 +575,19 @@ function PolicyCard({
                 )}
               </div>
             )}
+            {propertyNickname && (
+              <div className="mt-1 text-xs" style={{ color: "var(--label)" }}>
+                Property: {propertyNickname}
+              </div>
+            )}
             {memberName && (
               <div className="mt-1 text-xs" style={{ color: "var(--label)" }}>
                 Insured: {memberName}
+              </div>
+            )}
+            {policy.technical_notes && (
+              <div className="mt-1 text-xs italic" style={{ color: "var(--label)", opacity: 0.85 }}>
+                {policy.technical_notes}
               </div>
             )}
             <div className="mt-2 flex flex-wrap gap-2">
@@ -528,9 +644,14 @@ export default function Insurance() {
     queryKey: ["ownership-entities"],
     queryFn: ownershipEntitiesApi.list,
   })
+  const { data: properties } = useQuery({
+    queryKey: ["properties"],
+    queryFn: propertiesApi.list,
+  })
 
   const memberMap = useMemo(() => new Map(members?.map((m) => [m.id, m]) ?? []), [members])
   const entityMap = useMemo(() => new Map(entities?.map((e) => [e.id, e]) ?? []), [entities])
+  const propertyMap = useMemo(() => new Map(properties?.map((p) => [p.id, p]) ?? []), [properties])
 
   const remove = useMutation({
     mutationFn: (id: string) => insurancePoliciesApi.delete(id),
@@ -607,6 +728,9 @@ export default function Insurance() {
                 const entity = p.owner_ownership_entity_id
                   ? entityMap.get(p.owner_ownership_entity_id)
                   : null
+                const property = p.insured_real_estate_id
+                  ? propertyMap.get(p.insured_real_estate_id)
+                  : null
                 return (
                   <PolicyCard
                     key={p.id}
@@ -614,6 +738,7 @@ export default function Insurance() {
                     memberName={member?.display_name ?? null}
                     entityName={entity?.name ?? null}
                     entityCountsInNW={entity?.counts_in_personal_net_worth ?? null}
+                    propertyNickname={property?.nickname ?? null}
                     onDelete={() => {
                       if (window.confirm("Delete this insurance policy?")) remove.mutate(p.id)
                     }}

@@ -907,6 +907,34 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         )
     )
 
+    # ── Homeowners — Sarasota primary + Highlands NC vacation ───────────────────
+    session.add(
+        make_insurance_policy(
+            hid,
+            "homeowners",
+            D("3200000"),
+            D("6800"),
+            "annual",
+            carrier="Chubb",
+            policy_number="CHB-HO3-2022-8841076",
+            technical_notes="Masterpiece HO-3 open perils; flood excluded (separate NFIP policy)",
+            insured_real_estate_id=prop_sarasota.id,
+        )
+    )
+    session.add(
+        make_insurance_policy(
+            hid,
+            "homeowners",
+            D("1200000"),
+            D("3100"),
+            "annual",
+            carrier="Chubb",
+            policy_number="CHB-HO3-2019-7712043",
+            technical_notes="Masterpiece HO-3; extended replacement cost; mountain/fire coverage",
+            insured_real_estate_id=prop_highlands.id,
+        )
+    )
+
     # ── Umbrella ($10M) + long-term-care policies ───────────────────────────────
     session.add(
         make_insurance_policy(

@@ -8,6 +8,8 @@ import type {
 } from "./types"
 
 export const propertiesApi = {
+  list: () => api.get<PropertyResponse[]>("/properties"),
+
   get: (id: string) => api.get<PropertyResponse>(`/properties/${id}`),
 
   getByAccountId: async (accountId: string): Promise<PropertyResponse | null> => {

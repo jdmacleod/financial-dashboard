@@ -21,6 +21,8 @@ class InsurancePolicyCreate(BaseModel):
     cash_value_account_id: uuid.UUID | None = None
     carrier: str | None = None
     policy_number: str | None = None
+    technical_notes: str | None = None
+    insured_real_estate_id: uuid.UUID | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -34,6 +36,8 @@ class InsurancePolicyUpdate(BaseModel):
     cash_value_account_id: uuid.UUID | None = None
     carrier: str | None = None
     policy_number: str | None = None
+    technical_notes: str | None = None
+    insured_real_estate_id: uuid.UUID | None = None
     metadata: dict[str, Any] | None = None
 
 
@@ -51,6 +55,8 @@ class InsurancePolicyResponse(BaseModel):
     cash_value_account_id: uuid.UUID | None
     carrier: str | None
     policy_number: str | None
+    technical_notes: str | None
+    insured_real_estate_id: uuid.UUID | None
     # ORM attribute is `policy_metadata` (column "metadata"); expose as "metadata".
     metadata: dict[str, Any] = Field(
         validation_alias="policy_metadata", serialization_alias="metadata"

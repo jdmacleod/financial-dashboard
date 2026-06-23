@@ -299,6 +299,33 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             metadata={"purpose": "estate_liquidity", "owned_by": "ilit"},
         )
     )
+    # Homeowners for both properties
+    session.add(
+        make_insurance_policy(
+            hid,
+            "homeowners",
+            D("4500000"),
+            D("9200"),
+            "annual",
+            carrier="Chubb",
+            policy_number="CHB-HO3-2018-5521904",
+            technical_notes="Masterpiece HO-3; replacement cost; fine arts blanket $500K",
+            insured_real_estate_id=prop_residence.id,
+        )
+    )
+    session.add(
+        make_insurance_policy(
+            hid,
+            "homeowners",
+            D("2200000"),
+            D("4800"),
+            "annual",
+            carrier="Chubb",
+            policy_number="CHB-HO6-2020-6631082",
+            technical_notes="HO-6 co-op unit; loss assessment coverage; board approval rider",
+            insured_real_estate_id=prop_coop.id,
+        )
+    )
     session.add(
         make_insurance_policy(
             hid,

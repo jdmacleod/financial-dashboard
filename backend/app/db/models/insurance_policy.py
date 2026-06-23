@@ -16,6 +16,8 @@ INSURANCE_POLICY_TYPES = (
     "disability",
     "long_term_care",
     "scheduled_specialty",
+    "homeowners",
+    "renters",
 )
 
 PREMIUM_CADENCES = ("monthly", "quarterly", "annual")
@@ -56,4 +58,8 @@ class InsurancePolicy(Base):
     )
     carrier: Mapped[str | None] = mapped_column(nullable=True)
     policy_number: Mapped[str | None] = mapped_column(nullable=True)
+    technical_notes: Mapped[str | None] = mapped_column(nullable=True)
+    insured_real_estate_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

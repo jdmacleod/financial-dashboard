@@ -29,13 +29,15 @@ test.describe("Insurance tab — Castellano Household", () => {
     await expect(page.getByRole("button", { name: "Add policy" })).toBeVisible()
   })
 
-  test("shows all five Castellano insurance policies", async ({ page }) => {
-    // Castellano has: 2x permanent_life, umbrella, long_term_care, scheduled_specialty
+  test("shows all Castellano insurance policies", async ({ page }) => {
+    // Castellano has: 2x permanent_life, 2x homeowners, umbrella, long_term_care, scheduled_specialty
     await expect(page.getByText("Umbrella Liability")).toBeVisible()
     await expect(page.getByText("Long-Term Care")).toBeVisible()
     await expect(page.getByText("Scheduled / Specialty")).toBeVisible()
     const permanentLifeItems = await page.getByText("Permanent Life").all()
     expect(permanentLifeItems.length).toBe(2)
+    const homeownersItems = await page.getByText("Homeowners").all()
+    expect(homeownersItems.length).toBe(2)
   })
 
   test("sort control is present", async ({ page }) => {
@@ -78,7 +80,8 @@ test.describe("Insurance tab — Castellano Household", () => {
   })
 
   test("policy count badge is shown", async ({ page }) => {
-    await expect(page.getByText(/5 policies/)).toBeVisible()
+    // Castellano has 5 original + 2 homeowners policies = 7
+    await expect(page.getByText(/7 policies/)).toBeVisible()
   })
 
   test("ILIT-owned policy shows entity name with outside estate label", async ({ page }) => {
@@ -89,8 +92,9 @@ test.describe("Insurance tab — Castellano Household", () => {
   test("each policy card has Edit and Delete buttons", async ({ page }) => {
     const editButtons = page.getByRole("button", { name: "Edit" })
     const deleteButtons = page.getByRole("button", { name: "Delete" })
-    expect(await editButtons.count()).toBe(5)
-    expect(await deleteButtons.count()).toBe(5)
+    // 5 original policies + 2 homeowners = 7
+    expect(await editButtons.count()).toBe(7)
+    expect(await deleteButtons.count()).toBe(7)
   })
 
   // ── Add Policy modal ─────────────────────────────────────────────────────────
@@ -205,8 +209,9 @@ test.describe("Insurance tab — Chen-Nakamura Household", () => {
     await expect(page.getByText("Disability")).toBeVisible()
   })
 
-  test("policy count shows 2 policies", async ({ page }) => {
-    await expect(page.getByText(/2 policies/)).toBeVisible()
+  test("policy count shows 3 policies", async ({ page }) => {
+    // Chen-Nakamura: umbrella + disability + homeowners (HO-6 condo)
+    await expect(page.getByText(/3 policies/)).toBeVisible()
   })
 
   test("disability policy shows insured member", async ({ page }) => {
@@ -224,7 +229,8 @@ test.describe("Insurance tab — carrier and policy number display", () => {
   })
 
   test("carrier name is shown on policy card", async ({ page }) => {
-    await expect(page.getByText("USAA")).toBeVisible()
+    // USAA appears on umbrella and homeowners cards; Guardian on disability
+    await expect(page.getByText("USAA").first()).toBeVisible()
     await expect(page.getByText("Guardian")).toBeVisible()
   })
 

@@ -17,6 +17,8 @@ const policies: InsurancePolicyResponse[] = [
     cash_value_account_id: null,
     carrier: "Chubb",
     policy_number: "CHB-UMB-9921037",
+    technical_notes: null,
+    insured_real_estate_id: null,
     metadata: { underlying: ["auto", "home"] },
     created_at: "2026-01-01T00:00:00Z",
   },
@@ -32,22 +34,26 @@ const policies: InsurancePolicyResponse[] = [
     cash_value_account_id: null,
     carrier: "Northwestern Mutual",
     policy_number: "NM-WL-2006-4412198",
+    technical_notes: null,
+    insured_real_estate_id: null,
     metadata: {},
     created_at: "2026-01-01T00:00:00Z",
   },
   {
     id: "p3",
     household_id: "hh1",
-    policy_type: "disability",
-    insured_member_id: "m1",
+    policy_type: "homeowners",
+    insured_member_id: null,
     owner_ownership_entity_id: null,
-    coverage_amount: "72000.0000",
-    premium_amount: "142.0000",
-    premium_cadence: "monthly",
+    coverage_amount: "850000.0000",
+    premium_amount: "2400.0000",
+    premium_cadence: "annual",
     cash_value_account_id: null,
-    carrier: "Guardian",
-    policy_number: "GDI-0089-4412",
-    metadata: { benefit_period: "to_age_65", elimination_days: 90 },
+    carrier: "Chubb",
+    policy_number: "CHB-HO3-2024-00917",
+    technical_notes: "HO-3 open perils, flood rider, $10,000 jewelry scheduled",
+    insured_real_estate_id: "prop1",
+    metadata: {},
     created_at: "2026-01-01T00:00:00Z",
   },
 ]
@@ -96,6 +102,32 @@ vi.mock("@/api/ownershipEntities", () => ({
   ownershipEntitiesApi: { list: vi.fn(() => Promise.resolve(entities)) },
 }))
 
+vi.mock("@/api/properties", () => ({
+  propertiesApi: {
+    list: vi.fn(() =>
+      Promise.resolve([
+        {
+          id: "prop1",
+          account_id: "acc1",
+          nickname: "Main Home",
+          address: "123 Main St",
+          purchase_date: null,
+          purchase_price: null,
+          linked_mortgage_account_id: null,
+          ownership_entity_id: null,
+          property_type: "primary_residence",
+          current_estimated_value: "850000",
+          current_value_as_of: "2026-06-01",
+          gain_loss: null,
+          gain_loss_pct: null,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        },
+      ]),
+    ),
+  },
+}))
+
 function renderPage() {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -116,7 +148,7 @@ describe("Insurance page", () => {
     renderPage()
     await waitFor(() => expect(screen.getByText("Umbrella Liability")).toBeInTheDocument())
     expect(screen.getByText("Permanent Life")).toBeInTheDocument()
-    expect(screen.getByText("Disability")).toBeInTheDocument()
+    expect(screen.getByText("Homeowners")).toBeInTheDocument()
   })
 
   it("shows Add policy button in the header", async () => {
@@ -142,7 +174,7 @@ describe("Insurance page", () => {
   it("displays insured member name for policies with insured_member_id", async () => {
     renderPage()
     await waitFor(() => expect(screen.getByText("Umbrella Liability")).toBeInTheDocument())
-    // Two policies have insured_member_id = m1 → "Wei Chen"
+    // Permanent Life has insured_member_id = m1 → "Wei Chen"
     const insuredLabels = screen.getAllByText(/Insured: Wei Chen/)
     expect(insuredLabels.length).toBeGreaterThanOrEqual(1)
   })
@@ -175,8 +207,8 @@ describe("Insurance page", () => {
     const editButtons = screen.getAllByRole("button", { name: "Edit" })
     fireEvent.click(editButtons[0])
     expect(screen.getByRole("heading", { name: "Edit Policy" })).toBeInTheDocument()
-    // With default type_asc sort, first card is Disability (D < P < U)
-    expect(screen.getByText("Disability", { selector: "p" })).toBeInTheDocument()
+    // With default type_asc sort, first card is Homeowners (H < P < U)
+    expect(screen.getByText("Homeowners", { selector: "p" })).toBeInTheDocument()
   })
 
   it("closes Edit modal on Cancel", async () => {
@@ -191,14 +223,34 @@ describe("Insurance page", () => {
   it("displays carrier name on policy cards", async () => {
     renderPage()
     await waitFor(() => expect(screen.getByText("Umbrella Liability")).toBeInTheDocument())
-    expect(screen.getByText("Chubb")).toBeInTheDocument()
-    expect(screen.getByText("Guardian")).toBeInTheDocument()
+    // Both umbrella and homeowners policies carry "Chubb"
+    const chubbEls = screen.getAllByText("Chubb")
+    expect(chubbEls.length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText("Northwestern Mutual")).toBeInTheDocument()
   })
 
   it("displays policy number alongside carrier on cards", async () => {
     renderPage()
     await waitFor(() => expect(screen.getByText("Umbrella Liability")).toBeInTheDocument())
     expect(screen.getByText(/#CHB-UMB-9921037/)).toBeInTheDocument()
+  })
+
+  it("displays technical notes on homeowners policy card", async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByText("Homeowners")).toBeInTheDocument())
+    expect(screen.getByText(/HO-3 open perils/)).toBeInTheDocument()
+  })
+
+  it("displays linked property nickname on homeowners policy card", async () => {
+    renderPage()
+    await waitFor(() => expect(screen.getByText("Homeowners")).toBeInTheDocument())
+    expect(screen.getByText(/Property: Main Home/)).toBeInTheDocument()
+  })
+
+  it("Add Policy modal includes Technical notes and Covered property fields", async () => {
+    renderPage()
+    fireEvent.click(screen.getByRole("button", { name: "Add policy" }))
+    expect(screen.getByText("Technical notes")).toBeInTheDocument()
   })
 
   it("shows the empty-state Add button when no policies exist", async () => {

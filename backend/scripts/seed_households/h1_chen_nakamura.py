@@ -478,7 +478,20 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         # The 15% discount shows as supplemental income on the purchase date.
         add(tx(checking.id, pdate, discount_value, "Dell ESPP discount", cat["espp_purchase"]))
 
-    # ── Insurance: umbrella + Wei's disability ──────────────────────────────────
+    # ── Insurance: condo HO-6 + umbrella + Wei's disability ─────────────────────
+    session.add(
+        make_insurance_policy(
+            hid,
+            "homeowners",
+            D("750000"),
+            D("1140"),
+            "annual",
+            carrier="USAA",
+            policy_number="USAA-HO6-2021-7741883",
+            technical_notes="HO-6 condo unit owners policy; personal property replacement cost",
+            insured_real_estate_id=prop_home.id,
+        )
+    )
     session.add(
         make_insurance_policy(
             hid,
