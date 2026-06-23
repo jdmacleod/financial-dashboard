@@ -173,7 +173,7 @@ docker compose logs nginx       # Access logs
 
 ## Next steps
 
-- [Demo Quickstart](demo-quickstart.md): load three sample households and explore all features with real data
+- [Demo Quickstart](demo-quickstart.md): load six sample households and explore all features with real data
 - [User Guide](user-guide.md): all features explained
 - [API Reference](api-reference.md): REST API documentation
 - [Security](security.md): how authentication and encryption work
