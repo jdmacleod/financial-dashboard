@@ -8,6 +8,7 @@ import { ExportModal } from "@/components/app/ExportModal"
 import { accountsApi } from "@/api/accounts"
 import { reportsApi } from "@/api/reports"
 import { formatCurrency } from "@/lib/formatters"
+import ForcedPasswordReset from "@/pages/ForcedPasswordReset"
 
 type Range = "ytd" | "1y" | "all"
 
@@ -63,6 +64,7 @@ function SidebarNavLink({
 
 export function AppLayout() {
   const isPrimary = useAuth((s) => s.role === "primary")
+  const mustChangePassword = useAuth((s) => s.mustChangePassword)
   const logout = useAuth((s) => s.logout)
   const navigate = useNavigate()
   const { displayName, firstName, initials, householdName, role } = useCurrentUser()
@@ -342,6 +344,11 @@ export function AppLayout() {
       </div>
     </aside>
   )
+
+  // Forced first-login reset takes over the whole app — no nav reachable until
+  // the provisioned temporary password is replaced. (Hooks above run first so
+  // this conditional return doesn't violate the rules of hooks.)
+  if (mustChangePassword) return <ForcedPasswordReset />
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--bg)" }}>

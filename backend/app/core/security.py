@@ -1,3 +1,4 @@
+import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
@@ -11,6 +12,15 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
+
+
+def generate_temporary_password() -> str:
+    """A strong, URL-safe temporary password for provisioned users (~22 chars).
+
+    Server-generated so the inviter never invents a credential; the user is
+    forced to replace it on first login (must_change_password).
+    """
+    return secrets.token_urlsafe(16)
 
 
 def verify_password(plain: str, hashed: str) -> bool:

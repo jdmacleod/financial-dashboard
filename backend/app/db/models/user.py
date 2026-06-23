@@ -21,4 +21,7 @@ class User(Base):
     locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_password_change: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     last_login: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Set true when a user is provisioned with a temporary password; cleared when
+    # they set their own via /auth/change-password (forced reset on first login).
+    must_change_password: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -1,6 +1,26 @@
 export interface TokenResponse {
   access_token: string
   token_type: string
+  must_change_password?: boolean
+}
+
+export interface UserResponse {
+  id: string
+  member_id: string | null
+  email: string
+  is_active: boolean
+  last_login: string | null
+  created_at: string
+}
+
+export interface ProvisionResponse {
+  member: MemberResponse
+  user: UserResponse
+  temporary_password: string
+}
+
+export interface TemporaryPasswordResponse {
+  temporary_password: string
 }
 
 export interface HouseholdResponse {
