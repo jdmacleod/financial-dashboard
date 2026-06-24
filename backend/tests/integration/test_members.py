@@ -68,6 +68,50 @@ async def test_primary_can_update_member(
     assert resp.json()["display_name"] == "Renamed"
 
 
+async def test_can_set_member_date_of_birth(
+    client: AsyncClient,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+    make_member: object,
+) -> None:
+    target = await make_member(role="partner")
+    resp = await client.patch(
+        f"/api/v1/members/{target.id}",
+        json={"date_of_birth": "1960-04-12"},
+        headers=auth_headers(primary_user, primary_member, "primary"),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["date_of_birth"] == "1960-04-12"
+
+
+async def test_future_date_of_birth_is_rejected_on_update(
+    client: AsyncClient,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+    make_member: object,
+) -> None:
+    target = await make_member(role="partner")
+    resp = await client.patch(
+        f"/api/v1/members/{target.id}",
+        json={"date_of_birth": "2999-01-01"},
+        headers=auth_headers(primary_user, primary_member, "primary"),
+    )
+    assert resp.status_code == 422
+
+
+async def test_future_date_of_birth_is_rejected_on_create(
+    client: AsyncClient, household: Household, primary_member: HouseholdMember, primary_user: User
+) -> None:
+    resp = await client.post(
+        "/api/v1/members",
+        json={"display_name": "Future Kid", "role": "dependent", "date_of_birth": "2999-01-01"},
+        headers=auth_headers(primary_user, primary_member, "primary"),
+    )
+    assert resp.status_code == 422
+
+
 async def test_partner_cannot_update_member(
     client: AsyncClient,
     household: Household,

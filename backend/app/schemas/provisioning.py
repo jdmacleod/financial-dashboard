@@ -1,9 +1,8 @@
-from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from app.schemas.member import MemberResponse
+from app.schemas.member import BirthDate, MemberResponse
 from app.schemas.user import UserResponse
 
 
@@ -13,7 +12,7 @@ class ProvisionRequest(BaseModel):
     # str not EmailStr: matches LoginRequest — login is a DB lookup and demo data
     # uses .local domains that EmailStr rejects.
     email: str = Field(..., min_length=3, max_length=255)
-    date_of_birth: date | None = None
+    date_of_birth: BirthDate = None
 
 
 class ProvisionResponse(BaseModel):

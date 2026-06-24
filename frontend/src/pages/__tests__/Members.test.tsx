@@ -125,6 +125,25 @@ describe("Members page — MemberSlideOver", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Save$/i }))
     await waitFor(() => expect(screen.getByText(/Failed to update member/i)).toBeInTheDocument())
   })
+
+  it("saves a date of birth", async () => {
+    await openSlideOver()
+    const dob = screen.getByLabelText(/Date of birth/i)
+    await userEvent.type(dob, "1960-04-12")
+    await userEvent.click(screen.getByRole("button", { name: /^Save$/i }))
+    await waitFor(() =>
+      expect(membersApi.update).toHaveBeenCalledWith("member-2", { date_of_birth: "1960-04-12" }),
+    )
+  })
+
+  it("blocks a future date of birth and disables Save", async () => {
+    await openSlideOver()
+    const dob = screen.getByLabelText(/Date of birth/i)
+    await userEvent.type(dob, "2999-01-01")
+    expect(screen.getByText(/can't be in the future/i)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /^Save$/i })).toBeDisabled()
+    expect(membersApi.update).not.toHaveBeenCalled()
+  })
 })
 
 describe("Members page — AddPersonSlideOver (provisioning)", () => {
