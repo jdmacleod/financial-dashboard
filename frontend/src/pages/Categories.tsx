@@ -208,6 +208,8 @@ function ParentGroup({
   onDelete: (id: string) => void
 }) {
   const [expanded, setExpanded] = useState(true)
+  const [editing, setEditing] = useState(false)
+  const [name, setName] = useState(parent.name)
 
   return (
     <div>
@@ -242,39 +244,107 @@ function ParentGroup({
           color={parent.color_hex}
           onChange={(hex) => onUpdate(parent.id, { color_hex: hex })}
         />
-        <span style={{ flex: 1, fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>
-          {parent.name}
-        </span>
-        {parent.is_system && (
-          <span
-            style={{
-              fontSize: "10px",
-              fontWeight: 600,
-              letterSpacing: "0.05em",
-              color: "var(--faint)",
-              background: "var(--bd)",
-              borderRadius: "4px",
-              padding: "1px 5px",
-            }}
-          >
-            SYSTEM
-          </span>
-        )}
-        {!parent.is_system && (
+        {editing ? (
           <>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoFocus
+              style={{
+                flex: 1,
+                background: "var(--input-bg, var(--card))",
+                border: "1px solid var(--accent)",
+                borderRadius: "6px",
+                padding: "3px 8px",
+                fontSize: "13px",
+                fontWeight: 600,
+                color: "var(--text)",
+                outline: "none",
+              }}
+            />
             <button
-              onClick={() => onDelete(parent.id)}
+              onClick={() => {
+                onUpdate(parent.id, { name })
+                setEditing(false)
+              }}
               style={{
                 fontSize: "12px",
-                color: "var(--liab)",
+                color: "var(--accent)",
                 background: "none",
                 border: "none",
                 cursor: "pointer",
                 padding: "2px 4px",
               }}
             >
-              Delete
+              Save
             </button>
+            <button
+              onClick={() => {
+                setName(parent.name)
+                setEditing(false)
+              }}
+              style={{
+                fontSize: "12px",
+                color: "var(--muted)",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                padding: "2px 4px",
+              }}
+            >
+              Cancel
+            </button>
+          </>
+        ) : (
+          <>
+            <span style={{ flex: 1, fontSize: "13px", fontWeight: 600, color: "var(--text)" }}>
+              {parent.name}
+            </span>
+            {parent.is_system && (
+              <span
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  letterSpacing: "0.05em",
+                  color: "var(--faint)",
+                  background: "var(--bd)",
+                  borderRadius: "4px",
+                  padding: "1px 5px",
+                }}
+              >
+                SYSTEM
+              </span>
+            )}
+            {!parent.is_system && (
+              <>
+                <button
+                  onClick={() => setEditing(true)}
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--muted)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "2px 4px",
+                  }}
+                >
+                  Rename
+                </button>
+                <button
+                  onClick={() => onDelete(parent.id)}
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--liab)",
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    padding: "2px 4px",
+                  }}
+                >
+                  Delete
+                </button>
+              </>
+            )}
           </>
         )}
       </div>
