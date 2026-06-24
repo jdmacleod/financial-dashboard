@@ -3,6 +3,20 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.20.0.0] - 2026-06-24
+
+### Added
+
+- **Reports section in the sidebar.** Net Worth, Spending, Savings Rate, and Budget Trend now live together in a dedicated "Reports" group in the left sidebar, promoted out of the user-settings dropdown where they were harder to find. The dropdown no longer carries report links.
+
+### Changed
+
+- **Sidebar ordering by time horizon.** The main navigation now reads Overview → Accounts → Cash Flow → Investments → Real Estate → Retirement, moving the monthly Cash Flow view up and the long-horizon Retirement view to the bottom. The Planning section reorders to Budgets → Debt → FIRE → Insurance → Estate → Insights, shortest action horizon first.
+
+### Fixed
+
+- **Real Estate stays highlighted on property pages.** Viewing a property detail page now keeps the "Real Estate" sidebar item highlighted. The property detail route moved from `/properties/:id` to `/real-estate/:id` so the active-state matching works; any old `/properties/...` bookmarks will no longer resolve.
+
 ## [0.19.0.0] - 2026-06-24
 
 ### Added

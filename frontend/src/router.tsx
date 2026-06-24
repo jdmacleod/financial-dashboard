@@ -157,7 +157,7 @@ const reportsBudgetTrendRoute = createRoute({
 
 const propertyDetailRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: "/properties/$propertyId",
+  path: "/real-estate/$propertyId",
   component: PropertyDetail,
 })
 
