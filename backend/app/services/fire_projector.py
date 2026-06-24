@@ -6,6 +6,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from app.schemas.fire import IncomeStream
+from app.services.age import age_in_year
 
 
 @dataclass
@@ -60,7 +61,7 @@ def project(
     projections: list[YearProjection] = []
 
     for year in range(from_year, from_year + 75):
-        age = (year - member_dob.year) if member_dob else None
+        age = age_in_year(member_dob, year)
 
         # Pre-retirement income streams active this year
         annual_income = sum(
