@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import date
 from decimal import Decimal
 from uuid import uuid4
 
@@ -61,6 +62,20 @@ def test_basic_projection() -> None:
     fire_years = [p for p in projections if p.is_fire_year]
     assert len(fire_years) == 1, "Exactly one FIRE year should be found"
     assert fire_years[0].portfolio >= fire_years[0].fire_number
+
+
+def test_age_is_sourced_from_age_service() -> None:
+    """Regression: projection age now flows through age.age_in_year. Each row's
+    age must equal calendar_year - birth_year for a known DOB, and stay None when
+    no DOB is supplied."""
+    scenario = _scenario(streams=[_salary_stream()])
+
+    with_dob = project(scenario, from_year=2026, member_dob=date(1980, 7, 15))
+    assert with_dob[0].age == 46  # 2026 - 1980
+    assert with_dob[1].age == 47  # 2027 - 1980
+
+    without_dob = project(scenario, from_year=2026, member_dob=None)
+    assert all(p.age is None for p in without_dob)
 
 
 def test_stream_end_year_respected() -> None:
