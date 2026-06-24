@@ -497,6 +497,26 @@ export function AppLayout() {
             </svg>
             Budget Trend
           </SidebarNavLink>
+          <SidebarNavLink
+            to="/reports/required-distributions"
+            onClick={() => setSidebarOpen(false)}
+          >
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M8 1.5v9" />
+              <path d="M5 7.5L8 10.5L11 7.5" />
+              <path d="M2.5 13.5h11" />
+            </svg>
+            Required Distributions
+          </SidebarNavLink>
         </div>
       </div>
 
