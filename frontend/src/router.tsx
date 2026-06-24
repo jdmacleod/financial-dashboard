@@ -21,6 +21,7 @@ import ReportCashFlow from "@/pages/ReportCashFlow"
 import ReportSpending from "@/pages/ReportSpending"
 import ReportSavingsRate from "@/pages/ReportSavingsRate"
 import ReportBudgetTrend from "@/pages/ReportBudgetTrend"
+import ReportRequiredDistributions from "@/pages/ReportRequiredDistributions"
 import Budgets from "@/pages/Budgets"
 import PropertyDetail from "@/pages/PropertyDetail"
 import PensionDetail from "@/pages/PensionDetail"
@@ -155,6 +156,12 @@ const reportsBudgetTrendRoute = createRoute({
   component: ReportBudgetTrend,
 })
 
+const reportsRequiredDistributionsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/reports/required-distributions",
+  component: ReportRequiredDistributions,
+})
+
 const propertyDetailRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/real-estate/$propertyId",
@@ -277,6 +284,7 @@ const routeTree = rootRoute.addChildren([
     reportsSpendingRoute,
     reportsSavingsRateRoute,
     reportsBudgetTrendRoute,
+    reportsRequiredDistributionsRoute,
     budgetsRoute,
     propertyDetailRoute,
     pensionDetailRoute,
