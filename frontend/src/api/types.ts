@@ -393,6 +393,36 @@ export interface BudgetVsActualsReport {
   categories: BudgetVsActualsItem[]
 }
 
+export interface BudgetTrendPoint {
+  period: string
+  budget: string
+  actual: string
+  variance: string
+}
+
+export interface BudgetTrendReport {
+  series: BudgetTrendPoint[]
+  total_budget: string
+  total_actual: string
+  total_variance: string
+}
+
+export interface SavingsRatePoint {
+  period: string
+  income: string
+  expenses: string
+  savings: string
+  savings_rate: number
+  rolling_rate: number
+}
+
+export interface SavingsRateReport {
+  series: SavingsRatePoint[]
+  average_rate: number
+  best_period: string | null
+  worst_period: string | null
+}
+
 export interface PropertyExpenseItem {
   category_id: string | null
   name: string

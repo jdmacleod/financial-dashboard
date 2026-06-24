@@ -305,6 +305,75 @@ async def test_liability_without_snapshot_or_debt(
     assert report.series[0].total_liabilities == Decimal("0")
 
 
+async def test_tracked_loan_amortizes_over_time_and_beats_stale_debt(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    # A transaction-tracked consumer loan must value from the running transaction
+    # sum at each date so the liability amortizes as payments post — not a flat
+    # line from a static Debt.current_balance. Regression for the Park-Cole bug
+    # where student loans showed an unchanging $59,500 across 24 months.
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "student_loan", "MOHELA")
+    # Opening balance of $10,000 owed, then two $1,000 payments.
+    await _add_transaction(db_session, account.id, date(2024, 12, 31), Decimal("-10000"))
+    await _add_transaction(db_session, account.id, date(2025, 1, 15), Decimal("1000"))
+    await _add_transaction(db_session, account.id, date(2025, 2, 15), Decimal("1000"))
+    # A stale Debt record that disagrees with the transactions: the report must
+    # prefer the transaction-derived balance over this figure.
+    debt = Debt(
+        account_id=account.id,
+        original_balance=Decimal("12000"),
+        current_balance=Decimal("9999"),
+        interest_rate=Decimal("5.5"),
+        minimum_payment=Decimal("275"),
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    db_session.add(debt)
+    await db_session.flush()
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 3, 31))
+
+    liabilities = [p.total_liabilities for p in report.series]
+    # Jan: 10000 - 1000 = 9000; Feb: 8000; Mar: 8000 (no March payment).
+    assert liabilities == [Decimal("9000"), Decimal("8000"), Decimal("8000")]
+    # The stale Debt figure must NOT appear and the line must move over time.
+    assert Decimal("9999") not in liabilities
+    assert liabilities[0] != liabilities[1]
+
+
+async def test_tracked_loan_without_transactions_falls_back_to_debt(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    # A consumer loan tracked only by a structured Debt record (no transactions
+    # to anchor the balance) still reports the Debt.current_balance.
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "auto_loan", "Tennessee CU")
+    debt = Debt(
+        account_id=account.id,
+        original_balance=Decimal("18500"),
+        current_balance=Decimal("14800"),
+        interest_rate=Decimal("6.9"),
+        minimum_payment=Decimal("312"),
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    db_session.add(debt)
+    await db_session.flush()
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 1, 31))
+
+    assert report.series[0].total_liabilities == Decimal("14800")
+
+
 async def test_asset_non_cash_without_snapshot(
     db_session: AsyncSession,
     household: Household,
@@ -1059,3 +1128,91 @@ async def test_dashboard(
     assert isinstance(response.top_spending_categories, list)
     assert isinstance(response.budget_alerts, list)
     assert response.accounts_summary.total_assets == Decimal("10000")
+
+
+async def test_savings_rate_series_and_rolling(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "SR Checking")
+    income_cat = await _add_category(db_session, household.id, "Salary", is_income=True)
+    expense_cat = await _add_category(db_session, household.id, "Rent")
+
+    # Jan: income 4000, expenses 1000 -> rate 75%
+    await _add_transaction(db_session, account.id, date(2025, 1, 5), Decimal("4000"), income_cat.id)
+    await _add_transaction(
+        db_session, account.id, date(2025, 1, 6), Decimal("-1000"), expense_cat.id
+    )
+    # Feb: income 4000, expenses 3000 -> rate 25%
+    await _add_transaction(db_session, account.id, date(2025, 2, 5), Decimal("4000"), income_cat.id)
+    await _add_transaction(
+        db_session, account.id, date(2025, 2, 6), Decimal("-3000"), expense_cat.id
+    )
+
+    svc = ReportService(db_session)
+    report = await svc.savings_rate(ctx, date(2025, 1, 1), date(2025, 2, 28))
+
+    assert [p.period for p in report.series] == ["2025-01", "2025-02"]
+    assert report.series[0].savings == Decimal("3000")
+    assert report.series[0].savings_rate == pytest.approx(75.0)
+    assert report.series[1].savings_rate == pytest.approx(25.0)
+    # Rolling = trailing 3-month average: Feb sees (75 + 25) / 2 = 50.
+    assert report.series[1].rolling_rate == pytest.approx(50.0)
+    # Aggregate: total savings 4000 / total income 8000 = 50%.
+    assert report.average_rate == pytest.approx(50.0)
+    assert report.best_period == "2025-01"
+    assert report.worst_period == "2025-02"
+
+
+async def test_savings_rate_no_accounts(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, primary_user)
+    svc = ReportService(db_session)
+    report = await svc.savings_rate(ctx, date(2025, 1, 1), date(2025, 3, 31))
+    assert report.series == []
+    assert report.average_rate == 0.0
+    assert report.best_period is None
+
+
+async def test_budget_vs_actuals_trend(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "Trend Checking")
+    cat = await _add_category(db_session, household.id, "Groceries")
+    budget = Budget(
+        household_id=household.id,
+        category_id=cat.id,
+        period="monthly",
+        amount=Decimal("500"),
+        effective_from=date(2025, 1, 1),
+        effective_to=None,
+    )
+    db_session.add(budget)
+    await db_session.flush()
+
+    # Jan under budget (450), Feb over budget (560).
+    await _add_transaction(db_session, account.id, date(2025, 1, 15), Decimal("-450"), cat.id)
+    await _add_transaction(db_session, account.id, date(2025, 2, 15), Decimal("-560"), cat.id)
+
+    svc = ReportService(db_session)
+    report = await svc.budget_vs_actuals_trend(ctx, date(2025, 1, 1), date(2025, 2, 28))
+
+    assert [p.period for p in report.series] == ["2025-01", "2025-02"]
+    assert report.series[0].budget == Decimal("500")
+    assert report.series[0].actual == Decimal("450")
+    assert report.series[0].variance == Decimal("50")
+    assert report.series[1].variance == Decimal("-60")
+    assert report.total_budget == Decimal("1000")
+    assert report.total_actual == Decimal("1010")
+    assert report.total_variance == Decimal("-10")

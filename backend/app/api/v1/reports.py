@@ -8,12 +8,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.visibility import VisibilityContext, get_visibility_ctx
 from app.db.base import get_session
 from app.schemas.report import (
+    BudgetTrendReport,
     BudgetVsActualsReport,
     CashFlowReport,
     DashboardResponse,
     EstateExposureReport,
     NetWorthReport,
     PropertyPnLReport,
+    SavingsRateReport,
     SpendingByCategoryReport,
 )
 from app.services.report import ReportService
@@ -65,6 +67,28 @@ async def budget_vs_actuals_report(
 ) -> BudgetVsActualsReport:
     svc = ReportService(session)
     return await svc.budget_vs_actuals(ctx, month)
+
+
+@router.get("/reports/savings-rate", response_model=SavingsRateReport)
+async def savings_rate_report(
+    from_: date = Query(..., alias="from"),
+    to: date = Query(...),
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> SavingsRateReport:
+    svc = ReportService(session)
+    return await svc.savings_rate(ctx, from_, to)
+
+
+@router.get("/reports/budget-trend", response_model=BudgetTrendReport)
+async def budget_trend_report(
+    from_: date = Query(..., alias="from"),
+    to: date = Query(...),
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> BudgetTrendReport:
+    svc = ReportService(session)
+    return await svc.budget_vs_actuals_trend(ctx, from_, to)
 
 
 @router.get("/reports/property-pnl", response_model=PropertyPnLReport)

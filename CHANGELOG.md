@@ -3,6 +3,22 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.19.0.0] - 2026-06-24
+
+### Added
+
+- **Savings Rate report.** A new report (`/reports/savings-rate`) charts the share of income you keep each month — (income − expenses) ÷ income — with a trailing 3-month rolling average, your average rate over the window, and your best and leanest months. Savings rate is the single biggest lever on time to financial independence, and it now has a dedicated view instead of being buried in the Cash Flow numbers.
+- **Budget Trend report.** A new report (`/reports/budget-trend`) plots total budgeted vs actual spend each month with a variance line, plus totals showing whether you came in over or under budget across the window. It complements the per-category Budgets tab with a whole-household trend.
+
+### Fixed
+
+- **Net worth liabilities now reflect loan paydowns.** Liabilities backed by a structured debt record (student loans, auto loans) were shown at a single static balance across the entire net-worth history, so the liabilities line never moved as payments posted and net worth was understated. Transaction-tracked consumer loans are now valued from their running balance at each date, so the liabilities line amortizes correctly month over month.
+- **Park-Cole sample data.** Corrected the Park-Cole household's stored loan balances so the Debt page and the Net Worth report agree (the auto loan now reads paid-off, and the student-loan balances match their transaction history).
+
+### Changed
+
+- **Spending donut.** The category legend no longer crowds and clips the donut chart. The donut is larger and centered, the total spend is shown in the center, and the category list on the right serves as the legend.
+
 ## [0.18.0.0] - 2026-06-24
 
 ### Added

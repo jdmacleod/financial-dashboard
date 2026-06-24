@@ -107,6 +107,40 @@ class BudgetVsActualsReport(BaseModel):
     categories: list[BudgetVsActualsItem]
 
 
+class BudgetTrendPoint(BaseModel):
+    period: str
+    budget: Decimal
+    actual: Decimal
+    # budget - actual; positive = under budget, negative = over budget.
+    variance: Decimal
+
+
+class BudgetTrendReport(BaseModel):
+    series: list[BudgetTrendPoint]
+    total_budget: Decimal
+    total_actual: Decimal
+    total_variance: Decimal
+
+
+class SavingsRatePoint(BaseModel):
+    period: str
+    income: Decimal
+    expenses: Decimal
+    # income - expenses for the period (can be negative in a deficit month).
+    savings: Decimal
+    savings_rate: float
+    # Trailing 3-month average of savings_rate, smoothing lumpy months.
+    rolling_rate: float
+
+
+class SavingsRateReport(BaseModel):
+    series: list[SavingsRatePoint]
+    # Aggregate rate over the whole window: total savings / total income.
+    average_rate: float
+    best_period: str | None
+    worst_period: str | None
+
+
 class PropertyExpenseItem(BaseModel):
     category_id: uuid.UUID | None
     name: str

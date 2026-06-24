@@ -726,6 +726,12 @@ export function AppLayout() {
                     <DropdownLink to="/reports/spending" onClick={() => setUserMenuOpen(false)}>
                       Spending report
                     </DropdownLink>
+                    <DropdownLink to="/reports/savings-rate" onClick={() => setUserMenuOpen(false)}>
+                      Savings Rate report
+                    </DropdownLink>
+                    <DropdownLink to="/reports/budget-trend" onClick={() => setUserMenuOpen(false)}>
+                      Budget Trend report
+                    </DropdownLink>
                     <div style={{ height: "1px", background: "var(--bd)", margin: "6px 0" }} />
                     <button
                       onClick={() => {
