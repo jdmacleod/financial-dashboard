@@ -9,6 +9,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.visibility import VisibilityContext
+from app.db.models.account import Account
 from app.db.models.budget import Budget
 from app.db.models.category import Category
 from app.db.models.debt import Debt
@@ -372,6 +373,86 @@ async def test_tracked_loan_without_transactions_falls_back_to_debt(
     report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 1, 31))
 
     assert report.series[0].total_liabilities == Decimal("14800")
+
+
+async def test_sbloc_amortizes_via_transactions_even_with_a_debt_record(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    # Revolving lines (SBLOC / margin) are transaction-tracked: a draw raises the
+    # balance, a paydown lowers it, and the report follows the running sum at each
+    # date. Attaching a Debt record must NOT pin the line to a single static value
+    # (the flat-line bug fixed for student/auto loans applies to these too).
+    ctx = _ctx(household, primary_member, primary_user)
+    # sbloc is a demo-data-extension type the AccountCreate schema doesn't accept,
+    # so build the model directly rather than via _make_account.
+    account = Account(
+        household_id=ctx.household_id,
+        account_type="sbloc",
+        nickname="Pledged-Asset Line",
+        include_in_net_worth=True,
+        is_active=True,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    db_session.add(account)
+    await db_session.flush()
+    # $100k draw, then a $20k paydown the next month.
+    await _add_transaction(db_session, account.id, date(2025, 1, 10), Decimal("-100000"))
+    await _add_transaction(db_session, account.id, date(2025, 2, 10), Decimal("20000"))
+    # A stale Debt record that disagrees — the report must ignore it in favor of
+    # the transaction-derived balance.
+    debt = Debt(
+        account_id=account.id,
+        original_balance=Decimal("100000"),
+        current_balance=Decimal("99999"),
+        interest_rate=Decimal("6.0"),
+        minimum_payment=Decimal("0"),
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    db_session.add(debt)
+    await db_session.flush()
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 2, 28))
+
+    liabilities = [p.total_liabilities for p in report.series]
+    # Jan: 100000; Feb after the paydown: 80000.
+    assert liabilities == [Decimal("100000"), Decimal("80000")]
+    assert Decimal("99999") not in liabilities
+
+
+async def test_txn_tracked_liability_falls_back_to_snapshot(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    # A transaction-tracked liability with neither transactions nor a Debt record
+    # but a balance snapshot reports the snapshot value (a line of credit imported
+    # as a balance with no transaction history). Guards the snapshot fallback that
+    # adding sbloc/margin to the TXN_TRACKED branch could otherwise have dropped.
+    ctx = _ctx(household, primary_member, primary_user)
+    account = Account(
+        household_id=ctx.household_id,
+        account_type="margin",
+        nickname="Margin Account",
+        include_in_net_worth=True,
+        is_active=True,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    db_session.add(account)
+    await db_session.flush()
+    await _add_snapshot(db_session, account.id, date(2025, 1, 31), Decimal("50000"))
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 1, 31))
+
+    assert report.series[0].total_liabilities == Decimal("50000")
 
 
 async def test_asset_non_cash_without_snapshot(
