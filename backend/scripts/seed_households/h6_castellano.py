@@ -279,7 +279,9 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "quarterly",
             insured_member_id=rosa.id,
             cash_value_account_id=whole_life_cv.id,
-            metadata={"carrier": "Northwestern Mutual", "purpose": "legacy"},
+            carrier="Northwestern Mutual",
+            policy_number="NM-WL-2001-3389045",
+            metadata={"purpose": "legacy"},
         )
     )
     # ILIT-owned permanent policy — death benefit outside the estate; NOT in NW.
@@ -292,7 +294,36 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "annual",
             insured_member_id=rosa.id,
             owner_ownership_entity_id=ilit.id,
+            carrier="Northwestern Mutual",
+            policy_number="NM-WL-2006-4412198",
             metadata={"purpose": "estate_liquidity", "owned_by": "ilit"},
+        )
+    )
+    # Homeowners for both properties
+    session.add(
+        make_insurance_policy(
+            hid,
+            "homeowners",
+            D("4500000"),
+            D("9200"),
+            "annual",
+            carrier="Chubb",
+            policy_number="CHB-HO3-2018-5521904",
+            technical_notes="Masterpiece HO-3; replacement cost; fine arts blanket $500K",
+            insured_real_estate_id=prop_residence.id,
+        )
+    )
+    session.add(
+        make_insurance_policy(
+            hid,
+            "homeowners",
+            D("2200000"),
+            D("4800"),
+            "annual",
+            carrier="Chubb",
+            policy_number="CHB-HO6-2020-6631082",
+            technical_notes="HO-6 co-op unit; loss assessment coverage; board approval rider",
+            insured_real_estate_id=prop_coop.id,
         )
     )
     session.add(
@@ -302,6 +333,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             D("10000000"),
             D("2100"),
             "annual",
+            carrier="Chubb",
+            policy_number="CHB-UMB-9921037",
             metadata={"underlying": ["auto", "scarsdale_home", "manhattan_coop"]},
         )
     )
@@ -313,6 +346,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             D("6200"),
             "annual",
             insured_member_id=rosa.id,
+            carrier="Genworth",
+            policy_number="GNW-LTC-2012-0087334",
             metadata={"daily_benefit": 400, "inflation_rider": "3pct_compound"},
         )
     )
@@ -323,6 +358,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             D("800000"),
             D("4800"),
             "annual",
+            carrier="AXA Art",
+            policy_number="AXA-SCH-2022-00891",
             metadata={"schedule": "fine_art", "appraisal_date": "2024-02"},
         )
     )

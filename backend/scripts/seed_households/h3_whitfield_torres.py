@@ -1104,6 +1104,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             D("145000"),
             D("1100"),
             "annual",
+            carrier="AXA Art",
+            policy_number="AXA-SCH-2024-00417",
             metadata={"schedule": "fine_wine", "appraisal_date": "2024-01"},
         )
     )

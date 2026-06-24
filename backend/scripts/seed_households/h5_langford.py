@@ -901,7 +901,37 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "quarterly",
             insured_member_id=bob.id,
             cash_value_account_id=life_cv.id,
-            metadata={"carrier": "Northwestern Mutual", "purpose": "estate_liquidity"},
+            carrier="Northwestern Mutual",
+            policy_number="NM-WL-2008-4471203",
+            metadata={"purpose": "estate_liquidity"},
+        )
+    )
+
+    # ── Homeowners — Sarasota primary + Highlands NC vacation ───────────────────
+    session.add(
+        make_insurance_policy(
+            hid,
+            "homeowners",
+            D("3200000"),
+            D("6800"),
+            "annual",
+            carrier="Chubb",
+            policy_number="CHB-HO3-2022-8841076",
+            technical_notes="Masterpiece HO-3 open perils; flood excluded (separate NFIP policy)",
+            insured_real_estate_id=prop_sarasota.id,
+        )
+    )
+    session.add(
+        make_insurance_policy(
+            hid,
+            "homeowners",
+            D("1200000"),
+            D("3100"),
+            "annual",
+            carrier="Chubb",
+            policy_number="CHB-HO3-2019-7712043",
+            technical_notes="Masterpiece HO-3; extended replacement cost; mountain/fire coverage",
+            insured_real_estate_id=prop_highlands.id,
         )
     )
 
@@ -913,10 +943,12 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             D("10000000"),
             D("1850"),
             "annual",
+            carrier="Chubb",
+            policy_number="CHB-UMB-6612084",
             metadata={"underlying": ["auto", "home", "vacation_home"]},
         )
     )
-    for who in (bob, maggie):
+    for who, pnum in zip((bob, maggie), ("MUT-LTC-2018-0091", "MUT-LTC-2018-0092"), strict=True):
         session.add(
             make_insurance_policy(
                 hid,
@@ -925,6 +957,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
                 D("3800"),
                 "annual",
                 insured_member_id=who.id,
+                carrier="Mutual of Omaha",
+                policy_number=pnum,
                 metadata={"daily_benefit": 350, "inflation_rider": "3pct_compound"},
             )
         )

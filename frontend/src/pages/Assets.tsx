@@ -4,17 +4,30 @@ import { useQuery, useQueries } from "@tanstack/react-query"
 import { subDays, subYears, startOfYear, format } from "date-fns"
 import { accountsApi } from "@/api/accounts"
 import { propertiesApi } from "@/api/properties"
+import { insurancePoliciesApi } from "@/api/insurancePolicies"
 import { PROPERTY_TYPE_LABELS } from "@/lib/accountLabels"
 import { formatCurrency } from "@/lib/formatters"
 import { useAuth } from "@/hooks/useAuth"
 import AddAccountModal from "@/components/app/AddAccountModal"
 import ArchiveAccountModal from "@/components/app/ArchiveAccountModal"
 import { TrustBadge } from "@/components/app/TrustBadge"
+import { InsuranceBadge } from "@/components/app/InsuranceBadge"
 import { useOwnershipEntity } from "@/hooks/useOwnershipEntities"
-import type { AccountResponse, AccountType } from "@/api/types"
+import type { AccountResponse, AccountType, InsurancePolicyResponse } from "@/api/types"
 
 const BRONZE = "#a9743f"
 const ASSETS_PAGE_TYPES: AccountType[] = ["real_estate"]
+
+const POLICY_TYPE_LABELS: Record<string, string> = {
+  term_life: "Term Life",
+  permanent_life: "Permanent Life",
+  umbrella_liability: "Umbrella Liability",
+  disability: "Disability",
+  long_term_care: "Long-Term Care",
+  scheduled_specialty: "Scheduled / Specialty",
+  homeowners: "Homeowners",
+  renters: "Renters",
+}
 
 type Range = "ytd" | "1y" | "all"
 
@@ -47,7 +60,15 @@ function valuationDelta(
 
 // ── Property card ─────────────────────────────────────────────────────────────
 
-function PropertyCard({ account, from }: { account: AccountResponse; from: string }) {
+function PropertyCard({
+  account,
+  from,
+  linkedPolicies,
+}: {
+  account: AccountResponse
+  from: string
+  linkedPolicies: InsurancePolicyResponse[]
+}) {
   const isPrimary = useAuth((s) => s.role === "primary")
   const [archiving, setArchiving] = useState(false)
   const entity = useOwnershipEntity(account.ownership_entity_id)
@@ -126,6 +147,17 @@ function PropertyCard({ account, from }: { account: AccountResponse; from: strin
               {entity && (
                 <div style={{ marginTop: "6px" }}>
                   <TrustBadge name={entity.name} />
+                </div>
+              )}
+              {linkedPolicies.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
+                  {linkedPolicies.map((pol) => (
+                    <InsuranceBadge
+                      key={pol.id}
+                      label={POLICY_TYPE_LABELS[pol.policy_type] ?? pol.policy_type}
+                      carrier={pol.carrier}
+                    />
+                  ))}
                 </div>
               )}
               {property?.purchase_date && (
@@ -285,10 +317,38 @@ export default function Assets() {
     ]),
   })
 
+  const { data: allPolicies } = useQuery({
+    queryKey: ["insurance-policies"],
+    queryFn: insurancePoliciesApi.list,
+    staleTime: 60_000,
+  })
+
   const realEstateAccounts = useMemo(
     () => (accounts ?? []).filter((a) => a.account_type === "real_estate"),
     [accounts],
   )
+
+  // Map account_id → property_id using the prefetch results
+  const accountToPropId = useMemo(() => {
+    const map: Record<string, string> = {}
+    realEstateAccounts.forEach((acct, i) => {
+      const propId = prefetchedPropertyQueries[i]?.data?.id
+      if (propId) map[acct.id] = propId
+    })
+    return map
+  }, [realEstateAccounts, prefetchedPropertyQueries])
+
+  // Map property_id → linked insurance policies
+  const policyMap = useMemo(() => {
+    const map: Record<string, InsurancePolicyResponse[]> = {}
+    for (const pol of allPolicies ?? []) {
+      if (pol.insured_real_estate_id) {
+        const existing = map[pol.insured_real_estate_id] ?? []
+        map[pol.insured_real_estate_id] = [...existing, pol]
+      }
+    }
+    return map
+  }, [allPolicies])
 
   const totalValue = useMemo(
     () => realEstateAccounts.reduce((s, a) => s + Number(a.current_balance ?? 0), 0),
@@ -401,9 +461,11 @@ export default function Assets() {
         </div>
       ) : (
         <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {realEstateAccounts.map((a) => (
-            <PropertyCard key={a.id} account={a} from={from} />
-          ))}
+          {realEstateAccounts.map((a) => {
+            const propId = accountToPropId[a.id]
+            const linked = propId ? (policyMap[propId] ?? []) : []
+            return <PropertyCard key={a.id} account={a} from={from} linkedPolicies={linked} />
+          })}
         </div>
       )}
 

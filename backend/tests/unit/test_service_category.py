@@ -296,3 +296,53 @@ async def test_create_category_with_income_flag(
 
     cat = await svc.create(ctx, CategoryCreate(name="Salary", is_income=True))
     assert cat.is_income is True
+
+
+def test_retirement_income_slugs_mapping() -> None:
+    from app.services.report import RETIREMENT_INCOME_SLUGS
+
+    assert "social_security_income" in RETIREMENT_INCOME_SLUGS
+    assert "pension_income" in RETIREMENT_INCOME_SLUGS
+    assert "rmd_distribution" in RETIREMENT_INCOME_SLUGS
+    assert RETIREMENT_INCOME_SLUGS["social_security_income"] == "social_security"
+    assert RETIREMENT_INCOME_SLUGS["pension_income"] == "pension"
+    assert RETIREMENT_INCOME_SLUGS["rmd_distribution"] == "rmd"
+
+
+@pytest.mark.asyncio
+async def test_update_system_category_color_hex_allowed(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    svc = CategoryService(db_session)
+
+    system_cat = await svc.create(ctx, CategoryCreate(name="System Test", is_income=False))
+    system_cat.is_system = True
+    await db_session.flush()
+
+    updated = await svc.update(ctx, system_cat.id, CategoryUpdate(color_hex="#ff0000"))
+    assert updated.color_hex == "#ff0000"
+
+
+@pytest.mark.asyncio
+async def test_update_system_category_name_still_rejected(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    from fastapi import HTTPException
+
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    svc = CategoryService(db_session)
+
+    system_cat = await svc.create(ctx, CategoryCreate(name="System Test 2", is_income=False))
+    system_cat.is_system = True
+    await db_session.flush()
+
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.update(ctx, system_cat.id, CategoryUpdate(name="Renamed"))
+    assert exc_info.value.status_code == 409

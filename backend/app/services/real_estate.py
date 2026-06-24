@@ -59,6 +59,15 @@ class RealEstateService:
             updated_at=property_.updated_at,
         )
 
+    async def list_all(self, ctx: VisibilityContext) -> list[PropertyResponse]:
+        accounts = await self.account_repo.get_visible(ctx)
+        re_accounts = [a for a in accounts if a.account_type == "real_estate"]
+        if not re_accounts:
+            return []
+        account_map = {a.id: a for a in re_accounts}
+        properties = await self.property_repo.list_for_accounts(list(account_map.keys()))
+        return [await self._to_response(p, account_map[p.account_id]) for p in properties]
+
     async def get(self, ctx: VisibilityContext, property_id: uuid.UUID) -> PropertyResponse:
         property_ = await self.property_repo.get_by_id(property_id)
         if property_ is None:

@@ -655,10 +655,12 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             D("4000000"),
             D("780"),
             "annual",
+            carrier="Chubb",
+            policy_number="CHB-UMB-7734902",
             metadata={"underlying": ["auto", "home", "rental_condo"]},
         )
     )
-    for who in (darius, carmen):
+    for who, pnum in zip((darius, carmen), ("GDI-LTC-2019-0341", "GDI-LTC-2019-0342"), strict=True):
         session.add(
             make_insurance_policy(
                 hid,
@@ -667,6 +669,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
                 D("3200"),
                 "annual",
                 insured_member_id=who.id,
+                carrier="Guardian",
+                policy_number=pnum,
                 metadata={"daily_benefit": 250, "inflation_rider": "3pct_compound"},
             )
         )

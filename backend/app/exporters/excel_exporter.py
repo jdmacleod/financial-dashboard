@@ -16,9 +16,21 @@ from app.db.models.category import Category
 from app.db.models.debt import Debt
 from app.db.models.export_job import ExportJob
 from app.db.models.fire import FireScenario
+from app.db.models.insurance_policy import InsurancePolicy
 from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
+
+_INSURANCE_TYPE_LABELS: dict[str, str] = {
+    "term_life": "Term Life",
+    "permanent_life": "Permanent Life",
+    "umbrella_liability": "Umbrella Liability",
+    "disability": "Disability",
+    "long_term_care": "Long-Term Care",
+    "scheduled_specialty": "Scheduled / Specialty",
+    "homeowners": "Homeowners",
+    "renters": "Renters",
+}
 
 LIGHT_GRAY = "F2F2F2"
 HEADER_BLUE = "1E3A5F"
@@ -152,6 +164,17 @@ async def _fetch_fire_scenarios(
 ) -> list[FireScenario]:
     result = await session.execute(
         select(FireScenario).where(FireScenario.household_id == household_id)
+    )
+    return list(result.scalars().all())
+
+
+async def _fetch_insurance_policies(
+    session: AsyncSession, household_id: uuid.UUID
+) -> list[InsurancePolicy]:
+    result = await session.execute(
+        select(InsurancePolicy)
+        .where(InsurancePolicy.household_id == household_id)
+        .order_by(InsurancePolicy.policy_type)
     )
     return list(result.scalars().all())
 
@@ -327,6 +350,46 @@ def _build_fire_sheet(wb: Any, scenarios: list[FireScenario]) -> None:
         _alternate_fill(ws, row_idx, 6)
 
 
+def _build_insurance_sheet(
+    wb: Any,
+    policies: list[InsurancePolicy],
+    anonymized: bool,
+) -> None:
+    ws = wb.create_sheet("Insurance Policies")
+    headers = [
+        "Type",
+        "Carrier",
+        "Policy Number",
+        "Coverage Amount",
+        "Premium",
+        "Cadence",
+        "Linked Property",
+    ]
+    _bold_header_row(ws, headers)
+    _cadence_labels = {"monthly": "Monthly", "quarterly": "Quarterly", "annual": "Annual"}
+    for row_idx, pol in enumerate(policies, start=2):
+        type_label = _INSURANCE_TYPE_LABELS.get(pol.policy_type, pol.policy_type)
+        carrier = pol.carrier or ""
+        pnum: str
+        if pol.policy_number:
+            if anonymized and len(pol.policy_number) >= 4:
+                pnum = f"••••{pol.policy_number[-4:]}"
+            else:
+                pnum = pol.policy_number
+        else:
+            pnum = ""
+        cadence = _cadence_labels.get(pol.premium_cadence, pol.premium_cadence)
+        prop_linked = "Yes" if pol.insured_real_estate_id else ""
+        ws.cell(row=row_idx, column=1, value=type_label)
+        ws.cell(row=row_idx, column=2, value=carrier)
+        ws.cell(row=row_idx, column=3, value=pnum)
+        _cell_money(ws, row_idx, 4, pol.coverage_amount)
+        _cell_money(ws, row_idx, 5, pol.premium_amount)
+        ws.cell(row=row_idx, column=6, value=cadence)
+        ws.cell(row=row_idx, column=7, value=prop_linked)
+        _alternate_fill(ws, row_idx, 7)
+
+
 async def generate(job: ExportJob, session: AsyncSession, output_dir: str) -> str:
     """Generate an Excel export file. Returns the filename (not full path)."""
     from_date = date.fromisoformat(job.parameters["from_date"])
@@ -365,6 +428,7 @@ async def generate(job: ExportJob, session: AsyncSession, output_dir: str) -> st
     transactions = await _fetch_transactions(session, account_ids, from_date, to_date)
     debts = await _fetch_debts(session, account_ids)
     scenarios = await _fetch_fire_scenarios(session, job.household_id)
+    policies = await _fetch_insurance_policies(session, job.household_id)
 
     from openpyxl import Workbook  # type: ignore[import-untyped]
 
@@ -384,6 +448,9 @@ async def generate(job: ExportJob, session: AsyncSession, output_dir: str) -> st
 
     if scenarios:
         _build_fire_sheet(wb, scenarios)
+
+    if policies:
+        _build_insurance_sheet(wb, policies, anonymized)
 
     wb.save(output_path)
     return filename

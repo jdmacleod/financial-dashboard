@@ -669,6 +669,10 @@ export interface InsurancePolicyResponse {
   premium_amount: string
   premium_cadence: string
   cash_value_account_id: string | null
+  carrier: string | null
+  policy_number: string | null
+  technical_notes: string | null
+  insured_real_estate_id: string | null
   metadata: Record<string, unknown>
   created_at: string
 }

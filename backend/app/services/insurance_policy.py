@@ -7,9 +7,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.audit import AuditRepository, _snapshot, audit
 from app.core.visibility import VisibilityContext
+from app.db.models.account import Account
 from app.db.models.insurance_policy import InsurancePolicy
 from app.db.models.member import HouseholdMember
 from app.db.models.ownership_entity import OwnershipEntity
+from app.db.models.real_estate import RealEstateProperty
 from app.repositories.account import AccountRepository
 from app.schemas.insurance_policy import InsurancePolicyCreate, InsurancePolicyUpdate
 
@@ -50,6 +52,7 @@ class InsurancePolicyService:
         insured_member_id: uuid.UUID | None,
         owner_ownership_entity_id: uuid.UUID | None,
         cash_value_account_id: uuid.UUID | None,
+        insured_real_estate_id: uuid.UUID | None = None,
     ) -> None:
         if insured_member_id is not None:
             result = await self.session.execute(
@@ -73,13 +76,30 @@ class InsurancePolicyService:
                 )
         if cash_value_account_id is not None:
             await self.account_repo.get_by_id(ctx, cash_value_account_id)
+        if insured_real_estate_id is not None:
+            result = await self.session.execute(
+                select(RealEstateProperty.id)
+                .join(Account, RealEstateProperty.account_id == Account.id)
+                .where(
+                    RealEstateProperty.id == insured_real_estate_id,
+                    Account.household_id == ctx.household_id,
+                )
+            )
+            if result.scalar_one_or_none() is None:
+                raise HTTPException(
+                    status_code=400, detail="insured_real_estate_id not in household"
+                )
 
     @audit("insurance_policy.created", "insurance_policy")
     async def create(self, ctx: VisibilityContext, data: InsurancePolicyCreate) -> InsurancePolicy:
         if not ctx.can_write:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         await self._validate_refs(
-            ctx, data.insured_member_id, data.owner_ownership_entity_id, data.cash_value_account_id
+            ctx,
+            data.insured_member_id,
+            data.owner_ownership_entity_id,
+            data.cash_value_account_id,
+            data.insured_real_estate_id,
         )
         policy = InsurancePolicy(
             household_id=ctx.household_id,
@@ -90,6 +110,10 @@ class InsurancePolicyService:
             premium_amount=data.premium_amount,
             premium_cadence=data.premium_cadence,
             cash_value_account_id=data.cash_value_account_id,
+            carrier=data.carrier,
+            policy_number=data.policy_number,
+            technical_notes=data.technical_notes,
+            insured_real_estate_id=data.insured_real_estate_id,
             policy_metadata=data.metadata,
             created_at=datetime.now(UTC),
         )
@@ -107,7 +131,11 @@ class InsurancePolicyService:
         policy = await self.get_by_id(ctx, policy_id)
         self._prev_snapshot = _snapshot(policy)
         await self._validate_refs(
-            ctx, data.insured_member_id, data.owner_ownership_entity_id, data.cash_value_account_id
+            ctx,
+            data.insured_member_id,
+            data.owner_ownership_entity_id,
+            data.cash_value_account_id,
+            data.insured_real_estate_id,
         )
         if data.policy_type is not None:
             policy.policy_type = data.policy_type
@@ -123,6 +151,14 @@ class InsurancePolicyService:
             policy.premium_cadence = data.premium_cadence
         if data.cash_value_account_id is not None:
             policy.cash_value_account_id = data.cash_value_account_id
+        if data.carrier is not None:
+            policy.carrier = data.carrier
+        if data.policy_number is not None:
+            policy.policy_number = data.policy_number
+        if data.technical_notes is not None:
+            policy.technical_notes = data.technical_notes
+        if data.insured_real_estate_id is not None:
+            policy.insured_real_estate_id = data.insured_real_estate_id
         if data.metadata is not None:
             policy.policy_metadata = data.metadata
         await self.session.flush()

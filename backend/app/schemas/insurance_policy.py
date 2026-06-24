@@ -19,6 +19,10 @@ class InsurancePolicyCreate(BaseModel):
     premium_amount: Decimal = Field(..., ge=0)
     premium_cadence: str = Field(..., pattern=_CADENCE_PATTERN)
     cash_value_account_id: uuid.UUID | None = None
+    carrier: str | None = None
+    policy_number: str | None = None
+    technical_notes: str | None = None
+    insured_real_estate_id: uuid.UUID | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -30,6 +34,10 @@ class InsurancePolicyUpdate(BaseModel):
     premium_amount: Decimal | None = Field(default=None, ge=0)
     premium_cadence: str | None = Field(default=None, pattern=_CADENCE_PATTERN)
     cash_value_account_id: uuid.UUID | None = None
+    carrier: str | None = None
+    policy_number: str | None = None
+    technical_notes: str | None = None
+    insured_real_estate_id: uuid.UUID | None = None
     metadata: dict[str, Any] | None = None
 
 
@@ -45,6 +53,10 @@ class InsurancePolicyResponse(BaseModel):
     premium_amount: Decimal
     premium_cadence: str
     cash_value_account_id: uuid.UUID | None
+    carrier: str | None
+    policy_number: str | None
+    technical_notes: str | None
+    insured_real_estate_id: uuid.UUID | None
     # ORM attribute is `policy_metadata` (column "metadata"); expose as "metadata".
     metadata: dict[str, Any] = Field(
         validation_alias="policy_metadata", serialization_alias="metadata"
