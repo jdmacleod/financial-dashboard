@@ -24,6 +24,8 @@ from app.repositories.ownership_entity import OwnershipEntityRepository, counts_
 from app.repositories.pension import PensionRepository
 from app.repositories.real_estate import RealEstateRepository
 from app.schemas.report import (
+    BudgetTrendPoint,
+    BudgetTrendReport,
     BudgetVsActualsItem,
     BudgetVsActualsReport,
     CashFlowPeriod,
@@ -46,6 +48,8 @@ from app.schemas.report import (
     PropertyPnLPeriod,
     PropertyPnLReport,
     RetirementIncomeBreakdown,
+    SavingsRatePoint,
+    SavingsRateReport,
     SpendingByCategoryReport,
     SpendingCategoryItem,
 )
@@ -105,6 +109,14 @@ LIABILITY_BUCKET = {
 }
 ASSET_TYPES = frozenset(ASSET_BUCKET)
 LIABILITY_TYPES = frozenset(LIABILITY_BUCKET)
+# Liabilities whose point-in-time balance comes from the running transaction
+# sum at each date, so the value amortizes as payments post. Revolving credit
+# (credit_card/heloc) plus amortizing consumer loans tracked by transactions.
+# A static Debt.current_balance would otherwise render a flat line across the
+# whole net-worth history and ignore every payment made.
+TXN_TRACKED_LIABILITY_TYPES = frozenset(
+    {"credit_card", "heloc", "student_loan", "auto_loan", "personal_loan"}
+)
 BREAKDOWN_KEYS = (
     "checking_savings",
     "investment",
@@ -224,21 +236,34 @@ class ReportService:
         as_of: date,
         txn_sums: dict[uuid.UUID, Decimal] | None = None,
     ) -> Decimal:
-        if account.account_type in ("credit_card", "heloc"):
-            # Transaction-based liabilities: balance comes from running transaction sum.
+        if account.account_type in TXN_TRACKED_LIABILITY_TYPES:
+            # Balance comes from the running transaction sum at `as_of` so it
+            # amortizes over time as payments post. Debt.current_balance is a
+            # single present-day figure and is used only as a fallback for
+            # accounts that carry no transactions to anchor the balance.
             if txn_sums is not None:
-                return abs(txn_sums.get(account.id, Decimal("0")))
-            txn = await self._running_txn_balance_at(account.id, as_of)
-            return abs(txn)
+                if account.id in txn_sums:
+                    return abs(txn_sums[account.id])
+                # Absent from the batched sums => no transactions for this account.
+            else:
+                txn = await self._running_txn_balance_at(account.id, as_of)
+                if txn != 0:
+                    return abs(txn)
+                # A zero running sum may mean "no transactions" rather than
+                # "paid off"; fall through to a Debt record when one exists.
+            debt_balance = await self._debt_balance(account.id)
+            if debt_balance is not None:
+                return abs(debt_balance)
+            return Decimal("0")
+        # Mortgage / sbloc / margin / other_liability: a structured Debt record
+        # is the source of truth, then a snapshot, then the running transaction
+        # sum (e.g. a mortgage imported from CSV with no Debt record).
         debt_balance = await self._debt_balance(account.id)
         if debt_balance is not None:
             return abs(debt_balance)
         snap = await self._snapshot_balance_at(account.id, as_of)
         if snap is not None:
             return abs(snap)
-        # No Debt record and no Snapshot — fall back to running transaction sum.
-        # Handles accounts whose balance was established via imported transactions
-        # rather than a structured Debt record (e.g. a mortgage imported from CSV).
         if txn_sums is not None:
             return abs(txn_sums.get(account.id, Decimal("0")))
         txn = await self._running_txn_balance_at(account.id, as_of)
@@ -577,6 +602,114 @@ class ReportService:
             has_data=retirement_total > 0,
         )
         return CashFlowReport(series=series, totals=totals, retirement_income=retirement_income)
+
+    # --- Savings rate ----------------------------------------------------
+
+    async def savings_rate(
+        self,
+        ctx: VisibilityContext,
+        from_date: date,
+        to_date: date,
+    ) -> SavingsRateReport:
+        """Monthly savings rate ((income - expenses) / income) with a trailing
+        3-month rolling average. The single biggest lever on time-to-FI, which
+        the cash-flow report buries among per-period income/expense detail."""
+        accounts = await self._visible_accounts(ctx)
+        account_ids = [a.id for a in accounts]
+        if not account_ids:
+            return SavingsRateReport(
+                series=[], average_rate=0.0, best_period=None, worst_period=None
+            )
+
+        cat_map = await self._category_map(ctx)
+        result = await self.session.execute(
+            select(Transaction.transaction_date, Transaction.amount, Transaction.category_id).where(
+                Transaction.account_id.in_(account_ids),
+                Transaction.is_transfer.is_(False),
+                Transaction.transaction_date >= from_date,
+                Transaction.transaction_date <= to_date,
+            )
+        )
+
+        periods: dict[str, dict[str, Decimal]] = defaultdict(
+            lambda: {"income": Decimal("0"), "expenses": Decimal("0")}
+        )
+        for txn_date, amount, category_id in result.all():
+            category = cat_map.get(category_id)
+            is_income = category.is_income if category else False
+            key = _period_key(txn_date)
+            if is_income:
+                periods[key]["income"] += amount
+            elif amount < 0:
+                periods[key]["expenses"] += -amount
+
+        ordered_keys = sorted(periods)
+        rates: list[float] = []
+        series: list[SavingsRatePoint] = []
+        for key in ordered_keys:
+            income = periods[key]["income"]
+            expenses = periods[key]["expenses"]
+            savings = income - expenses
+            rate = float(savings / income * 100) if income > 0 else 0.0
+            rates.append(rate)
+            rolling = sum(rates[-3:]) / len(rates[-3:])
+            series.append(
+                SavingsRatePoint(
+                    period=key,
+                    income=income,
+                    expenses=expenses,
+                    savings=savings,
+                    savings_rate=rate,
+                    rolling_rate=rolling,
+                )
+            )
+
+        total_income = sum((p.income for p in series), Decimal("0"))
+        total_savings = sum((p.savings for p in series), Decimal("0"))
+        average_rate = float(total_savings / total_income * 100) if total_income > 0 else 0.0
+        best = max(series, key=lambda p: p.savings_rate).period if series else None
+        worst = min(series, key=lambda p: p.savings_rate).period if series else None
+        return SavingsRateReport(
+            series=series,
+            average_rate=average_rate,
+            best_period=best,
+            worst_period=worst,
+        )
+
+    # --- Budget vs actuals trend -----------------------------------------
+
+    async def budget_vs_actuals_trend(
+        self,
+        ctx: VisibilityContext,
+        from_date: date,
+        to_date: date,
+    ) -> BudgetTrendReport:
+        """Total budgeted vs actual spend per month across a window. The Budgets
+        tab shows a per-category table for a chosen range; this surfaces the
+        whole-household variance as a trend so over/under months stand out."""
+        series: list[BudgetTrendPoint] = []
+        for month_end in _month_ends(from_date, to_date):
+            month_str = _period_key(month_end)
+            report = await self.budget_vs_actuals(ctx, month_str)
+            budget = sum((item.budget for item in report.categories), Decimal("0"))
+            actual = sum((item.actual for item in report.categories), Decimal("0"))
+            series.append(
+                BudgetTrendPoint(
+                    period=month_str,
+                    budget=budget,
+                    actual=actual,
+                    variance=budget - actual,
+                )
+            )
+
+        total_budget = sum((p.budget for p in series), Decimal("0"))
+        total_actual = sum((p.actual for p in series), Decimal("0"))
+        return BudgetTrendReport(
+            series=series,
+            total_budget=total_budget,
+            total_actual=total_actual,
+            total_variance=total_budget - total_actual,
+        )
 
     # --- Spending by category --------------------------------------------
 

@@ -1,11 +1,13 @@
 import { api } from "./client"
 import type {
+  BudgetTrendReport,
   BudgetVsActualsReport,
   CashFlowReport,
   DashboardResponse,
   EstateExposureReport,
   NetWorthReport,
   PropertyPnLReport,
+  SavingsRateReport,
   SpendingByCategoryReport,
 } from "./types"
 
@@ -24,6 +26,12 @@ export const reportsApi = {
 
   budgetVsActuals: (month: string) =>
     api.get<BudgetVsActualsReport>(`/reports/budget-vs-actuals?month=${month}`),
+
+  budgetTrend: (from: string, to: string) =>
+    api.get<BudgetTrendReport>(`/reports/budget-trend?from=${from}&to=${to}`),
+
+  savingsRate: (from: string, to: string) =>
+    api.get<SavingsRateReport>(`/reports/savings-rate?from=${from}&to=${to}`),
 
   propertyPnl: (propertyId: string, from: string, to: string) =>
     api.get<PropertyPnLReport>(

@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useSearch } from "@tanstack/react-router"
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts"
 import { reportsApi } from "@/api/reports"
 import { categoriesApi } from "@/api/categories"
 import { formatCurrency } from "@/lib/formatters"
@@ -96,31 +96,41 @@ export default function ReportSpending() {
 
       {data && (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <p className="text-sm font-semibold text-gray-700 mb-1">Total</p>
-            <p className="text-2xl font-semibold text-gray-900 mb-4">
-              {formatCurrency(data.total)}
+          <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
+              Total spending
             </p>
             {pieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={240}>
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={90}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(v) => formatCurrency(v as number)} />
-                  <Legend iconType="circle" iconSize={8} />
-                </PieChart>
-              </ResponsiveContainer>
+              // The Breakdown panel on the right is the legend (color dot + name +
+              // amount + %), so the chart carries no in-SVG <Legend>. That keeps
+              // the donut from being squeezed/clipped by a wrapping legend, and
+              // the total is overlaid in the donut center where it reads at a glance.
+              <div className="relative">
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={70}
+                      outerRadius={110}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, i) => (
+                        <Cell key={i} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(v) => formatCurrency(v as number)} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-semibold text-gray-900">
+                    {formatCurrency(data.total)}
+                  </span>
+                  <span className="text-xs text-gray-400">{pieData.length} categories</span>
+                </div>
+              </div>
             ) : (
               <p className="text-sm text-gray-400 py-8 text-center">No spending data.</p>
             )}

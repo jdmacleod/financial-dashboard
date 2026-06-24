@@ -19,6 +19,8 @@ import Dashboard from "@/pages/Dashboard"
 import ReportNetWorth from "@/pages/ReportNetWorth"
 import ReportCashFlow from "@/pages/ReportCashFlow"
 import ReportSpending from "@/pages/ReportSpending"
+import ReportSavingsRate from "@/pages/ReportSavingsRate"
+import ReportBudgetTrend from "@/pages/ReportBudgetTrend"
 import Budgets from "@/pages/Budgets"
 import PropertyDetail from "@/pages/PropertyDetail"
 import PensionDetail from "@/pages/PensionDetail"
@@ -141,6 +143,18 @@ const budgetsRoute = createRoute({
   component: Budgets,
 })
 
+const reportsSavingsRateRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/reports/savings-rate",
+  component: ReportSavingsRate,
+})
+
+const reportsBudgetTrendRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/reports/budget-trend",
+  component: ReportBudgetTrend,
+})
+
 const propertyDetailRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/properties/$propertyId",
@@ -261,6 +275,8 @@ const routeTree = rootRoute.addChildren([
     reportsNetWorthRoute,
     reportsCashFlowRoute,
     reportsSpendingRoute,
+    reportsSavingsRateRoute,
+    reportsBudgetTrendRoute,
     budgetsRoute,
     propertyDetailRoute,
     pensionDetailRoute,

@@ -761,11 +761,16 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     session.add(fire)
 
     # ── Debt records ──────────────────────────────────────────────────────────
+    # current_balance values track the transaction-derived Jun 2026 balances
+    # (honda paid off Aug 2025; student-loan targets above) so the Debt page and
+    # the Net Worth report agree. The report values these accounts from their
+    # running transaction sum; these figures keep the structured Debt record in
+    # sync for the Debt page and Debt Payoff report.
     session.add(
         make_debt(
             honda.id,
             D("18500.00"),
-            D("14800.00"),
+            D("0.00"),  # paid off Aug 2025
             D("0.0690"),
             D("312.00"),
             60,
@@ -776,7 +781,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         make_debt(
             zoe_sl.id,
             D("42000.00"),
-            D("34000.00"),
+            D("16421.00"),  # matches zoe_sl Jun 2026 target
             D("0.0550"),
             D("275.00"),
             120,
@@ -787,7 +792,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         make_debt(
             marcus_sl.id,
             D("28000.00"),
-            D("22000.00"),
+            D("19011.00"),  # matches marcus_sl Jun 2026 target
             D("0.0480"),
             D("182.00"),
             120,
@@ -837,7 +842,10 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         "accounts": 14,  # +1: inherited IRA
         "transactions": len(all_txns),
         "properties": 0,
-        "net_worth": 279_483.0,  # +~$33,443 inherited IRA (May-2026 snapshot)
+        # Liabilities are valued from the amortizing transaction balances
+        # (student loans ~$16.4k + ~$19.0k, cards ~$3.5k = ~$38.9k), not the
+        # loans' original principal — see ReportService._liability_value_at.
+        "net_worth": 300_051.0,
         "fire_scenarios": 1,
         "debt_records": 3,
     }
