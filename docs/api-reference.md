@@ -884,6 +884,64 @@ Budget vs. actual spending for a month.
 }
 ```
 
+### `GET /reports/savings-rate`
+
+Monthly savings rate over a date range: `(income − expenses) ÷ income` per period, with a trailing 3-month rolling average. Transfers are excluded; income is any transaction in an income category, expenses are the remaining outflows.
+
+**Query parameters:**
+| Parameter | Type | Description |
+|---|---|---|
+| `from` | date | Start date (required) |
+| `to` | date | End date (required) |
+
+**Response:**
+
+```json
+{
+  "series": [
+    {
+      "period": "2025-01",
+      "income": "8000.0000",
+      "expenses": "5200.0000",
+      "savings": "2800.0000",
+      "savings_rate": 35.0,
+      "rolling_rate": 32.4
+    }
+  ],
+  "average_rate": 33.1,
+  "best_period": "2025-03",
+  "worst_period": "2025-08"
+}
+```
+
+### `GET /reports/budget-trend`
+
+Total budgeted vs. actual spend per month across a date range, with a variance line (positive = under budget) and window totals.
+
+**Query parameters:**
+| Parameter | Type | Description |
+|---|---|---|
+| `from` | date | Start date (required) |
+| `to` | date | End date (required) |
+
+**Response:**
+
+```json
+{
+  "series": [
+    {
+      "period": "2025-01",
+      "budget": "4500.0000",
+      "actual": "4820.0000",
+      "variance": "-320.0000"
+    }
+  ],
+  "total_budget": "54000.0000",
+  "total_actual": "52310.0000",
+  "total_variance": "1690.0000"
+}
+```
+
 ### `GET /reports/property-pnl`
 
 Income vs. expenses for a real estate property.
