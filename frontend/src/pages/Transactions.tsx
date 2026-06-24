@@ -43,11 +43,33 @@ function CategoryBadge({
         className="rounded-md border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500"
       >
         <option value="">Uncategorized</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
+        {(() => {
+          const childrenByParent = categories.reduce<Record<string, typeof categories>>(
+            (acc, c) => {
+              if (c.parent_category_id) {
+                const key = String(c.parent_category_id)
+                ;(acc[key] ??= []).push(c)
+              }
+              return acc
+            },
+            {},
+          )
+          return categories
+            .filter((c) => !c.parent_category_id)
+            .map((parent) => {
+              const children = childrenByParent[String(parent.id)] ?? []
+              return (
+                <optgroup key={parent.id} label={parent.name}>
+                  <option value={parent.id}>{parent.name} — general</option>
+                  {children.map((child) => (
+                    <option key={child.id} value={child.id}>
+                      {child.name}
+                    </option>
+                  ))}
+                </optgroup>
+              )
+            })
+        })()}
       </select>
     )
   }
@@ -302,11 +324,31 @@ export default function Transactions() {
             className="rounded-md border border-indigo-300 px-2 py-1 text-sm"
           >
             <option value="">Choose category…</option>
-            {categories?.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            {(() => {
+              const cats = categories ?? []
+              const childrenByParent = cats.reduce<Record<string, typeof cats>>((acc, c) => {
+                if (c.parent_category_id) {
+                  const key = String(c.parent_category_id)
+                  ;(acc[key] ??= []).push(c)
+                }
+                return acc
+              }, {})
+              return cats
+                .filter((c) => !c.parent_category_id)
+                .map((parent) => {
+                  const children = childrenByParent[String(parent.id)] ?? []
+                  return (
+                    <optgroup key={parent.id} label={parent.name}>
+                      <option value={parent.id}>{parent.name} — general</option>
+                      {children.map((child) => (
+                        <option key={child.id} value={child.id}>
+                          {child.name}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )
+                })
+            })()}
           </select>
           <button
             onClick={() => bulkCategorize.mutate()}
