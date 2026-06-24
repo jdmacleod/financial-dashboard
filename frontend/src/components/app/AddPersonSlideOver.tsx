@@ -8,10 +8,16 @@ import { provisioningApi } from "@/api/provisioning"
 import { useAuth } from "@/hooks/useAuth"
 import type { ProvisionResponse } from "@/api/types"
 
+const today = new Date().toISOString().slice(0, 10)
+
 const schema = z.object({
   display_name: z.string().min(1, "Required"),
   role: z.enum(["primary", "partner", "dependent"]),
   email: z.string().min(3, "Required"),
+  date_of_birth: z
+    .string()
+    .optional()
+    .refine((v) => !v || v <= today, "Date of birth can't be in the future"),
 })
 type FormValues = z.infer<typeof schema>
 
@@ -43,7 +49,8 @@ export function AddPersonSlideOver({ onClose }: { onClose: () => void }) {
   })
 
   const provision = useMutation({
-    mutationFn: (data: FormValues) => provisioningApi.provision(data),
+    mutationFn: (data: FormValues) =>
+      provisioningApi.provision({ ...data, date_of_birth: data.date_of_birth || null }),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ["members"] })
       setResult(res)
@@ -148,6 +155,25 @@ export function AddPersonSlideOver({ onClose }: { onClose: () => void }) {
                 {/* Only a primary may add another primary (server enforces too). */}
                 {viewerIsPrimary && <option value="primary">Primary</option>}
               </select>
+            </div>
+
+            <div>
+              <label htmlFor="ap-dob" className="mb-1 block text-sm font-medium text-gray-700">
+                Date of birth <span className="font-normal text-gray-400">(optional)</span>
+              </label>
+              <input
+                id="ap-dob"
+                type="date"
+                max={today}
+                {...register("date_of_birth")}
+                className={inputClass}
+              />
+              {errors.date_of_birth && (
+                <p className="mt-1 text-xs text-red-600">{errors.date_of_birth.message}</p>
+              )}
+              <p className="mt-1 text-xs text-gray-400">
+                Powers age-based projections like FIRE and required minimum distributions.
+              </p>
             </div>
 
             {error && (
