@@ -3,6 +3,12 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.20.1.0] - 2026-06-24
+
+### Fixed
+
+- **Lines of credit always value from their actual balance.** SBLOC and margin accounts are now treated as transaction-tracked liabilities, so their net-worth value follows draws and paydowns over time and can never be pinned to a single static figure. As part of this, any transaction-tracked liability (credit cards, lines of credit, loans) that was imported as a balance snapshot with no transaction history now reports that snapshot balance instead of zero. No change to the sample data.
+
 ## [0.20.0.0] - 2026-06-24
 
 ### Added

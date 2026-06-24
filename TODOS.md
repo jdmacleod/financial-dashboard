@@ -92,21 +92,18 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Include SBLOC/margin in transaction-tracked liability valuation (future-proofing)
-
-**What:** Add `"sbloc"` and `"margin"` to `TXN_TRACKED_LIABILITY_TYPES` in `app/services/report.py`. Today these revolving lines are valued correctly from the running transaction sum only because they fall through the else-branch (no Debt record, no snapshot). If a structured Debt record is ever attached to an SBLOC, it would hit the static-balance path — the exact flat-line bug fixed in v0.19.0.0 for student/auto loans.
-
-**Why:** Pre-landing review (v0.19.0.0) flagged this as latent. Behavior is identical today across all six seed households (verified — no Debt records on sbloc/margin), so it was not fixed in the same PR to avoid a behavior-neutral churn; recording it so the consistency gap isn't lost.
-
-**Pros:** Two-string change. Makes the transaction-tracked intent explicit and immune to a future Debt-record attachment.
-
-**Cons:** None meaningful; purely defensive.
-
-**Depends on:** v0.19.0.0 shipped.
-
----
-
 ## Completed
+
+### Include SBLOC/margin in transaction-tracked liability valuation
+
+**Completed:** v0.20.1.0 (2026-06-24) — Added `sbloc` and `margin` to
+`TXN_TRACKED_LIABILITY_TYPES` in `app/services/report.py`, so revolving credit
+lines value from their running transaction sum and a Debt record can no longer
+pin them to a static balance (the v0.19.0.0 flat-line bug). Preserved the
+snapshot fallback by extending the transaction-tracked branch to txn → Debt →
+snapshot → 0, which also gives credit cards / lines of credit / loans a snapshot
+fallback they lacked. Behavior-neutral for the sample data (verified by the
+per-household net-worth agreement test). Two regression tests added.
 
 ### Investment positions rollup — Top positions + Holdings mix
 
