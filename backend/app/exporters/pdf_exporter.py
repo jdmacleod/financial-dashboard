@@ -17,12 +17,24 @@ from app.db.models.debt import Debt
 from app.db.models.export_job import ExportJob
 from app.db.models.fire import FireScenario
 from app.db.models.household import Household
+from app.db.models.insurance_policy import InsurancePolicy
 from app.db.models.real_estate import RealEstateProperty
 from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
 from app.repositories.real_estate import RealEstateRepository
 from app.services.report import ReportService
+
+_INSURANCE_TYPE_LABELS: dict[str, str] = {
+    "term_life": "Term Life",
+    "permanent_life": "Permanent Life",
+    "umbrella_liability": "Umbrella Liability",
+    "disability": "Disability",
+    "long_term_care": "Long-Term Care",
+    "scheduled_specialty": "Scheduled / Specialty",
+    "homeowners": "Homeowners",
+    "renters": "Renters",
+}
 
 try:
     from importlib.metadata import version as _pkg_version
@@ -77,6 +89,26 @@ def _mask_institution(institution_name_enc: bytes | None, anonymized: bool) -> s
         return decrypt(institution_name_enc)
     except Exception:
         return "N/A"
+
+
+def _mask_policy_number(policy_number: str | None, anonymized: bool) -> str:
+    if policy_number is None:
+        return "N/A"
+    if anonymized:
+        last4 = policy_number[-4:] if len(policy_number) >= 4 else policy_number
+        return f"••••{last4}"
+    return policy_number
+
+
+async def _fetch_insurance_policies(
+    session: AsyncSession, household_id: uuid.UUID
+) -> list[InsurancePolicy]:
+    result = await session.execute(
+        select(InsurancePolicy)
+        .where(InsurancePolicy.household_id == household_id)
+        .order_by(InsurancePolicy.policy_type)
+    )
+    return list(result.scalars().all())
 
 
 async def _fetch_accounts(session: AsyncSession, ctx: VisibilityContext) -> list[Account]:
@@ -484,6 +516,41 @@ async def generate(job: ExportJob, session: AsyncSession, output_dir: str) -> st
                     f"<tr><td>{sc.name}</td>"
                     f"<td>{_fmt_usd(sc.target_annual_spend)}</td>"
                     f"<td>{swr}</td><td>{fire_year}</td></tr>"
+                )
+            html_parts.append("</table>")
+
+        # --- Insurance policies ---
+        policies = await _fetch_insurance_policies(session, job.household_id)
+        if policies:
+            # Build property_id → address map for the "Covered property" column
+            _prop_addr: dict[uuid.UUID, str] = {}
+            for _p in properties:
+                try:
+                    _prop_addr[_p.id] = decrypt(_p.address_enc)
+                except Exception:
+                    _prop_addr[_p.id] = "[encrypted]"
+
+            html_parts.append("<h2>Insurance Policies</h2>")
+            html_parts.append(
+                "<table><tr><th>Type</th><th>Carrier</th><th>Policy Number</th>"
+                "<th>Coverage</th><th>Premium</th><th>Covered Property</th></tr>"
+            )
+            _cadence_labels = {"monthly": "/mo", "quarterly": "/qtr", "annual": "/yr"}
+            for pol in policies:
+                type_label = _INSURANCE_TYPE_LABELS.get(pol.policy_type, pol.policy_type)
+                carrier = pol.carrier or "N/A"
+                pnum = _mask_policy_number(pol.policy_number, anonymized)
+                coverage = _fmt_usd(pol.coverage_amount)
+                cadence = _cadence_labels.get(pol.premium_cadence, "")
+                premium = f"{_fmt_usd(pol.premium_amount)}{cadence}"
+                prop_label = (
+                    _prop_addr.get(pol.insured_real_estate_id, "—")
+                    if pol.insured_real_estate_id
+                    else "—"
+                )
+                html_parts.append(
+                    f"<tr><td>{type_label}</td><td>{carrier}</td><td>{pnum}</td>"
+                    f"<td>{coverage}</td><td>{premium}</td><td>{prop_label}</td></tr>"
                 )
             html_parts.append("</table>")
 
