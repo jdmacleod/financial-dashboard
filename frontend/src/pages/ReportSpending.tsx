@@ -1,22 +1,11 @@
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
+import { useSearch } from "@tanstack/react-router"
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts"
 import { reportsApi } from "@/api/reports"
+import { categoriesApi } from "@/api/categories"
 import { formatCurrency } from "@/lib/formatters"
 import { currentMonthRange, lastNMonthsRange } from "@/lib/dateRange"
-
-const CHART_COLORS = [
-  "#6366f1",
-  "#10b981",
-  "#f59e0b",
-  "#ef4444",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ec4899",
-  "#14b8a6",
-  "#f97316",
-  "#84cc16",
-]
 
 type Preset = "this_month" | "3m" | "6m" | "12m"
 
@@ -28,8 +17,9 @@ function presetRange(p: Preset) {
 }
 
 export default function ReportSpending() {
+  const search = useSearch({ from: "/app/reports/spending" })
   const [preset, setPreset] = useState<Preset>("this_month")
-  const [drillCategory, setDrillCategory] = useState<string | null>(null)
+  const [drillCategory, setDrillCategory] = useState<string | null>(search.category ?? null)
 
   const range = presetRange(preset)
 
@@ -38,9 +28,28 @@ export default function ReportSpending() {
     queryFn: () => reportsApi.spendingByCategory(range.from, range.to, drillCategory ?? undefined),
   })
 
+  const { data: categories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: categoriesApi.list,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  const categoryColorMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const c of categories ?? []) {
+      map.set(c.id, c.color_hex)
+    }
+    return map
+  }, [categories])
+
   const pieData = (data?.categories ?? [])
     .filter((c) => Number(c.amount) !== 0)
-    .map((c) => ({ name: c.name, value: Math.abs(Number(c.amount)), id: c.category_id }))
+    .map((c) => ({
+      name: c.name,
+      value: Math.abs(Number(c.amount)),
+      id: c.category_id,
+      color: c.category_id ? (categoryColorMap.get(c.category_id) ?? "#888888") : "#888888",
+    }))
 
   return (
     <div className="p-8 max-w-5xl mx-auto space-y-6">
@@ -104,8 +113,8 @@ export default function ReportSpending() {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {pieData.map((_, i) => (
-                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip formatter={(v) => formatCurrency(v as number)} />
@@ -124,40 +133,45 @@ export default function ReportSpending() {
               </p>
             </div>
             <div className="divide-y divide-gray-100">
-              {data.categories.map((c, i) => (
-                <div key={c.category_id ?? c.name} className="px-4 py-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className="h-2 w-2 rounded-full shrink-0"
-                      style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
-                    />
-                    <span className="flex-1 text-sm text-gray-800 truncate">{c.name}</span>
-                    {c.has_children && c.category_id && (
-                      <button
-                        onClick={() => setDrillCategory(c.category_id)}
-                        className="text-xs text-indigo-600 hover:underline shrink-0"
-                      >
-                        drill down
-                      </button>
-                    )}
-                    <span className="text-sm font-medium text-gray-900">
-                      {formatCurrency(c.amount)}
-                    </span>
+              {data.categories.map((c) => {
+                const entryColor = c.category_id
+                  ? (categoryColorMap.get(c.category_id) ?? "#888888")
+                  : "#888888"
+                return (
+                  <div key={c.category_id ?? c.name} className="px-4 py-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span
+                        className="h-2 w-2 rounded-full shrink-0"
+                        style={{ backgroundColor: entryColor }}
+                      />
+                      <span className="flex-1 text-sm text-gray-800 truncate">{c.name}</span>
+                      {c.has_children && c.category_id && (
+                        <button
+                          onClick={() => setDrillCategory(c.category_id)}
+                          className="text-xs text-indigo-600 hover:underline shrink-0"
+                        >
+                          drill down
+                        </button>
+                      )}
+                      <span className="text-sm font-medium text-gray-900">
+                        {formatCurrency(c.amount)}
+                      </span>
+                    </div>
+                    <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.min(100, c.percentage)}%`,
+                          backgroundColor: entryColor,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {c.percentage.toFixed(1)}% · {c.transaction_count} transactions
+                    </p>
                   </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.min(100, c.percentage)}%`,
-                        backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
-                      }}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {c.percentage.toFixed(1)}% · {c.transaction_count} transactions
-                  </p>
-                </div>
-              ))}
+                )
+              })}
               {data.categories.length === 0 && (
                 <p className="px-4 py-8 text-center text-gray-400">No data for this period.</p>
               )}
