@@ -65,9 +65,17 @@ class CategoryService:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         category = await self._get_or_404(ctx, category_id)
         if category.is_system:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT, detail="System categories cannot be modified"
+            only_color = (
+                data.color_hex is not None
+                and data.name is None
+                and data.parent_category_id is None
+                and data.icon is None
             )
+            if not only_color:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="System categories cannot be modified",
+                )
         self._prev_snapshot = _snapshot(category)
 
         if data.name is not None:

@@ -25,6 +25,7 @@ class CategoryResponse(BaseModel):
     id: uuid.UUID
     household_id: uuid.UUID
     name: str
+    slug: str | None
     parent_category_id: uuid.UUID | None
     color_hex: str
     icon: str | None

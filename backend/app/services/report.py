@@ -57,13 +57,12 @@ Interval = Literal["monthly", "quarterly", "annual"]
 # estimate in effect at each net-worth date.
 _PensionData = tuple[PensionAccount | None, list[PensionEstimateHistory]]
 
-# Maps retirement-income category names (see seed shared_categories.py) to the
-# labeled buckets surfaced in the cash-flow report. Matched by category name
-# because categories carry no stable slug column.
-RETIREMENT_INCOME_CATEGORIES = {
-    "Social Security": "social_security",
-    "Pension Income": "pension",
-    "Required Minimum Distribution": "rmd",
+# Maps retirement-income category slugs (see seed shared_categories.py) to the
+# labeled buckets surfaced in the cash-flow report.
+RETIREMENT_INCOME_SLUGS = {
+    "social_security_income": "social_security",
+    "pension_income": "pension",
+    "rmd_distribution": "rmd",
 }
 
 # Federal estate-tax parameters. The 2025 OBBBA made the higher unified credit
@@ -531,7 +530,7 @@ class ReportService:
         periods: dict[str, dict[str, Decimal]] = defaultdict(
             lambda: {"income": Decimal("0"), "expenses": Decimal("0")}
         )
-        retirement = {bucket: Decimal("0") for bucket in RETIREMENT_INCOME_CATEGORIES.values()}
+        retirement = {bucket: Decimal("0") for bucket in RETIREMENT_INCOME_SLUGS.values()}
         for txn_date, amount, category_id in result.all():
             category = cat_map.get(category_id)
             is_income = category.is_income if category else False
@@ -541,7 +540,7 @@ class ReportService:
                 key = _period_key(txn_date)
             if is_income:
                 periods[key]["income"] += amount
-                bucket = category and RETIREMENT_INCOME_CATEGORIES.get(category.name)
+                bucket = category and category.slug and RETIREMENT_INCOME_SLUGS.get(category.slug)
                 if bucket:
                     retirement[bucket] += amount
             elif amount < 0:
