@@ -102,20 +102,21 @@ LIABILITY_BUCKET = {
     "student_loan": "other_liabilities",
     "other_liability": "other_liabilities",
     "heloc": "other_liabilities",
-    # Demo-data extension (migration 0007): revolving credit lines. Valued from
-    # the running transaction sum via _liability_value_at's fallback path.
+    # Demo-data extension (migration 0007): revolving credit lines, valued from
+    # the running transaction sum (see TXN_TRACKED_LIABILITY_TYPES).
     "sbloc": "other_liabilities",
     "margin": "other_liabilities",
 }
 ASSET_TYPES = frozenset(ASSET_BUCKET)
 LIABILITY_TYPES = frozenset(LIABILITY_BUCKET)
 # Liabilities whose point-in-time balance comes from the running transaction
-# sum at each date, so the value amortizes as payments post. Revolving credit
-# (credit_card/heloc) plus amortizing consumer loans tracked by transactions.
-# A static Debt.current_balance would otherwise render a flat line across the
-# whole net-worth history and ignore every payment made.
+# sum at each date, so the value amortizes as payments/draws post. Revolving
+# credit (credit_card/heloc/sbloc/margin) plus amortizing consumer loans tracked
+# by transactions. A static Debt.current_balance would otherwise render a flat
+# line across the whole net-worth history and ignore every payment made — so
+# attaching a Debt record to any of these must not pin it to a single value.
 TXN_TRACKED_LIABILITY_TYPES = frozenset(
-    {"credit_card", "heloc", "student_loan", "auto_loan", "personal_loan"}
+    {"credit_card", "heloc", "student_loan", "auto_loan", "personal_loan", "sbloc", "margin"}
 )
 BREAKDOWN_KEYS = (
     "checking_savings",
@@ -254,10 +255,15 @@ class ReportService:
             debt_balance = await self._debt_balance(account.id)
             if debt_balance is not None:
                 return abs(debt_balance)
+            # Last resort: a snapshot (e.g. a line of credit imported as a balance
+            # snapshot with no transactions or Debt record).
+            snap = await self._snapshot_balance_at(account.id, as_of)
+            if snap is not None:
+                return abs(snap)
             return Decimal("0")
-        # Mortgage / sbloc / margin / other_liability: a structured Debt record
-        # is the source of truth, then a snapshot, then the running transaction
-        # sum (e.g. a mortgage imported from CSV with no Debt record).
+        # Mortgage / other_liability: a structured Debt record is the source of
+        # truth, then a snapshot, then the running transaction sum (e.g. a
+        # mortgage imported from CSV with no Debt record).
         debt_balance = await self._debt_balance(account.id)
         if debt_balance is not None:
             return abs(debt_balance)
