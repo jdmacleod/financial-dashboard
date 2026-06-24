@@ -3,6 +3,19 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.18.0.0] - 2026-06-24
+
+### Added
+
+- **Category hierarchy.** Categories now have a two-level parent/child tree. The Categories page shows collapsible parent groups with color dots (click to open the native color picker); system categories show a SYSTEM badge and allow color edits only; custom categories get Rename and Delete at both parent and child level.
+- **Category slugs.** Each system category gets a stable machine-readable slug (e.g. `social_security_income`, `pension_income`) stored in a new `slug` column with a partial unique index. Slugs drive the retirement-income breakdown in the Cash Flow report (replacing fragile name matching) and enable reliable cross-installation lookups.
+- **Category colors.** System parent categories now seed with distinct colors (income green, housing blue, healthcare purple, etc.). Child categories default to `#888888`. The Alembic migration 0013 backfills slugs and colors for existing installations.
+- **Colored category bars in Cash Flow.** The top-spending-categories panel now fills each horizontal bar with the category's `color_hex`. Each bar is a button that navigates to `/reports/spending?category=<id>` for drill-through, with hover/focus styles and an aria-label. A "View full breakdown →" link appears below the panel.
+- **Dynamic category colors in Spending Report.** Pie chart slices and breakdown progress bars now use each category's `color_hex` (fetched from the categories API) instead of a static color rotation.
+- **URL-driven drill-down in Spending Report.** Opening `/reports/spending?category=<id>` pre-selects that category's drill-down view, so Cash Flow bar clicks land in the correct context.
+- **Grouped `<optgroup>` selectors.** Category dropdowns in TransactionForm, the inline CategoryBadge select, and the bulk-categorize select now group children under their parent with an `{parent} — general` option at the top of each group.
+- **Mobile-responsive Cash Flow report.** KPI grid switches from 4 columns to 2×2 on narrow viewports; the bottom panel stack collapses to a single column.
+
 ## [0.17.0.0] - 2026-06-23
 
 ### Added
