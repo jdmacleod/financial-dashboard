@@ -103,10 +103,12 @@ async def _add_category(
     name: str,
     is_income: bool = False,
     parent_category_id: uuid.UUID | None = None,
+    slug: str | None = None,
 ) -> Category:
     cat = Category(
         household_id=household_id,
         name=name,
+        slug=slug,
         is_income=is_income,
         is_system=False,
         parent_category_id=parent_category_id,
@@ -633,10 +635,18 @@ async def test_cash_flow_retirement_income_breakdown(
 ) -> None:
     ctx = _ctx(household, primary_member, primary_user)
     account = await _make_account(db_session, ctx, "checking", "Retiree Checking")
-    ss_cat = await _add_category(db_session, household.id, "Social Security", is_income=True)
-    pension_cat = await _add_category(db_session, household.id, "Pension Income", is_income=True)
+    ss_cat = await _add_category(
+        db_session, household.id, "Social Security", is_income=True, slug="social_security_income"
+    )
+    pension_cat = await _add_category(
+        db_session, household.id, "Pension Income", is_income=True, slug="pension_income"
+    )
     rmd_cat = await _add_category(
-        db_session, household.id, "Required Minimum Distribution", is_income=True
+        db_session,
+        household.id,
+        "Required Minimum Distribution",
+        is_income=True,
+        slug="rmd_distribution",
     )
     salary_cat = await _add_category(db_session, household.id, "Salary", is_income=True)
 
