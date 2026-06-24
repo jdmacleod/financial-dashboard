@@ -243,3 +243,30 @@ class DashboardResponse(BaseModel):
     top_spending_categories: list[DashboardSpendingCategory]
     budget_alerts: list[DashboardBudgetAlert]
     accounts_summary: DashboardAccountsSummary
+
+
+class MemberRequiredDistribution(BaseModel):
+    member_id: uuid.UUID
+    display_name: str
+    date_of_birth: date | None
+    current_age: int | None
+    rmd_start_age: int | None
+    rmd_start_year: int | None
+    # True once the member has reached RMD age and a distribution is required
+    # this year.
+    has_started: bool
+    # Prior-year-end pretax balance the RMD is computed from, and the snapshot
+    # date that supplied it. None when no prior-year snapshot exists.
+    pretax_balance: Decimal | None
+    balance_as_of: date | None
+    # IRS Uniform Lifetime divisor for this year's age, and the resulting RMD.
+    divisor: Decimal | None
+    rmd_amount: Decimal | None
+    # Human-readable status for the empty/partial cases (no DOB, pre-RMD age,
+    # no pretax accounts, missing year-end balance).
+    note: str | None
+
+
+class RequiredDistributionsReport(BaseModel):
+    year: int
+    members: list[MemberRequiredDistribution]

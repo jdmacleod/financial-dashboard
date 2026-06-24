@@ -15,12 +15,24 @@ from app.schemas.report import (
     EstateExposureReport,
     NetWorthReport,
     PropertyPnLReport,
+    RequiredDistributionsReport,
     SavingsRateReport,
     SpendingByCategoryReport,
 )
 from app.services.report import ReportService
+from app.services.rmd import RmdService
 
 router = APIRouter()
+
+
+@router.get("/reports/required-distributions", response_model=RequiredDistributionsReport)
+async def required_distributions_report(
+    year: int | None = Query(None, description="Distribution year; defaults to the current year"),
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> RequiredDistributionsReport:
+    svc = RmdService(session)
+    return await svc.required_distributions(ctx, year)
 
 
 @router.get("/reports/net-worth", response_model=NetWorthReport)

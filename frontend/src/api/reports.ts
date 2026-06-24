@@ -7,6 +7,7 @@ import type {
   EstateExposureReport,
   NetWorthReport,
   PropertyPnLReport,
+  RequiredDistributionsReport,
   SavingsRateReport,
   SpendingByCategoryReport,
 } from "./types"
@@ -32,6 +33,11 @@ export const reportsApi = {
 
   savingsRate: (from: string, to: string) =>
     api.get<SavingsRateReport>(`/reports/savings-rate?from=${from}&to=${to}`),
+
+  requiredDistributions: (year?: number) =>
+    api.get<RequiredDistributionsReport>(
+      `/reports/required-distributions${year ? `?year=${year}` : ""}`,
+    ),
 
   propertyPnl: (propertyId: string, from: string, to: string) =>
     api.get<PropertyPnLReport>(

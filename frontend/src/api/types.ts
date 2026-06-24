@@ -423,6 +423,26 @@ export interface SavingsRateReport {
   worst_period: string | null
 }
 
+export interface MemberRequiredDistribution {
+  member_id: string
+  display_name: string
+  date_of_birth: string | null
+  current_age: number | null
+  rmd_start_age: number | null
+  rmd_start_year: number | null
+  has_started: boolean
+  pretax_balance: string | null
+  balance_as_of: string | null
+  divisor: string | null
+  rmd_amount: string | null
+  note: string | null
+}
+
+export interface RequiredDistributionsReport {
+  year: number
+  members: MemberRequiredDistribution[]
+}
+
 export interface PropertyExpenseItem {
   category_id: string | null
   name: string
