@@ -130,6 +130,9 @@ const reportsSpendingRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/reports/spending",
   component: ReportSpending,
+  validateSearch: (search: Record<string, unknown>) => ({
+    category: typeof search.category === "string" ? search.category : undefined,
+  }),
 })
 
 const budgetsRoute = createRoute({

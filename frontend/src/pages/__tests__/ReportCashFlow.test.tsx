@@ -63,12 +63,22 @@ const mockUseRouterState = vi.fn(() => "")
 vi.mock("@tanstack/react-router", () => ({
   useRouterState: (opts: { select: (s: { location: { search: string } }) => unknown }) =>
     opts.select({ location: { search: mockUseRouterState() as string } }),
+  useNavigate: () => vi.fn(),
+  Link: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <a {...props}>{children}</a>
+  ),
 }))
 
 vi.mock("@/api/reports", () => ({
   reportsApi: {
     cashFlow: vi.fn(() => Promise.resolve(mockCashFlow)),
     spendingByCategory: vi.fn(() => Promise.resolve(mockSpending)),
+  },
+}))
+
+vi.mock("@/api/categories", () => ({
+  categoriesApi: {
+    list: vi.fn(() => Promise.resolve([])),
   },
 }))
 
