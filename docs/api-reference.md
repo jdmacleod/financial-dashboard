@@ -336,6 +336,8 @@ Lists all accounts visible to the current member (based on role and access grant
 
 Account types: `checking`, `savings`, `credit`, `investment`, `retirement`, `loan`.
 
+Retirement and investment accounts also carry a `tax_treatment` of `pretax`, `roth`, or `taxable` (null when not applicable). It is seeded from the account type — traditional 401(k)/403(b)/IRA → `pretax`, Roth IRA → `roth`, brokerage/treasury → `taxable` — and drives required-minimum-distribution eligibility (only `pretax` balances are subject to RMDs).
+
 ### `POST /accounts`
 
 Creates an account owned by the current member.
@@ -939,6 +941,39 @@ Total budgeted vs. actual spend per month across a date range, with a variance l
   "total_budget": "54000.0000",
   "total_actual": "52310.0000",
   "total_variance": "1690.0000"
+}
+```
+
+### `GET /reports/required-distributions`
+
+Per-member required minimum distributions (RMDs) from pretax retirement balances. For each household member who owns at least one `tax_treatment: pretax` account, computes `RMD = prior-calendar-year-end balance ÷ IRS Uniform Lifetime divisor` for the age attained that year. The RMD start age follows SECURE 2.0 (72 for those born ≤1950, 73 for 1951–1959, 75 for 1960+). Members who have not reached RMD age, have no date of birth, or lack a prior-year-end balance get a `note` explaining what's missing; Roth and taxable balances never count.
+
+**Query parameters:**
+| Parameter | Type | Description |
+|---|---|---|
+| `year` | int | Distribution year (optional; defaults to the current year) |
+
+**Response:**
+
+```json
+{
+  "year": 2024,
+  "members": [
+    {
+      "member_id": "uuid",
+      "display_name": "Pat Saver",
+      "date_of_birth": "1950-01-01",
+      "current_age": 74,
+      "rmd_start_age": 72,
+      "rmd_start_year": 2022,
+      "has_started": true,
+      "pretax_balance": "1000000.0000",
+      "balance_as_of": "2023-12-31",
+      "divisor": "25.5",
+      "rmd_amount": "39215.69",
+      "note": null
+    }
+  ]
 }
 ```
 

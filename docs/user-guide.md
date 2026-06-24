@@ -185,7 +185,7 @@ The dashboard shows budget alerts for categories that have exceeded 90% of their
 
 ## Reports
 
-Reports live in the left sidebar. Net Worth, Spending, **Savings Rate**, and **Budget Trend** are grouped under a dedicated **Reports** section near the bottom; Cash Flow, Investments, Real Estate, and Retirement sit in the main navigation above it.
+Reports live in the left sidebar. Net Worth, Spending, **Savings Rate**, **Budget Trend**, and **Required Distributions** are grouped under a dedicated **Reports** section near the bottom; Cash Flow, Investments, Real Estate, and Retirement sit in the main navigation above it.
 
 ### Net Worth
 
@@ -231,6 +231,12 @@ Shows every category with a budget alongside its actual spending for a given mon
 ### Budget Trend
 
 Plots total budgeted vs actual spend for each month across a date range, with a variance line (positive means you came in under budget). Totals at the bottom show whether you were over or under budget for the whole window. It complements the per-category Budget vs Actuals view with a whole-household trend.
+
+### Required Distributions
+
+Shows each household member's required minimum distribution (RMD) — the amount the IRS makes you withdraw from pretax retirement accounts once you reach RMD age. For a member who has reached that age, the card shows the dollar amount required this year, the prior year-end pretax balance it's based on (with the snapshot date), and the IRS Uniform Lifetime divisor used. The RMD start age follows SECURE 2.0: 73 if you were born 1951–1959, 75 if born 1960 or later (72 for 1950 and earlier).
+
+For this report to compute a number, a member needs a [date of birth](#members) set, at least one retirement account marked `pretax` (traditional 401(k)/403(b)/IRA), and a balance snapshot dated in the prior calendar year. When something's missing, the card tells you exactly what to add. Roth and taxable balances are never subject to RMDs.
 
 ### Property P&L
 
@@ -433,7 +439,7 @@ HearthLedger supports multiple household members. Each member has a role:
 
 ### Adding a member
 
-Go to **Members** in the sidebar and click **New member**. The primary member creates the profile; the new member's login credentials are set at this point.
+Go to **Members** in the sidebar and click **New member**. The primary member creates the profile; the new member's login credentials are set at this point. You can also set an optional **date of birth** here (and when editing an existing member). It powers age-based projections — FIRE timelines and [Required Distributions](#required-distributions) — and a future-dated birthday is rejected.
 
 ### Granting account access
 
