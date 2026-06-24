@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { useRouterState } from "@tanstack/react-router"
+import { useRouterState, useNavigate, Link } from "@tanstack/react-router"
 import {
   BarChart,
   Bar,
@@ -13,6 +13,7 @@ import {
 } from "recharts"
 import { subDays, subYears, startOfYear } from "date-fns"
 import { reportsApi } from "@/api/reports"
+import { categoriesApi } from "@/api/categories"
 import { formatCurrency } from "@/lib/formatters"
 import { toIso } from "@/lib/dateRange"
 
@@ -30,6 +31,18 @@ function rangeToDateParams(range: Range): { from: string; to: string } {
   if (range === "1y") return { from: toIso(subDays(today, 365)), to }
   if (range === "all") return { from: toIso(subYears(today, 10)), to }
   return { from: toIso(startOfYear(today)), to }
+}
+
+function useIsMobile() {
+  const [mobile, setMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 768 : false,
+  )
+  useEffect(() => {
+    const handler = () => setMobile(window.innerWidth < 768)
+    window.addEventListener("resize", handler)
+    return () => window.removeEventListener("resize", handler)
+  }, [])
+  return mobile
 }
 
 // ── KPI card ─────────────────────────────────────────────────────────────────
@@ -72,22 +85,26 @@ function KpiCard({
   )
 }
 
-// Category bar (horizontal)
+// Category bar (horizontal) — renders as button when onClick is provided
 function CategoryBar({
   name,
   amount,
   percentage,
   max,
+  color,
+  onClick,
 }: {
   name: string
   amount: string
   percentage: number
   max: number
+  color?: string
+  onClick?: () => void
 }) {
   const barWidth = max > 0 ? (Math.abs(Number(amount)) / max) * 100 : 0
 
-  return (
-    <div style={{ marginBottom: "10px" }}>
+  const inner = (
+    <>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "3px" }}>
         <span style={{ fontSize: "12px", color: "var(--text3)" }}>{name}</span>
         <span style={{ fontSize: "12px", color: "var(--muted)" }}>
@@ -109,13 +126,49 @@ function CategoryBar({
           style={{
             height: "100%",
             width: `${barWidth}%`,
-            background: "var(--liab)",
+            background: color ?? "var(--liab)",
             borderRadius: "2px",
           }}
         />
       </div>
-    </div>
+    </>
   )
+
+  if (onClick) {
+    return (
+      <button
+        onClick={onClick}
+        aria-label={`View ${name} spending detail`}
+        style={{
+          display: "block",
+          width: "100%",
+          marginBottom: "10px",
+          padding: "6px 8px",
+          background: "transparent",
+          border: "none",
+          borderRadius: "6px",
+          cursor: "pointer",
+          textAlign: "left",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = "rgba(255,255,255,0.04)"
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = "transparent"
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.outline = "2px solid var(--accent)"
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.outline = "none"
+        }}
+      >
+        {inner}
+      </button>
+    )
+  }
+
+  return <div style={{ marginBottom: "10px" }}>{inner}</div>
 }
 
 function formatPeriodLabel(period: string): string {
@@ -135,6 +188,8 @@ export default function ReportCashFlow() {
 
   const range = useRange()
   const dateRange = rangeToDateParams(range)
+  const navigate = useNavigate()
+  const isMobile = useIsMobile()
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["reports", "cash-flow", dateRange.from, dateRange.to, groupBy],
@@ -145,6 +200,12 @@ export default function ReportCashFlow() {
     queryKey: ["reports", "spending-by-category", dateRange.from, dateRange.to],
     queryFn: () => reportsApi.spendingByCategory(dateRange.from, dateRange.to),
     staleTime: 30_000,
+  })
+
+  const { data: categories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: categoriesApi.list,
+    staleTime: 5 * 60 * 1000,
   })
 
   const chartData = useMemo(
@@ -163,6 +224,14 @@ export default function ReportCashFlow() {
       spending ? Math.max(0, ...spending.categories.map((c) => Math.abs(Number(c.amount)))) : 0,
     [spending],
   )
+
+  const categoryColorMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const c of categories ?? []) {
+      map.set(c.id, c.color_hex)
+    }
+    return map
+  }, [categories])
 
   const savingsRateStr = data?.totals ? `${data.totals.savings_rate.toFixed(1)}%` : "—"
   const netPositive = data?.totals ? Number(data.totals.net) >= 0 : true
@@ -214,7 +283,7 @@ export default function ReportCashFlow() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
+              gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
               gap: "12px",
               marginBottom: "16px",
             }}
@@ -337,7 +406,7 @@ export default function ReportCashFlow() {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(4, 1fr)",
+                  gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4, 1fr)",
                   gap: "12px",
                 }}
               >
@@ -373,7 +442,13 @@ export default function ReportCashFlow() {
           )}
 
           {/* Bottom row: category breakdown + period table */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1.5fr", gap: "14px" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: isMobile ? "1fr" : "1fr 1.5fr",
+              gap: "14px",
+            }}
+          >
             {/* Spending by category */}
             {spending && spending.categories.length > 0 && (
               <div
@@ -402,8 +477,29 @@ export default function ReportCashFlow() {
                     amount={c.amount}
                     percentage={c.percentage}
                     max={maxSpend}
+                    color={
+                      c.category_id ? (categoryColorMap.get(c.category_id) ?? "#888888") : undefined
+                    }
+                    onClick={
+                      c.category_id
+                        ? () =>
+                            void navigate({
+                              to: "/reports/spending",
+                              search: { category: c.category_id! },
+                            })
+                        : undefined
+                    }
                   />
                 ))}
+                <div style={{ textAlign: "right", marginTop: "8px" }}>
+                  <Link
+                    to="/reports/spending"
+                    search={{ category: undefined }}
+                    style={{ fontSize: "11px", color: "var(--faint)", textDecoration: "none" }}
+                  >
+                    View full breakdown →
+                  </Link>
+                </div>
               </div>
             )}
 
