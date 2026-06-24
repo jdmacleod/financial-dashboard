@@ -35,6 +35,21 @@ ACCOUNT_TYPES = (
     "treasury",
 )
 
+TAX_TREATMENTS = ("pretax", "roth", "taxable")
+
+# Default tax treatment inferred from account_type, kept in sync with migration
+# 0014's backfill. Only unambiguous types are mapped; everything else (including
+# inherited_ira, whose distributions follow separate beneficiary rules) is left
+# unclassified so the user can set it explicitly.
+DEFAULT_TAX_TREATMENT: dict[str, str] = {
+    "retirement_401k": "pretax",
+    "retirement_403b": "pretax",
+    "retirement_ira": "pretax",
+    "retirement_roth_ira": "roth",
+    "investment_brokerage": "taxable",
+    "treasury": "taxable",
+}
+
 
 class Account(Base):
     __tablename__ = "accounts"
@@ -47,6 +62,12 @@ class Account(Base):
         nullable=False,
     )
     nickname: Mapped[str] = mapped_column(String(100), nullable=False)
+    # pretax / roth / taxable, or NULL when not applicable or unclassified.
+    # RMD eligibility keys off 'pretax'. Seeded from account_type (migration 0014).
+    tax_treatment: Mapped[str | None] = mapped_column(
+        Enum(*TAX_TREATMENTS, name="tax_treatment", create_type=False),
+        nullable=True,
+    )
     institution_name_enc: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     account_number_enc: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
     routing_number_enc: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
