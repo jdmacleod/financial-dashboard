@@ -109,3 +109,28 @@ Deferred (NOT in scope):
 | T11 | P2  | tests         | age boundaries; rmd matrix; endpoint pretax-vs-Roth                       |
 | T12 | P2  | observability | structured log in rmd.project                                             |
 | T13 | P3  | design        | /plan-design-review on the timeline                                       |
+
+## Eng-review additions (2026-06-24)
+
+Slicing: **PR0 = DOB-in-UI first** (Members drawer + create form, ~3-4 files, no new
+service — uses the existing PATCH and FIRE's existing DOB consumption), then PR1 schema +
+`age.py`, PR2 RMD, PR3 timeline. Keeps every PR under the complexity smell line.
+
+| ID  | P   | Component   | Title                                                                                 |
+| --- | --- | ----------- | ------------------------------------------------------------------------------------- |
+| E1  | P1  | age-service | `rmd_start_age(dob)` per SECURE 2.0: ≤1950→72, 1951–59→73, ≥1960→75 (not constant 73) |
+| E2  | P1  | rmd-engine  | Year-end balance = latest snapshot within prior calendar year; surface its date       |
+| E3  | P1  | tests       | REGRESSION: update FIRE age assertions + pin month/day-accurate age after extraction  |
+| E4  | P2  | performance | Batch prior-year snapshot reads per pretax account (avoid N+1)                        |
+
+## GSTACK REVIEW REPORT
+
+| Review        | Trigger               | Why                             | Runs | Status | Findings                            |
+| ------------- | --------------------- | ------------------------------- | ---- | ------ | ----------------------------------- |
+| CEO Review    | `/plan-ceo-review`    | Scope & strategy                | 1    | clean  | 8 proposals, 3 accepted, 5 deferred |
+| Eng Review    | `/plan-eng-review`    | Architecture & tests (required) | 1    | clean  | 3 issues folded, 0 critical gaps    |
+| Design Review | `/plan-design-review` | UI/UX gaps                      | 0    | —      | not run (UI scope present)          |
+
+**VERDICT:** CEO + ENG CLEARED — ready to implement, starting with PR0 (DOB-in-UI). Design review optional before the milestone timeline (PR3).
+
+NO UNRESOLVED DECISIONS
