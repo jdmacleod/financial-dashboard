@@ -267,7 +267,7 @@ export default function Transactions() {
           )}
           {isRealEstateAccount && property && (
             <Link
-              to="/properties/$propertyId"
+              to="/real-estate/$propertyId"
               params={{ propertyId: String(property.id) }}
               className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
             >
@@ -428,7 +428,7 @@ export default function Transactions() {
           </p>
           {property && (
             <Link
-              to="/properties/$propertyId"
+              to="/real-estate/$propertyId"
               params={{ propertyId: String(property.id) }}
               className="text-sm font-medium text-blue-700 hover:text-blue-900 whitespace-nowrap ml-4"
             >

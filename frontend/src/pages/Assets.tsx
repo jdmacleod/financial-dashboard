@@ -237,7 +237,7 @@ function PropertyCard({
         >
           {property ? (
             <Link
-              to="/properties/$propertyId"
+              to="/real-estate/$propertyId"
               params={{ propertyId: property.id }}
               style={{ fontSize: "12px", color: "var(--muted)", textDecoration: "none" }}
             >
