@@ -92,6 +92,20 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
+### Include SBLOC/margin in transaction-tracked liability valuation (future-proofing)
+
+**What:** Add `"sbloc"` and `"margin"` to `TXN_TRACKED_LIABILITY_TYPES` in `app/services/report.py`. Today these revolving lines are valued correctly from the running transaction sum only because they fall through the else-branch (no Debt record, no snapshot). If a structured Debt record is ever attached to an SBLOC, it would hit the static-balance path — the exact flat-line bug fixed in v0.19.0.0 for student/auto loans.
+
+**Why:** Pre-landing review (v0.19.0.0) flagged this as latent. Behavior is identical today across all six seed households (verified — no Debt records on sbloc/margin), so it was not fixed in the same PR to avoid a behavior-neutral churn; recording it so the consistency gap isn't lost.
+
+**Pros:** Two-string change. Makes the transaction-tracked intent explicit and immune to a future Debt-record attachment.
+
+**Cons:** None meaningful; purely defensive.
+
+**Depends on:** v0.19.0.0 shipped.
+
+---
+
 ## Completed
 
 ### Investment positions rollup — Top positions + Holdings mix
