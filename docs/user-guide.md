@@ -185,7 +185,7 @@ The dashboard shows budget alerts for categories that have exceeded 90% of their
 
 ## Reports
 
-All reports are under the **Reports** menu in the top navigation.
+Reports live in the left sidebar. Net Worth, Spending, **Savings Rate**, and **Budget Trend** are grouped under a dedicated **Reports** section near the bottom; Cash Flow, Investments, Real Estate, and Retirement sit in the main navigation above it.
 
 ### Net Worth
 
@@ -220,9 +220,17 @@ Figures are cost basis, not market value; HearthLedger tracks no live prices. Se
 
 Shows spending totals per category for a date range. Optionally filter to a single parent category to drill into subcategories.
 
+### Savings Rate
+
+Charts the share of income you keep each month — (income − expenses) ÷ income — over a date range, with a trailing 3-month rolling average that smooths lumpy months. Below the chart it reports your average rate across the whole window and flags your best and leanest months. Transfers are excluded; income is anything in an income category, and expenses are the remaining outflows. Savings rate is the single biggest lever on time to financial independence, so it gets its own view instead of being buried in the Cash Flow numbers.
+
 ### Budget vs Actuals
 
 Shows every category with a budget alongside its actual spending for a given month. Format: `YYYY-MM`, e.g. `2025-01`.
+
+### Budget Trend
+
+Plots total budgeted vs actual spend for each month across a date range, with a variance line (positive means you came in under budget). Totals at the bottom show whether you were over or under budget for the whole window. It complements the per-category Budget vs Actuals view with a whole-household trend.
 
 ### Property P&L
 
@@ -336,7 +344,7 @@ The avalanche strategy will always pay equal or less total interest than snowbal
 
 ## Real Estate
 
-Real estate properties are tracked under **Properties** in the sidebar.
+Real estate properties are tracked under **Real Estate** in the sidebar. (Property detail pages live at `/real-estate/:id`; older `/properties/:id` bookmarks no longer resolve.)
 
 ### Adding a property
 
