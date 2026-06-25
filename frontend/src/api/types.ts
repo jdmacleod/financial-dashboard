@@ -195,7 +195,7 @@ export interface ApiError {
   detail: string | Record<string, unknown>
 }
 
-export type BudgetPeriod = "monthly" | "annual"
+export type BudgetPeriod = "monthly" | "quarterly" | "annual"
 
 export interface SnapshotResponse {
   id: string
@@ -389,7 +389,7 @@ export interface BudgetVsActualsItem {
   actual: string
   remaining: string
   percentage_used: number
-  period: "monthly" | "annual"
+  period: BudgetPeriod
 }
 
 export interface BudgetVsActualsReport {

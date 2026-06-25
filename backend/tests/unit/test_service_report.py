@@ -1071,6 +1071,43 @@ async def test_budget_vs_actuals_annual_proration(
     assert item.name == "HomeInsurance"
 
 
+async def test_budget_vs_actuals_quarterly_proration(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Quarterly budgets are prorated to monthly (÷3) when returned by the report."""
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "Budget Checking Quarterly")
+    cat = await _add_category(db_session, household.id, "WaterBill")
+
+    quarterly_budget = Budget(
+        household_id=household.id,
+        category_id=cat.id,
+        period="quarterly",
+        amount=Decimal("300"),
+        effective_from=date(2025, 1, 1),
+        effective_to=None,
+    )
+    db_session.add(quarterly_budget)
+    await db_session.flush()
+
+    await _add_transaction(db_session, account.id, date(2025, 3, 15), Decimal("-80"), cat.id)
+
+    svc = ReportService(db_session)
+    report = await svc.budget_vs_actuals(ctx, "2025-03")
+
+    assert len(report.categories) == 1
+    item = report.categories[0]
+    # Quarterly $300 prorated to monthly $100
+    assert item.budget == Decimal("100.00")
+    assert item.actual == Decimal("80")
+    assert item.remaining == Decimal("20.00")
+    assert item.period == "quarterly"
+    assert item.name == "WaterBill"
+
+
 async def test_budget_vs_actuals_period_field_propagated(
     db_session: AsyncSession,
     household: Household,

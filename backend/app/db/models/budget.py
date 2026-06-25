@@ -8,7 +8,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
-BUDGET_PERIODS = ("monthly", "annual")
+BUDGET_PERIODS = ("monthly", "quarterly", "annual")
 
 
 class Budget(Base):

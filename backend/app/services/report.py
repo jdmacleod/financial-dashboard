@@ -855,12 +855,13 @@ class ReportService:
         for category_id, budget in chosen.items():
             category = cat_map.get(category_id)
             actual = actuals.get(category_id, Decimal("0"))
-            # Annual budgets are prorated to a monthly amount for comparison
-            monthly_budget = (
-                (budget.amount / Decimal("12")).quantize(Decimal("0.01"))
-                if budget.period == "annual"
-                else budget.amount
-            )
+            # Annual and quarterly budgets are prorated to a monthly amount for comparison.
+            if budget.period == "annual":
+                monthly_budget = (budget.amount / Decimal("12")).quantize(Decimal("0.01"))
+            elif budget.period == "quarterly":
+                monthly_budget = (budget.amount / Decimal("3")).quantize(Decimal("0.01"))
+            else:
+                monthly_budget = budget.amount
             remaining = monthly_budget - actual
             pct = float(actual / monthly_budget * 100) if monthly_budget > 0 else 0.0
             best[category_id] = BudgetVsActualsItem(

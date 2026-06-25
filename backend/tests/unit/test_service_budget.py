@@ -279,6 +279,95 @@ async def test_update_budget_period(
     assert updated.period == "annual"
 
 
+async def test_create_budget_quarterly(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    cat = await _make_category(db_session, household)
+
+    svc = BudgetService(db_session)
+    budget = await svc.create(
+        ctx,
+        BudgetCreate(
+            category_id=cat.id,
+            period="quarterly",
+            amount=Decimal("900.00"),
+            effective_from=date(2025, 1, 1),
+        ),
+    )
+    assert budget.period == "quarterly"
+
+
+async def test_create_budget_duplicate_effective_from_conflict(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A second budget for the same category and start date is rejected with 409."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    cat = await _make_category(db_session, household)
+
+    svc = BudgetService(db_session)
+    await svc.create(
+        ctx,
+        BudgetCreate(
+            category_id=cat.id,
+            amount=Decimal("100.00"),
+            effective_from=date(2025, 1, 1),
+        ),
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.create(
+            ctx,
+            BudgetCreate(
+                category_id=cat.id,
+                amount=Decimal("200.00"),
+                effective_from=date(2025, 1, 1),
+            ),
+        )
+    assert exc_info.value.status_code == 409
+
+
+async def test_update_budget_to_conflicting_effective_from(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Moving a budget's start date onto another budget's start date is rejected."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    cat = await _make_category(db_session, household)
+
+    svc = BudgetService(db_session)
+    await svc.create(
+        ctx,
+        BudgetCreate(
+            category_id=cat.id,
+            amount=Decimal("100.00"),
+            effective_from=date(2025, 1, 1),
+        ),
+    )
+    second = await svc.create(
+        ctx,
+        BudgetCreate(
+            category_id=cat.id,
+            amount=Decimal("150.00"),
+            effective_from=date(2025, 6, 1),
+        ),
+    )
+    with pytest.raises(HTTPException) as exc_info:
+        await svc.update(ctx, second.id, BudgetUpdate(effective_from=date(2025, 1, 1)))
+    assert exc_info.value.status_code == 409
+
+    # Updating other fields without moving the start date is unaffected.
+    updated = await svc.update(ctx, second.id, BudgetUpdate(amount=Decimal("175.00")))
+    assert updated.amount == Decimal("175.00")
+
+
 async def test_update_budget_effective_to_cleared(
     db_session: AsyncSession,
     household: Household,

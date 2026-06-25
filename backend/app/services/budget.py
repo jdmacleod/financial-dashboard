@@ -38,6 +38,14 @@ class BudgetService:
     async def create(self, ctx: VisibilityContext, data: BudgetCreate) -> Budget:
         if not ctx.can_write:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+        conflict = await self.budget_repo.get_by_natural_key(
+            ctx.household_id, data.category_id, data.effective_from
+        )
+        if conflict is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="A budget for this category and start date already exists.",
+            )
         budget = Budget(
             household_id=ctx.household_id,
             category_id=data.category_id,
@@ -58,6 +66,15 @@ class BudgetService:
         if not ctx.can_write:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         budget = await self._get_or_404(ctx, budget_id)
+        if data.effective_from is not None and data.effective_from != budget.effective_from:
+            conflict = await self.budget_repo.get_by_natural_key(
+                ctx.household_id, budget.category_id, data.effective_from
+            )
+            if conflict is not None and conflict.id != budget.id:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="A budget for this category and start date already exists.",
+                )
         self._prev_snapshot = _snapshot(budget)
 
         if data.period is not None:

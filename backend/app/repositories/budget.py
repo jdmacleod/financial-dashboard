@@ -30,6 +30,19 @@ class BudgetRepository:
         result = await self.session.execute(q)
         return list(result.scalars().all())
 
+    async def get_by_natural_key(
+        self, household_id: uuid.UUID, category_id: uuid.UUID, effective_from: date
+    ) -> Budget | None:
+        """Return the budget matching the unique (household, category, start date)."""
+        result = await self.session.execute(
+            select(Budget).where(
+                Budget.household_id == household_id,
+                Budget.category_id == category_id,
+                Budget.effective_from == effective_from,
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def get_by_id(self, household_id: uuid.UUID, budget_id: uuid.UUID) -> Budget | None:
         result = await self.session.execute(
             select(Budget).where(Budget.id == budget_id, Budget.household_id == household_id)

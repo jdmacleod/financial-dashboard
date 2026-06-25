@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-BudgetPeriod = Literal["monthly", "annual"]
+BudgetPeriod = Literal["monthly", "quarterly", "annual"]
 
 
 class PensionAnnotation(BaseModel):

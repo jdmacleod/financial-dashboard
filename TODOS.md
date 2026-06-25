@@ -14,43 +14,15 @@
 
 ---
 
-### Sort/filter state persistence — Budgets tab (Deferred from v0.17.0.0)
+### Custom date mode for the Spending Report (follow-on from cash-flow-categories plan)
 
-**What:** After the Budgets tab sort/filter controls ship, optionally persist the user's chosen sort keys (for Budget vs Actuals and All Budgets) to `localStorage`. Currently session-only React state that resets on navigation.
+**What:** Add a "Custom" date mode to the Spending Report so Cash Flow → Spending drill-down can carry an explicit `from`/`to` range. Today the Cash Flow bars pass only `?category=<id>` (D2-eng) because Cash Flow's YTD/1Y/All presets don't map cleanly onto Spending's this_month/3m/6m/12m presets, so the drilled report opens at its own default range.
 
-**Why:** A household that always reviews budgets in "Name A-Z" order has to re-apply the sort every visit. A power user with 20+ categories finds alphabetical scanning essential and would benefit from the preference being remembered. Raised during the sort/filter design review.
+**Why:** Recorded as a committed follow-on in `docs/design/cash-flow-categories-unified-plan.md` (D2-eng — "A follow-on task (TODOS.md) will add a 'Custom' date mode") but never actually tracked here until now. Closing the loop so the drill-down lands on the matching date range, not just the matching category.
 
-**Pros:** ~15 lines of `useEffect` code. No schema or backend changes. Purely additive.
+**Cons:** Touches the Spending Report's preset model + `validateSearch` (new `from`/`to` params) and the Cash Flow navigation call sites. Small-to-medium.
 
-**Cons:** localStorage has no cross-device sync. If the sort option keys ever change, stored values become stale (would need versioning or fallback). Adds a `useEffect` dependency to the component.
-
-**Context:** Session-only state was the v0.17.0.0 choice because it covers the common case with zero overhead. Persistence is a progressive enhancement for power users.
-
-**Depends on:** Budgets sort/filter feature shipped (v0.17.0.0).
-
----
-
-### Quarterly budget period — Budgets tab (Deferred from v0.16.0.0)
-
-**What:** Add `"quarterly"` as a valid budget period alongside `"monthly"` and `"annual"`. The Budgets tab would show a `÷3` monthly proration badge and the backend would divide by 3 in the budget-vs-actuals report.
-
-**Why:** The original devex review request mentioned "quarterly or yearly items." Only annual was implemented because it covers the most common case (annual subscriptions, insurance, property tax).
-
-**Cons:** Adds a third enum value that must be threaded through schema, service, DB migration, and UI radio buttons. Modest scope but requires an Alembic migration to update the `budgetperiod` Postgres enum.
-
-**Depends on:** v0.16.0.0 shipped.
-
----
-
-### Unique constraint on (household_id, category_id, effective_from) in budgets table
-
-**What:** Add a DB-level unique constraint to prevent two budgets for the same category and start date. Currently prevented only by application logic; a race condition could create duplicates.
-
-**Why:** Adversarial review (v0.16.0.0) identified that `list_active_for_period` returns all matching budgets and the service discards duplicates with last-wins dict behavior. A uniqueness constraint enforces the intent at the DB layer.
-
-**Cons:** Requires an Alembic migration. May need a data cleanup pass if any households have existing duplicates.
-
-**Depends on:** v0.16.0.0 shipped.
+**Depends on:** Cash-flow-categories plan (shipped, PRs #38/#39).
 
 ---
 
@@ -153,6 +125,38 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### Quarterly budget period — Budgets tab
+
+**Completed:** 2026-06-25 (branch `feat/budgets-quarterly-persistence-constraint`) —
+Added `"quarterly"` to the `budget_period` enum (migration `0016`, `ALTER TYPE ...
+ADD VALUE`), threaded it through the model, Pydantic schemas (`BudgetPeriod` in
+`schemas/budget.py` and `schemas/report.py`), and the budget-vs-actuals report,
+which now prorates quarterly budgets to monthly (÷3) alongside the existing annual
+(÷12). The Budgets UI gained a quarterly radio, a "Quarterly amount" label, a "÷3
+per month" proration note, a `/qtr` row suffix with monthly-equivalent hint, and a
+`quarterly÷3` actuals badge. Unit test asserts the ÷3 report proration.
+
+### Sort/filter state persistence — Budgets tab
+
+**Completed:** 2026-06-25 (branch `feat/budgets-quarterly-persistence-constraint`) —
+The Budget vs Actuals and All Budgets sort selections now persist to `localStorage`
+(`hl.budgets.actualsSort` / `hl.budgets.budgetsSort`). Stored values are validated
+against the allowed sort set on read, so a renamed/removed option falls back to the
+default rather than sticking (addresses the "stale stored values" caveat). Writes
+are wrapped so private-mode/SSR localStorage failures degrade gracefully. Vitest
+covers persist-on-change, restore-on-mount, and invalid-value fallback.
+
+### Unique constraint on (household_id, category_id, effective_from) in budgets
+
+**Completed:** 2026-06-25 (branch `feat/budgets-quarterly-persistence-constraint`) —
+Migration `0017` adds the unique constraint
+(`uq_budgets_household_category_effective_from`) after a defensive dedup pass that
+keeps the newest row per natural key (behavior-preserving, since the report already
+treats later rows as authoritative). `BudgetService.create`/`update` now pre-check
+the natural key and raise 409 on conflict, so duplicates surface as a clean error
+instead of a raw IntegrityError 500. Unit tests cover create-conflict and
+update-into-conflict.
 
 ### Batch prior-year snapshot reads in the RMD engine (Identity layer E4)
 
