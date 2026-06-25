@@ -107,6 +107,7 @@ CREATE TABLE accounts (
     owner_member_id        UUID REFERENCES household_members(id) ON DELETE SET NULL,
     -- NULL owner_member_id = joint account
     account_type           account_type NOT NULL,
+    tax_treatment          tax_treatment,  -- pretax / roth / taxable; NULL = n/a. Drives RMD eligibility.
     nickname               VARCHAR(100) NOT NULL,
     institution_name_enc   BYTEA,        -- AES-256-GCM encrypted
     account_number_enc     BYTEA,        -- AES-256-GCM encrypted

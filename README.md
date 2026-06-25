@@ -17,7 +17,7 @@ Self-hosted household financial tracking. Runs entirely on your own machine: no 
 - **Assets**: real estate (valuations), pensions (present-value estimate), and investment/retirement accounts (balance snapshots) on a dedicated page
 - **Transactions**: manual entry, edit, and delete; CSV and OFX/QFX import; bulk categorize; duplicate detection
 - **Budgets**: monthly limits per category with dashboard alerts
-- **Reports**: net worth (with pension present-value annotations), cash flow (with a Social Security / pension / RMD retirement-income breakdown), investments (top positions + holdings mix by asset class), spending by category, savings rate (monthly rate with a 3-month rolling average), budget vs actuals, budget trend (budgeted vs actual over time), property P&L
+- **Reports**: net worth (with pension present-value annotations), cash flow (with a Social Security / pension / RMD retirement-income breakdown), investments (top positions + holdings mix by asset class), spending by category, savings rate (monthly rate with a 3-month rolling average), budget vs actuals, budget trend (budgeted vs actual over time), required minimum distributions (SECURE 2.0 RMDs from pretax retirement balances), property P&L
 - **FIRE planning**: retirement projections with multiple income streams and scenario modeling; auto-detects vested pension income
 - **Debt payoff**: avalanche/snowball comparison with extra payment modeling
 - **Real estate**: property type selection (primary, rental, vacation, commercial, land); manual or API-driven valuations (ATTOM, Estated)

@@ -3,6 +3,18 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.21.0.0] - 2026-06-24
+
+### Added
+
+- **Required Minimum Distributions report.** A new report (`/reports/required-distributions`) shows each household member the amount the IRS requires them to withdraw from pretax retirement accounts once they reach RMD age. Each card shows the dollar amount due this year, the prior year-end pretax balance it's based on (with its snapshot date), and the IRS Uniform Lifetime divisor used. The start age follows SECURE 2.0 — 73 for those born 1951–1959, 75 for 1960 or later — so projections are correct for working-age savers, not just current retirees. Members who haven't reached RMD age, have no birthdate, or lack a year-end balance get a note explaining exactly what to add.
+- **Date of birth is editable in the app.** You can now set a member's date of birth from the Members edit drawer and the Add-person form. It powers age-based projections (FIRE timelines and RMDs); a future-dated birthday is rejected. The field already existed in the data model but had no way to set it through the UI.
+- **Account tax treatment.** Retirement and investment accounts carry a `tax_treatment` of `pretax`, `roth`, or `taxable`, seeded from the account type (traditional 401(k)/403(b)/IRA → pretax, Roth IRA → roth, brokerage/treasury → taxable). Only pretax balances are subject to RMDs.
+
+### Changed
+
+- **FIRE projections use month/day-accurate ages.** Age math moved into one shared service, so a member's age in FIRE projections (and the age FIRE is reached) now accounts for birth month and day instead of just the birth year.
+
 ## [0.20.1.0] - 2026-06-24
 
 ### Fixed
