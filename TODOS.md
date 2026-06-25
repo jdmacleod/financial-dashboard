@@ -156,7 +156,7 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ### Batch prior-year snapshot reads in the RMD engine (Identity layer E4)
 
-**Completed:** v0.23.1.0 (2026-06-24) — Replaced the per-account snapshot
+**Completed:** v0.23.3.0 (2026-06-25) — Replaced the per-account snapshot
 lookup in `RmdService` with a single keyed `DISTINCT ON (account_id)` query
 (`_batch_prior_year_snapshots`) across every pretax account in the report, then
 a pure in-memory sum (`_sum_prior_year_balances`) per member — mirroring the
@@ -166,7 +166,7 @@ per-account loop, including multi-account and multi-member cases.
 
 ### Structured logging in the RMD engine (Identity layer T12)
 
-**Completed:** v0.23.1.0 (2026-06-24) — `RmdService` now emits an info log per
+**Completed:** v0.23.3.0 (2026-06-25) — `RmdService` now emits an info log per
 member: the computed line (member, attained age, pretax base, snapshot date,
 divisor, RMD) plus the three "$0" reasons (no date of birth, below start age, no
 prior-year balance), so a "why is my RMD $0" question is reconstructable from
