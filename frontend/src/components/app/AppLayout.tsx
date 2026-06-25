@@ -845,6 +845,11 @@ export function AppLayout() {
                     <DropdownLink to="/members" onClick={() => setUserMenuOpen(false)}>
                       Members & roles
                     </DropdownLink>
+                    {isPrimary && (
+                      <DropdownLink to="/settings/household" onClick={() => setUserMenuOpen(false)}>
+                        Household & tax
+                      </DropdownLink>
+                    )}
                     <DropdownLink to="/categories" onClick={() => setUserMenuOpen(false)}>
                       Categories
                     </DropdownLink>

@@ -5,6 +5,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.tax import FederalTaxEstimate
+
 BudgetPeriod = Literal["monthly", "quarterly", "annual"]
 
 
@@ -70,6 +72,10 @@ class RetirementIncomeBreakdown(BaseModel):
     rmd: Decimal
     total: Decimal
     has_data: bool
+    # Federal income-tax estimate over this retirement income (pension + RMD as
+    # ordinary income, plus the taxable portion of Social Security). None when the
+    # household hasn't set a filing status or draws no retirement income.
+    federal_tax_estimate: FederalTaxEstimate | None = None
 
 
 class CashFlowReport(BaseModel):

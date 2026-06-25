@@ -14,6 +14,7 @@ from app.core.visibility import VisibilityContext
 from app.db.models.account import Account
 from app.db.models.category import Category
 from app.db.models.debt import Debt
+from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
 from app.db.models.pension import PensionAccount, PensionEstimateHistory
 from app.db.models.snapshot import AccountSnapshot
@@ -53,7 +54,9 @@ from app.schemas.report import (
     SpendingByCategoryReport,
     SpendingCategoryItem,
 )
+from app.schemas.tax import FederalTaxEstimate
 from app.services.pension_valuation import pension_present_value, pension_value_at
+from app.services.tax import estimate_federal_tax, resolve_tax_year
 
 Interval = Literal["monthly", "quarterly", "annual"]
 
@@ -600,14 +603,43 @@ class ReportService:
             savings_rate=total_savings_rate,
         )
         retirement_total = sum(retirement.values(), Decimal("0"))
+        tax_estimate = await self._retirement_tax_estimate(ctx, retirement, to_date)
         retirement_income = RetirementIncomeBreakdown(
             social_security=retirement["social_security"],
             pension=retirement["pension"],
             rmd=retirement["rmd"],
             total=retirement_total,
             has_data=retirement_total > 0,
+            federal_tax_estimate=tax_estimate,
         )
         return CashFlowReport(series=series, totals=totals, retirement_income=retirement_income)
+
+    async def _retirement_tax_estimate(
+        self,
+        ctx: VisibilityContext,
+        retirement: dict[str, Decimal],
+        to_date: date,
+    ) -> FederalTaxEstimate | None:
+        """Federal tax estimate over the period's retirement income.
+
+        Pension + RMD are ordinary income; Social Security is taxed via its
+        provisional-income rules. Returns None unless the household has a filing
+        status set and actually drew retirement income. The estimate treats this
+        retirement income as the household's taxable income — other income sources
+        aren't folded in yet, so it understates tax for households with wages or
+        large taxable investment income."""
+        total = sum(retirement.values(), Decimal("0"))
+        if total <= 0:
+            return None
+        household = await self.session.get(Household, ctx.household_id)
+        if household is None or household.filing_status is None:
+            return None
+        return estimate_federal_tax(
+            tax_year=resolve_tax_year(to_date.year),
+            filing_status=household.filing_status,
+            ordinary_income=retirement["pension"] + retirement["rmd"],
+            social_security=retirement["social_security"],
+        )
 
     # --- Savings rate ----------------------------------------------------
 

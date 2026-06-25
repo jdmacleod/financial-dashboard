@@ -23,11 +23,26 @@ export interface TemporaryPasswordResponse {
   temporary_password: string
 }
 
+export type FilingStatus =
+  | "single"
+  | "married_filing_jointly"
+  | "married_filing_separately"
+  | "head_of_household"
+  | "qualifying_surviving_spouse"
+
 export interface HouseholdResponse {
   id: string
   name: string
   settings: Record<string, unknown>
+  filing_status: FilingStatus | null
+  state: string | null
   created_at: string
+}
+
+export interface HouseholdUpdate {
+  name?: string
+  filing_status?: FilingStatus | null
+  state?: string | null
 }
 
 export interface MemberResponse {
@@ -354,12 +369,27 @@ export interface CashFlowPeriod {
   savings_rate: number
 }
 
+export interface FederalTaxEstimate {
+  tax_year: number
+  filing_status: FilingStatus
+  ordinary_income: string
+  social_security_gross: string
+  taxable_social_security: string
+  standard_deduction: string
+  taxable_income: string
+  federal_tax: string
+  after_tax_income: string
+  effective_rate: number
+  marginal_rate: number
+}
+
 export interface RetirementIncomeBreakdown {
   social_security: string
   pension: string
   rmd: string
   total: string
   has_data: boolean
+  federal_tax_estimate: FederalTaxEstimate | null
 }
 
 export interface CashFlowReport {

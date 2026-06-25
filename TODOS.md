@@ -76,30 +76,6 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Filing status attribute (Identity layer — deferred scope)
-
-**What:** Store household/member filing status (single / MFJ / HoH).
-
-**Why:** Cheap to store, but only pays off once a tax-estimate engine consumes it (brackets, standard deduction, SS provisional-income taxation).
-
-**Cons:** Mild YAGNI until the tax engine is scheduled; best shipped with its consumer.
-
-**Depends on:** Tax-estimate engine (below).
-
----
-
-### State of residence attribute (Identity layer — deferred scope)
-
-**What:** Store the household's state of residence for future state-tax modeling.
-
-**Why:** Needed for any state-level tax estimate; HearthLedger is federal/USD-focused today.
-
-**Cons:** Placeholder until state-tax logic exists; not scheduled.
-
-**Depends on:** State-tax modeling (not scheduled).
-
----
-
 ### Roth-conversion modeling (Identity layer — deferred scope)
 
 **What:** Project converting pretax balances to Roth in low-income years to shrink future RMDs, showing the RMD/tax tradeoff over time.
@@ -108,23 +84,52 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 **Cons:** Substantial (L); depends on a tax estimate. Med risk.
 
-**Depends on:** `account.tax_treatment` (shipped v0.21.0.0) + tax-estimate engine.
+**Depends on:** `account.tax_treatment` (shipped v0.21.0.0) + tax-estimate engine (federal core shipped 2026-06-25; full-income basis still pending — see remaining-scope item).
 
 ---
 
-### Federal/state tax-estimate engine (Identity layer — deferred scope)
+### Tax-estimate engine — remaining scope (state tax, full-income basis)
 
-**What:** Estimate federal (and optionally state) tax: brackets, standard deduction, Social Security provisional-income taxation, applied to RMD/SS/withdrawal figures so they can be shown after-tax.
+**What:** Extend the federal tax-estimate engine (shipped 2026-06-25, see Completed) with: (1) state income tax keyed off `households.state`; (2) a full-household-income basis (wages, taxable interest/dividends, capital gains) instead of the retirement-income-only basis; (3) preferential long-term capital-gains / qualified-dividend rates, and optionally AMT / NIIT.
 
-**Why:** Turns gross retirement numbers into spendable ones and unblocks filing status, state, and Roth-conversion modeling.
+**Why:** The federal core is in and surfaced on the Cash Flow retirement panel, but it taxes only retirement income (RMD + pension + taxable SS) and ignores state tax, so it understates total liability for households with wages or large taxable investment income.
 
-**Cons:** XL, with ongoing annual table maintenance and real correctness risk. Its own multi-PR program.
+**Cons:** State brackets for 50 states are a large annual-maintenance surface; the full-income basis needs an income-aggregation layer. Multi-PR.
 
-**Depends on:** Filing status + state of residence attributes.
+**Depends on:** Federal tax engine + `households.state` (both shipped 2026-06-25).
 
 ---
 
 ## Completed
+
+### Federal tax-estimate engine — first slice (Identity layer)
+
+**Completed:** 2026-06-25 (branch `feat/identity-filing-status-state`) — Federal
+income-tax estimate: ordinary-income brackets + standard deduction + §86 Social
+Security provisional-income taxation, year-keyed for 2025 + 2026. Constants verified
+against IRS Rev. Proc. / OBBBA via `/browse` and isolated in
+`app/services/tax_tables.py` (cite + update annually). Pure functions in
+`app/services/tax.py` return a `FederalTaxEstimate`. Surfaced on the Cash Flow
+report's retirement-income panel (est. federal tax + after-tax + marginal rate) when
+the household has a filing status, using pension + RMD as ordinary income and the SS
+bucket. Deferred to the remaining-scope item: state tax, full-household-income basis
+(currently retirement-income only), preferential cap-gains / qualified-dividend
+rates, AMT / NIIT. Tests: 12 engine unit (hand-computed bracket math + SS tiers) + 2
+report + 1 frontend.
+
+### Filing status + state of residence attributes (Identity layer — foundational)
+
+**Completed:** 2026-06-25 (branch `feat/identity-filing-status-state`, stacked on
+the Budgets branch) — Added two nullable household-level identity columns
+(migration `0018`): `filing_status` (PG enum: single / MFJ / MFS / HoH / QSS) and
+`state` (two-letter US/DC code, app-validated and uppercased). Exposed on
+`HouseholdResponse`/`HouseholdUpdate` (PATCH `/household`, primary-only, uses
+`model_fields_set` so explicit nulls clear them) and a new **Household & tax**
+settings page (`/settings/household`) with a primary-only edit form + read-only
+view for other members. Landed ahead of their consumer per the chosen sequencing
+(foundational attrs first); no report reads them yet — the federal/state
+tax-estimate engine is the next item. Tests: 6 backend integration (set/clear/
+validate/primary-only/partial-update) + 5 frontend.
 
 ### Quarterly budget period — Budgets tab
 
