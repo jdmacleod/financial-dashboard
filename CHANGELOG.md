@@ -3,6 +3,12 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.0.0] - 2026-06-24
+
+### Added
+
+- **Target retirement age.** Each member can record the age they plan to retire, from their own profile or (for a primary) the Members editor. When set, it adds a "Target retirement" marker to that member's [Retirement Milestones](#) timeline, placed by birth date alongside the 59½, Social Security, Medicare, and RMD events. Leave it blank to remove the marker. Valid ages are 18–100. This is separate from a FIRE scenario's own target retirement age.
+
 ## [0.22.0.0] - 2026-06-24
 
 ### Added
