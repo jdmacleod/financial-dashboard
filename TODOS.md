@@ -104,30 +104,6 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Account tax-treatment override UI (Identity layer — deferred from v0.21.0.0)
-
-**What:** A select in the account create/edit form to set `tax_treatment` (pretax / roth / taxable), overriding the account-type-based seed from migration 0014.
-
-**Why:** RMD eligibility keys off `tax_treatment`. The column is seeded automatically, but accounts whose treatment isn't implied by type (a generic "IRA", after-tax 401k balances, a rollover) can't be corrected today, so their RMD may be wrong.
-
-**Cons:** Small frontend form change plus exposing the field on the account schema/API.
-
-**Depends on:** `account.tax_treatment` (shipped v0.21.0.0).
-
----
-
-### Self-service profile page + self-or-primary DOB authz (Identity layer — deferred from v0.21.0.0)
-
-**What:** A "Your profile" page under the user dropdown, and a self-or-primary authorization rule so a member can edit their own date of birth (primary can edit anyone; role changes stay primary-only).
-
-**Why:** This is the one place the implementation diverged from an approved CEO-review decision (Decision 3: self-or-primary). DOB editing currently lives in the Members admin drawer and is primary-only, so a partner can't fix their own birthdate without the primary.
-
-**Cons:** New page + a self-or-primary check in `MemberService.update`; small but security-relevant (it widens who can mutate a member).
-
-**Depends on:** DOB editing UI (shipped v0.21.0.0).
-
----
-
 ### Wire RMD into FIRE projections (Identity layer T9 — in progress)
 
 **What:** Feed each member's computed required minimum distribution into the FIRE projection as post-retirement supplemental income, so projections reflect forced withdrawals.
@@ -237,6 +213,24 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### Self-service profile page + self-or-primary DOB authz (Identity layer T8)
+
+**Completed:** v0.22.0.0 (2026-06-24) — Added a "Your profile" page
+(`/profile`, under the user dropdown) where any member edits their own display
+name and date of birth. `MemberService.update` now allows self-or-primary edits
+(CEO-review Decision 3); role and `is_active` mutations stay primary-only, so a
+member can't self-promote or self-deactivate. Closes the one spot the identity
+layer had diverged from an approved decision.
+
+### Account tax-treatment override UI (Identity layer T6)
+
+**Completed:** v0.22.0.0 (2026-06-24) — Exposed `tax_treatment` on the account
+create/update/response schemas and added a "Tax treatment" select to the Edit
+account dialog (pre-tax / roth / taxable / unset). `create` seeds the value from
+the account type (mirrors migration 0014); `update` can correct or clear it via
+`model_fields_set`. Accounts whose treatment isn't implied by type (generic IRA,
+after-tax 401k, rollover) can now be corrected so their RMD is right.
 
 ### Include SBLOC/margin in transaction-tracked liability valuation
 
