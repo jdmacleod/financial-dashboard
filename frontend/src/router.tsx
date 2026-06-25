@@ -37,6 +37,7 @@ import SettingsBackups from "@/pages/SettingsBackups"
 import SettingsImports from "@/pages/SettingsImports"
 import SettingsDashboard from "@/pages/SettingsDashboard"
 import SettingsAppearance from "@/pages/SettingsAppearance"
+import SettingsHousehold from "@/pages/SettingsHousehold"
 import Assets from "@/pages/Assets"
 import Investments from "@/pages/Investments"
 import Retirement from "@/pages/Retirement"
@@ -248,6 +249,12 @@ const settingsAppearanceRoute = createRoute({
   component: SettingsAppearance,
 })
 
+const settingsHouseholdRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/settings/household",
+  component: SettingsHousehold,
+})
+
 const assetsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/real-estate",
@@ -314,6 +321,7 @@ const routeTree = rootRoute.addChildren([
     settingsImportsRoute,
     settingsDashboardRoute,
     settingsAppearanceRoute,
+    settingsHouseholdRoute,
     assetsRoute,
     reportsInvestmentsRoute,
     reportsRetirementRoute,

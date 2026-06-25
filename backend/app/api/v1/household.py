@@ -44,6 +44,12 @@ async def update_household(
         household.name = data.name
     if data.settings is not None:
         household.settings = data.settings
+    # filing_status and state are nullable identity fields; use model_fields_set so
+    # an explicit null in the payload clears them rather than being ignored.
+    if "filing_status" in data.model_fields_set:
+        household.filing_status = data.filing_status
+    if "state" in data.model_fields_set:
+        household.state = data.state
     await session.commit()
     await session.refresh(household)
     return household
