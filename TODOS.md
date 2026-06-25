@@ -64,18 +64,6 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Social Security claiming-age — feed into FIRE supplemental income (Identity layer)
-
-**What:** The benefit-adjustment engine + Profile claiming-age calculator shipped 2026-06-25 (see Completed). Remaining: persist a member's FRA benefit estimate (PIA) + chosen claiming age, and auto-seed a FIRE `social_security` income stream from the adjusted benefit at the claiming age (today the FIRE SS stream is a manual amount/start-year entry).
-
-**Why:** Closes the loop so the claiming-age decision flows into FIRE projections instead of being a standalone calculator.
-
-**Cons:** Needs a member PIA/claiming-age field (migration) + FIRE income-stream seeding logic. Small-to-medium.
-
-**Depends on:** Claiming-age engine (shipped) + FIRE income streams (`IncomeStream`, exists).
-
----
-
 ### Roth-conversion modeling — multi-year projection (Identity layer)
 
 **What:** The single-year bracket-headroom primitive shipped 2026-06-25 (see Completed). Remaining: project conversions across multiple years in the FIRE drawdown, showing how filling low-income-year brackets now shrinks future RMDs and lifetime tax — the RMD/tax tradeoff over time.
@@ -101,6 +89,20 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### Social Security claiming plan feeds FIRE projections (Identity layer)
+
+**Completed:** 2026-06-25 (branch `feat/ss-fire-integration`) — Closes the loop
+from the claiming-age engine into FIRE. Added `household_members.ss_monthly_benefit_at_fra`
+(PIA) + `ss_claiming_age` (migration 0019), exposed on the member create/update/
+response schemas (validated: benefit ≥ 0, age 62-70, clearable via
+`model_fields_set`). The Profile "Social Security claiming" section now persists
+both and highlights the chosen age in the table. `FireScenarioService.project()`
+derives a `social_security` income stream from the target member's saved plan
+(PIA adjusted for claiming age, starting the year they reach it) and supersedes
+any manual SS stream so it's never double-counted. Tests: 2 FIRE-projection unit
+(stream appears at the claiming year; manual stream superseded) + member-field
+coverage + 1 frontend (save).
 
 ### Social Security claiming-age benefit adjustment (Identity layer)
 

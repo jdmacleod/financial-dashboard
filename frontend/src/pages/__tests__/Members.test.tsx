@@ -46,6 +46,8 @@ const partnerMember: MemberResponse = {
   role: "partner",
   date_of_birth: null,
   retirement_target_age: null,
+  ss_monthly_benefit_at_fra: null,
+  ss_claiming_age: null,
   is_active: true,
   settings: {},
   created_at: "2025-01-01T00:00:00Z",
