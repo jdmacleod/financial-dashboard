@@ -20,6 +20,7 @@ The Uniform Lifetime Table below is the IRS table effective for 2022+ RMDs.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from collections import defaultdict
 from datetime import date
@@ -35,6 +36,8 @@ from app.db.models.snapshot import AccountSnapshot
 from app.repositories.account import AccountRepository
 from app.schemas.report import MemberRequiredDistribution, RequiredDistributionsReport
 from app.services.age import age_in_year, current_age, rmd_start_age, year_turning_age
+
+logger = logging.getLogger(__name__)
 
 # IRS Uniform Lifetime Table (effective 2022+). Distribution period by the age
 # the account owner attains during the distribution year. Ages 120+ share the
@@ -128,18 +131,27 @@ class RmdService:
             if account.tax_treatment == "pretax" and account.owner_member_id is not None:
                 pretax_by_owner[account.owner_member_id].append(account)
 
+        # Prior-year-end balances for every pretax account in one query (E4):
+        # one keyed DISTINCT ON read instead of a per-account snapshot lookup.
+        pretax_ids = [a.id for owned in pretax_by_owner.values() for a in owned]
+        snapshots = await self._batch_prior_year_snapshots(pretax_ids, year - 1)
+
         members = await self._active_members(ctx)
         rows: list[MemberRequiredDistribution] = []
         for member in members:
             owned = pretax_by_owner.get(member.id)
             if not owned:
                 continue  # not RMD-relevant — no pretax retirement accounts
-            rows.append(await self._member_rmd(member, owned, year))
+            rows.append(self._member_rmd(member, owned, year, snapshots))
 
         return RequiredDistributionsReport(year=year, members=rows)
 
-    async def _member_rmd(
-        self, member: HouseholdMember, pretax_accounts: list[Account], year: int
+    def _member_rmd(
+        self,
+        member: HouseholdMember,
+        pretax_accounts: list[Account],
+        year: int,
+        snapshots: dict[uuid.UUID, tuple[Decimal, date]],
     ) -> MemberRequiredDistribution:
         dob = member.date_of_birth
         start_age = rmd_start_age(dob)
@@ -162,19 +174,42 @@ class RmdService:
 
         if dob is None or start_age is None:
             base.note = "Add a date of birth to see required distributions."
+            logger.info(
+                "RMD %s member=%s: $0 — no date of birth (pretax_accounts=%d)",
+                year,
+                member.id,
+                len(pretax_accounts),
+            )
             return base
 
         attained_age = age_in_year(dob, year)
         assert attained_age is not None  # dob is not None here
         if attained_age < start_age:
             base.note = f"RMDs begin in {start_year} (age {start_age})."
+            logger.info(
+                "RMD %s member=%s: $0 — age %d below start age %d (begins %s)",
+                year,
+                member.id,
+                attained_age,
+                start_age,
+                start_year,
+            )
             return base
 
         base.has_started = True
         prior_year = year - 1
-        total, as_of = await self._prior_year_end_pretax_balance(pretax_accounts, prior_year)
+        total, as_of = _sum_prior_year_balances(pretax_accounts, snapshots)
         if as_of is None:
             base.note = f"Add a {prior_year} year-end balance to compute the RMD."
+            logger.info(
+                "RMD %s member=%s: $0 — attained age %d but no %d year-end balance "
+                "across %d pretax account(s)",
+                year,
+                member.id,
+                attained_age,
+                prior_year,
+                len(pretax_accounts),
+            )
             return base
 
         divisor = uniform_lifetime_divisor(attained_age)
@@ -183,6 +218,16 @@ class RmdService:
         base.balance_as_of = as_of
         base.divisor = divisor
         base.rmd_amount = compute_rmd(total, divisor)
+        logger.info(
+            "RMD %s member=%s: attained age %d, pretax base %s as of %s, divisor %s -> %s",
+            year,
+            member.id,
+            attained_age,
+            total,
+            as_of,
+            divisor,
+            base.rmd_amount,
+        )
         return base
 
     async def _active_members(self, ctx: VisibilityContext) -> list[HouseholdMember]:
@@ -194,28 +239,47 @@ class RmdService:
         )
         return list(result.scalars().all())
 
-    async def _prior_year_end_pretax_balance(
-        self, accounts: list[Account], prior_year: int
-    ) -> tuple[Decimal, date | None]:
-        """Sum each account's latest snapshot within ``prior_year``. Returns the
-        running total and the most recent snapshot date used (None when not a
-        single account has a prior-year snapshot)."""
-        total = Decimal("0")
-        latest: date | None = None
-        for account in accounts:
-            row = (
-                await self.session.execute(
-                    select(AccountSnapshot.balance, AccountSnapshot.snapshot_date)
-                    .where(
-                        AccountSnapshot.account_id == account.id,
-                        AccountSnapshot.snapshot_date >= date(prior_year, 1, 1),
-                        AccountSnapshot.snapshot_date <= date(prior_year, 12, 31),
-                    )
-                    .order_by(AccountSnapshot.snapshot_date.desc())
-                    .limit(1)
-                )
-            ).first()
-            if row is not None:
-                total += row[0]
-                latest = row[1] if latest is None else max(latest, row[1])
-        return total, latest
+    async def _batch_prior_year_snapshots(
+        self, account_ids: list[uuid.UUID], prior_year: int
+    ) -> dict[uuid.UUID, tuple[Decimal, date]]:
+        """Latest within-``prior_year`` snapshot for each account, in one query.
+
+        Postgres ``DISTINCT ON (account_id)`` with ``ORDER BY account_id,
+        snapshot_date DESC`` keeps the most-recent prior-year row per account —
+        the same batched-balance pattern AccountService uses (account.py). Accounts
+        with no prior-year snapshot are simply absent from the map.
+        """
+        if not account_ids:
+            return {}
+        result = await self.session.execute(
+            select(
+                AccountSnapshot.account_id,
+                AccountSnapshot.balance,
+                AccountSnapshot.snapshot_date,
+            )
+            .where(
+                AccountSnapshot.account_id.in_(account_ids),
+                AccountSnapshot.snapshot_date >= date(prior_year, 1, 1),
+                AccountSnapshot.snapshot_date <= date(prior_year, 12, 31),
+            )
+            .distinct(AccountSnapshot.account_id)
+            .order_by(AccountSnapshot.account_id, AccountSnapshot.snapshot_date.desc())
+        )
+        return {row.account_id: (row.balance, row.snapshot_date) for row in result.all()}
+
+
+def _sum_prior_year_balances(
+    accounts: list[Account], snapshots: dict[uuid.UUID, tuple[Decimal, date]]
+) -> tuple[Decimal, date | None]:
+    """Sum the batched prior-year snapshots for ``accounts``. Returns the running
+    total and the most recent snapshot date used (None when not a single account
+    has a prior-year snapshot)."""
+    total = Decimal("0")
+    latest: date | None = None
+    for account in accounts:
+        snap = snapshots.get(account.id)
+        if snap is not None:
+            balance, snap_date = snap
+            total += balance
+            latest = snap_date if latest is None else max(latest, snap_date)
+    return total, latest

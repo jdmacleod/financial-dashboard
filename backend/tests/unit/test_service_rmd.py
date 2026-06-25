@@ -3,6 +3,7 @@ per-member scenarios."""
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
@@ -183,6 +184,122 @@ async def test_roth_account_holder_is_not_listed(
 
     # No pretax accounts -> member is not RMD-relevant and is omitted.
     assert report.members == []
+
+
+async def test_sums_multiple_pretax_accounts_using_latest_prior_year_snapshot(
+    db_session: AsyncSession,
+    household: Any,
+    primary_member: HouseholdMember,
+    primary_ctx: VisibilityContext,
+) -> None:
+    """Batched read (E4): across two pretax accounts, each contributes its latest
+    prior-year snapshot, the totals sum, and balance_as_of is the latest date —
+    matching what the old per-account loop produced."""
+    primary_member.date_of_birth = date(1950, 1, 1)  # attains 74 in 2024 -> divisor 25.5
+    await db_session.flush()
+    a1 = await _pretax_account(db_session, household.id, primary_member.id)
+    a2 = await _pretax_account(db_session, household.id, primary_member.id)
+    # a1 has two 2023 snapshots; the December one must win over the June one.
+    await _snapshot(db_session, a1.id, date(2023, 6, 30), "400000")
+    await _snapshot(db_session, a1.id, date(2023, 12, 31), "500000")
+    await _snapshot(db_session, a2.id, date(2023, 11, 30), "300000")
+
+    report = await RmdService(db_session).required_distributions(primary_ctx, year=2024)
+
+    row = report.members[0]
+    assert row.pretax_balance == Decimal("800000")  # 500k (latest a1) + 300k a2
+    assert row.balance_as_of == date(2023, 12, 31)  # latest across both accounts
+    assert row.divisor == Decimal("25.5")
+    assert row.rmd_amount == compute_rmd(Decimal("800000"), Decimal("25.5"))
+
+
+async def test_account_without_prior_year_snapshot_excluded_from_sum(
+    db_session: AsyncSession,
+    household: Any,
+    primary_member: HouseholdMember,
+    primary_ctx: VisibilityContext,
+) -> None:
+    primary_member.date_of_birth = date(1950, 1, 1)
+    await db_session.flush()
+    a1 = await _pretax_account(db_session, household.id, primary_member.id)
+    a2 = await _pretax_account(db_session, household.id, primary_member.id)
+    await _snapshot(db_session, a1.id, date(2023, 12, 31), "500000")
+    await _snapshot(db_session, a2.id, date(2024, 6, 1), "999999")  # wrong year, ignored
+
+    report = await RmdService(db_session).required_distributions(primary_ctx, year=2024)
+
+    row = report.members[0]
+    assert row.pretax_balance == Decimal("500000")
+    assert row.balance_as_of == date(2023, 12, 31)
+
+
+async def test_single_batch_serves_multiple_members(
+    db_session: AsyncSession,
+    household: Any,
+    primary_member: HouseholdMember,
+    primary_ctx: VisibilityContext,
+    make_member: Any,
+) -> None:
+    """The one batched snapshot query keys correctly per account, so two members
+    each get the RMD computed from their own account's balance."""
+    primary_member.date_of_birth = date(1950, 1, 1)  # attains 74 -> divisor 25.5
+    second = await make_member(role="partner", display_name="Pat")
+    second.date_of_birth = date(1951, 1, 1)  # attains 73 in 2024 -> divisor 26.5
+    await db_session.flush()
+    a1 = await _pretax_account(db_session, household.id, primary_member.id)
+    a2 = await _pretax_account(db_session, household.id, second.id)
+    await _snapshot(db_session, a1.id, date(2023, 12, 31), "1000000")
+    await _snapshot(db_session, a2.id, date(2023, 12, 31), "530000")
+
+    report = await RmdService(db_session).required_distributions(primary_ctx, year=2024)
+
+    by_id = {m.member_id: m for m in report.members}
+    assert len(by_id) == 2
+    assert by_id[primary_member.id].rmd_amount == compute_rmd(Decimal("1000000"), Decimal("25.5"))
+    assert by_id[second.id].rmd_amount == compute_rmd(Decimal("530000"), Decimal("26.5"))
+
+
+async def test_logs_computed_rmd_line(
+    db_session: AsyncSession,
+    household: Any,
+    primary_member: HouseholdMember,
+    primary_ctx: VisibilityContext,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """T12: a computed RMD is reconstructable from an info log line."""
+    primary_member.date_of_birth = date(1950, 1, 1)
+    await db_session.flush()
+    account = await _pretax_account(db_session, household.id, primary_member.id)
+    await _snapshot(db_session, account.id, date(2023, 12, 31), "1000000")
+
+    with caplog.at_level(logging.INFO, logger="app.services.rmd"):
+        await RmdService(db_session).required_distributions(primary_ctx, year=2024)
+
+    messages = [r.getMessage() for r in caplog.records if r.name == "app.services.rmd"]
+    assert any(
+        f"member={primary_member.id}" in m and "39215.69" in m and "attained age 74" in m
+        for m in messages
+    )
+
+
+async def test_logs_zero_reason_when_missing_year_end_balance(
+    db_session: AsyncSession,
+    household: Any,
+    primary_member: HouseholdMember,
+    primary_ctx: VisibilityContext,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """T12: the silent '$0 because no prior-year balance' branch is logged."""
+    primary_member.date_of_birth = date(1950, 1, 1)
+    await db_session.flush()
+    account = await _pretax_account(db_session, household.id, primary_member.id)
+    await _snapshot(db_session, account.id, date(2024, 6, 1), "800000")  # wrong year
+
+    with caplog.at_level(logging.INFO, logger="app.services.rmd"):
+        await RmdService(db_session).required_distributions(primary_ctx, year=2024)
+
+    messages = [r.getMessage() for r in caplog.records if r.name == "app.services.rmd"]
+    assert any("$0" in m and "no 2023 year-end balance" in m for m in messages)
 
 
 @pytest.mark.parametrize("dob_year,expected_start", [(1950, 72), (1955, 73), (1965, 75)])

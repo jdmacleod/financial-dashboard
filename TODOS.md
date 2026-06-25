@@ -92,30 +92,6 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Batch prior-year snapshot reads in the RMD engine (Identity layer E4 — deferred from v0.21.0.0)
-
-**What:** `rmd._prior_year_end_pretax_balance` issues one query per pretax account (an N+1). Batch the prior-year snapshot reads into a single keyed query, mirroring `report.py`'s batched-balance pattern.
-
-**Why:** Eng-review flagged it. Harmless at household scale, but it's the documented N+1 and the report service already has the batched pattern to copy.
-
-**Cons:** Minor refactor; needs a test that the batched result matches the per-account loop.
-
-**Depends on:** RMD engine (shipped v0.21.0.0).
-
----
-
-### Structured logging in the RMD engine (Identity layer T12 — deferred from v0.21.0.0)
-
-**What:** Add an info-level log line in `RmdService.required_distributions` (member, attained age, pretax base, snapshot date, computed RMD) so a "why is my RMD $0" report is reconstructable from logs.
-
-**Why:** Observability was specced but not built; the engine has several silent empty/partial branches.
-
-**Cons:** Trivial; a few log statements.
-
-**Depends on:** RMD engine (shipped v0.21.0.0).
-
----
-
 ### Social Security claiming-age modeling (Identity layer — deferred scope)
 
 **What:** Per-member Social Security claiming age with benefit adjustment (reduction before FRA, delayed-retirement credits to 70) and FRA lookup by birth year; feed the result into FIRE supplemental income.
@@ -177,6 +153,24 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### Batch prior-year snapshot reads in the RMD engine (Identity layer E4)
+
+**Completed:** v0.23.3.0 (2026-06-25) — Replaced the per-account snapshot
+lookup in `RmdService` with a single keyed `DISTINCT ON (account_id)` query
+(`_batch_prior_year_snapshots`) across every pretax account in the report, then
+a pure in-memory sum (`_sum_prior_year_balances`) per member — mirroring the
+batched-balance pattern in `account.py`. `_member_rmd` is now synchronous (no
+per-member DB calls). Tests assert the batched total/latest-date matches the old
+per-account loop, including multi-account and multi-member cases.
+
+### Structured logging in the RMD engine (Identity layer T12)
+
+**Completed:** v0.23.3.0 (2026-06-25) — `RmdService` now emits an info log per
+member: the computed line (member, attained age, pretax base, snapshot date,
+divisor, RMD) plus the three "$0" reasons (no date of birth, below start age, no
+prior-year balance), so a "why is my RMD $0" question is reconstructable from
+logs. Covered by `caplog` tests.
 
 ### Member retirement target age (Identity layer)
 

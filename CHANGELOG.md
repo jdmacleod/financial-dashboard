@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.3.0] - 2026-06-25
+
+### Changed
+
+- **Required-distribution reports load with fewer database queries.** The RMD engine now reads every member's prior-year-end retirement balance in a single batched query instead of one query per account, so the Required Distributions report and RMD-aware FIRE projections stay fast as the number of retirement accounts grows. No change to the numbers shown.
+
+### For contributors
+
+- The RMD engine logs an info line per member (computed amount with its inputs, or the specific reason an RMD is $0 — no date of birth, below the start age, or no prior-year balance), so a "why is my RMD $0" question is answerable from the logs.
+
 ## [0.23.2.0] - 2026-06-25
 
 ### Changed
