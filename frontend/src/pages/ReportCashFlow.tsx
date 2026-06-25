@@ -438,6 +438,37 @@ export default function ReportCashFlow() {
                   </div>
                 ))}
               </div>
+              {data.retirement_income.federal_tax_estimate && (
+                <div
+                  style={{
+                    marginTop: "14px",
+                    paddingTop: "12px",
+                    borderTop: "1px solid var(--bd)",
+                    display: "flex",
+                    flexWrap: "wrap",
+                    justifyContent: "space-between",
+                    gap: "8px",
+                    fontSize: "12px",
+                    color: "var(--text2)",
+                  }}
+                >
+                  <span>
+                    Est. federal tax ({data.retirement_income.federal_tax_estimate.tax_year}):{" "}
+                    <strong style={{ color: "var(--liab)" }}>
+                      {formatCurrency(data.retirement_income.federal_tax_estimate.federal_tax)}
+                    </strong>{" "}
+                    · after-tax{" "}
+                    <strong style={{ color: "var(--up)" }}>
+                      {formatCurrency(data.retirement_income.federal_tax_estimate.after_tax_income)}
+                    </strong>{" "}
+                    ({(data.retirement_income.federal_tax_estimate.marginal_rate * 100).toFixed(0)}%
+                    marginal)
+                  </span>
+                  <span style={{ color: "var(--faint)" }}>
+                    Estimate — federal only, retirement income basis
+                  </span>
+                </div>
+              )}
             </div>
           )}
 

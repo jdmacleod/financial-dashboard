@@ -821,6 +821,51 @@ async def test_cash_flow_retirement_income_breakdown(
     assert ri.total == Decimal("17886")
     # Retirement buckets are a subset of total income.
     assert report.totals.income == Decimal("18886")
+    # No filing status set on the household -> no federal tax estimate.
+    assert ri.federal_tax_estimate is None
+
+
+async def test_cash_flow_retirement_tax_estimate_when_filing_status_set(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    household.filing_status = "married_filing_jointly"
+    await db_session.flush()
+
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "Retiree Checking 2")
+    ss_cat = await _add_category(
+        db_session, household.id, "Social Security", is_income=True, slug="social_security_income"
+    )
+    pension_cat = await _add_category(
+        db_session, household.id, "Pension Income", is_income=True, slug="pension_income"
+    )
+    rmd_cat = await _add_category(
+        db_session, household.id, "RMD", is_income=True, slug="rmd_distribution"
+    )
+    # ordinary = pension 24,000 + RMD 36,000 = 60,000; SS 40,000 (matches the
+    # engine's MFJ retiree unit test: federal tax 7,023, taxable income 62,500).
+    await _add_transaction(
+        db_session, account.id, date(2025, 2, 1), Decimal("24000"), pension_cat.id
+    )
+    await _add_transaction(db_session, account.id, date(2025, 3, 1), Decimal("36000"), rmd_cat.id)
+    await _add_transaction(db_session, account.id, date(2025, 4, 1), Decimal("40000"), ss_cat.id)
+
+    svc = ReportService(db_session)
+    report = await svc.cash_flow(ctx, date(2025, 1, 1), date(2025, 12, 31))
+
+    est = report.retirement_income.federal_tax_estimate
+    assert est is not None
+    assert est.tax_year == 2025
+    assert est.filing_status == "married_filing_jointly"
+    assert est.ordinary_income == Decimal("60000")
+    assert est.social_security_gross == Decimal("40000")
+    assert est.taxable_social_security == Decimal("34000.00")
+    assert est.taxable_income == Decimal("62500.00")
+    assert est.federal_tax == Decimal("7023.00")
+    assert est.marginal_rate == 0.12
 
 
 async def test_cash_flow_retirement_income_absent_when_no_retirement(
