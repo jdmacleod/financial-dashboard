@@ -72,6 +72,19 @@ RETIREMENT_INCOME_SLUGS = {
     "rmd_distribution": "rmd",
 }
 
+# Federal tax treatment of income-category slugs for the cash-flow tax estimate.
+# Slugs not listed fall through to "ordinary"; non-income categories are ignored.
+# Two deliberate estimate simplifications, since a single category can't carry the
+# distinction: `capital_gains` is treated as long-term and `dividends` as qualified,
+# so both receive the preferential 0/15/20 rate schedule.
+INCOME_TAX_TREATMENT = {
+    "social_security_income": "social_security",
+    "capital_gains": "qualified",
+    "dividends": "qualified",
+    "tax_refund": "excluded",  # refund of tax already paid, not new income
+    "gifts_received": "excluded",  # not federally taxable to the recipient
+}
+
 # Federal estate-tax parameters. The 2025 OBBBA made the higher unified credit
 # permanent and set the per-decedent exemption at $15,000,000 for 2026 (indexed
 # thereafter); the top marginal rate is 40%. These are intentionally module
@@ -565,6 +578,13 @@ class ReportService:
             lambda: {"income": Decimal("0"), "expenses": Decimal("0")}
         )
         retirement = {bucket: Decimal("0") for bucket in RETIREMENT_INCOME_SLUGS.values()}
+        # Full-household-income basis for the federal tax estimate, classified from
+        # the same income transactions by their category's tax treatment.
+        tax_basis = {
+            "ordinary": Decimal("0"),
+            "qualified": Decimal("0"),
+            "social_security": Decimal("0"),
+        }
         for txn_date, amount, category_id in result.all():
             category = cat_map.get(category_id)
             is_income = category.is_income if category else False
@@ -574,9 +594,13 @@ class ReportService:
                 key = _period_key(txn_date)
             if is_income:
                 periods[key]["income"] += amount
-                bucket = category and category.slug and RETIREMENT_INCOME_SLUGS.get(category.slug)
+                slug = category.slug if category else None
+                bucket = RETIREMENT_INCOME_SLUGS.get(slug) if slug else None
                 if bucket:
                     retirement[bucket] += amount
+                treatment = INCOME_TAX_TREATMENT.get(slug, "ordinary") if slug else "ordinary"
+                if treatment != "excluded":
+                    tax_basis[treatment] += amount
             elif amount < 0:
                 periods[key]["expenses"] += -amount
 
@@ -603,32 +627,36 @@ class ReportService:
             savings_rate=total_savings_rate,
         )
         retirement_total = sum(retirement.values(), Decimal("0"))
-        tax_estimate = await self._retirement_tax_estimate(ctx, retirement, to_date)
         retirement_income = RetirementIncomeBreakdown(
             social_security=retirement["social_security"],
             pension=retirement["pension"],
             rmd=retirement["rmd"],
             total=retirement_total,
             has_data=retirement_total > 0,
+        )
+        tax_estimate = await self._household_tax_estimate(ctx, tax_basis, to_date)
+        return CashFlowReport(
+            series=series,
+            totals=totals,
+            retirement_income=retirement_income,
             federal_tax_estimate=tax_estimate,
         )
-        return CashFlowReport(series=series, totals=totals, retirement_income=retirement_income)
 
-    async def _retirement_tax_estimate(
+    async def _household_tax_estimate(
         self,
         ctx: VisibilityContext,
-        retirement: dict[str, Decimal],
+        basis: dict[str, Decimal],
         to_date: date,
     ) -> FederalTaxEstimate | None:
-        """Federal tax estimate over the period's retirement income.
+        """Federal tax estimate over the period's full household income.
 
-        Pension + RMD are ordinary income; Social Security is taxed via its
-        provisional-income rules. Returns None unless the household has a filing
-        status set and actually drew retirement income. The estimate treats this
-        retirement income as the household's taxable income — other income sources
-        aren't folded in yet, so it understates tax for households with wages or
-        large taxable investment income."""
-        total = sum(retirement.values(), Decimal("0"))
+        `basis` carries the income classified by tax treatment: ``ordinary`` (wages,
+        business/rental income, pensions, RMDs), ``qualified`` (long-term capital
+        gains + qualified dividends, preferential rates), and ``social_security``
+        (taxed via §86). Returns None unless the household has a filing status set
+        and had taxable income in the period. State income tax is still out of scope
+        (tracked separately), so this is a federal-only estimate."""
+        total = basis["ordinary"] + basis["qualified"] + basis["social_security"]
         if total <= 0:
             return None
         household = await self.session.get(Household, ctx.household_id)
@@ -637,8 +665,9 @@ class ReportService:
         return estimate_federal_tax(
             tax_year=resolve_tax_year(to_date.year),
             filing_status=household.filing_status,
-            ordinary_income=retirement["pension"] + retirement["rmd"],
-            social_security=retirement["social_security"],
+            ordinary_income=basis["ordinary"],
+            qualified_income=basis["qualified"],
+            social_security=basis["social_security"],
         )
 
     # --- Savings rate ----------------------------------------------------

@@ -822,7 +822,7 @@ async def test_cash_flow_retirement_income_breakdown(
     # Retirement buckets are a subset of total income.
     assert report.totals.income == Decimal("18886")
     # No filing status set on the household -> no federal tax estimate.
-    assert ri.federal_tax_estimate is None
+    assert report.federal_tax_estimate is None
 
 
 async def test_cash_flow_retirement_tax_estimate_when_filing_status_set(
@@ -856,15 +856,17 @@ async def test_cash_flow_retirement_tax_estimate_when_filing_status_set(
     svc = ReportService(db_session)
     report = await svc.cash_flow(ctx, date(2025, 1, 1), date(2025, 12, 31))
 
-    est = report.retirement_income.federal_tax_estimate
+    est = report.federal_tax_estimate
     assert est is not None
     assert est.tax_year == 2025
     assert est.filing_status == "married_filing_jointly"
     assert est.ordinary_income == Decimal("60000")
+    assert est.qualified_income == Decimal("0")
     assert est.social_security_gross == Decimal("40000")
     assert est.taxable_social_security == Decimal("34000.00")
     assert est.taxable_income == Decimal("62500.00")
     assert est.federal_tax == Decimal("7023.00")
+    assert est.qualified_tax == Decimal("0.00")
     assert est.marginal_rate == 0.12
 
 
@@ -884,6 +886,51 @@ async def test_cash_flow_retirement_income_absent_when_no_retirement(
 
     assert report.retirement_income.has_data is False
     assert report.retirement_income.total == Decimal("0")
+
+
+async def test_cash_flow_tax_estimate_full_income_basis(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Wages + qualified investment income, no retirement income: the estimate
+    still surfaces (it's not gated on retirement income) and qualified income is
+    taxed at the preferential rate, not the ordinary brackets."""
+    household.filing_status = "single"
+    await db_session.flush()
+
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "Worker Brokerage")
+    salary_cat = await _add_category(db_session, household.id, "Salary", is_income=True)
+    cg_cat = await _add_category(
+        db_session, household.id, "Capital Gains", is_income=True, slug="capital_gains"
+    )
+    div_cat = await _add_category(
+        db_session, household.id, "Dividends", is_income=True, slug="dividends"
+    )
+    await _add_transaction(
+        db_session, account.id, date(2025, 2, 1), Decimal("80000"), salary_cat.id
+    )
+    await _add_transaction(db_session, account.id, date(2025, 3, 1), Decimal("8000"), cg_cat.id)
+    await _add_transaction(db_session, account.id, date(2025, 4, 1), Decimal("2000"), div_cat.id)
+
+    svc = ReportService(db_session)
+    report = await svc.cash_flow(ctx, date(2025, 1, 1), date(2025, 12, 31))
+
+    # No retirement income at all, yet the household estimate is present.
+    assert report.retirement_income.has_data is False
+    est = report.federal_tax_estimate
+    assert est is not None
+    assert est.ordinary_income == Decimal("80000")
+    assert est.qualified_income == Decimal("10000")  # capital gains + dividends
+    # taxable income = 90,000 - 15,750 std deduction
+    assert est.taxable_income == Decimal("74250.00")
+    # qualified 10,000 stacks above ordinary taxable 64,250, so it lands fully in
+    # the 15% bracket: 10,000 * 0.15 = 1,500.
+    assert est.qualified_tax == Decimal("1500.00")
+    # ordinary tax 9,049 + qualified 1,500.
+    assert est.federal_tax == Decimal("10549.00")
 
 
 async def test_cash_flow_empty_accounts(

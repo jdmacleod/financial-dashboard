@@ -1,10 +1,12 @@
 """Federal income-tax estimate engine.
 
 Pure functions over the year-keyed constants in `tax_tables`. Given a household's
-filing status, ordinary income (RMDs, pensions, traditional withdrawals, wages),
-and gross Social Security benefits, it estimates federal income tax: it taxes the
-includable portion of Social Security (§86 provisional-income rules), subtracts the
-standard deduction, and applies the ordinary-income brackets.
+filing status, ordinary income (RMDs, pensions, traditional withdrawals, wages,
+business and rental income), qualified income (long-term capital gains and qualified
+dividends), and gross Social Security benefits, it estimates federal income tax: it
+taxes the includable portion of Social Security (§86 provisional-income rules),
+subtracts the standard deduction, applies the ordinary-income brackets, and taxes
+qualified income at the preferential 0/15/20 schedule stacked on top.
 
 Scope is deliberately narrow (see tax_tables docstring). Everything here is an
 estimate intended for planning, not tax preparation.
@@ -101,14 +103,43 @@ def bracket_headroom(
     return None, None
 
 
+def preferential_tax(
+    breakpoints: tax_tables.CapGainsBreakpoints,
+    ordinary_taxable: Decimal,
+    qualified_taxable: Decimal,
+) -> Decimal:
+    """Tax on qualified income (LTCG + qualified dividends) at the 0/15/20 schedule.
+
+    Qualified income stacks on top of ordinary taxable income: the slice falling
+    below the 0% ceiling is untaxed, the slice up to the 15% ceiling is taxed at
+    15%, and the remainder at 20%. `ordinary_taxable` and `qualified_taxable` are
+    the post-deduction amounts (their sum is total taxable income).
+    """
+    if qualified_taxable <= 0:
+        return Decimal("0")
+    zero_ceiling, fifteen_ceiling = breakpoints
+    room_0 = max(zero_ceiling - ordinary_taxable, Decimal("0"))
+    at_0 = min(qualified_taxable, room_0)
+    room_15 = max(fifteen_ceiling - ordinary_taxable - at_0, Decimal("0"))
+    at_15 = min(qualified_taxable - at_0, room_15)
+    at_20 = qualified_taxable - at_0 - at_15
+    return at_15 * tax_tables.CAPITAL_GAINS_RATES[1] + at_20 * tax_tables.CAPITAL_GAINS_RATES[2]
+
+
 def estimate_federal_tax(
     *,
     tax_year: int,
     filing_status: str,
     ordinary_income: Decimal,
     social_security: Decimal,
+    qualified_income: Decimal = Decimal("0"),
 ) -> FederalTaxEstimate:
     """Estimate federal income tax for the given income components and year.
+
+    `ordinary_income` is all income taxed at ordinary rates (wages, business and
+    rental income, pensions, traditional withdrawals/RMDs). `qualified_income` is
+    long-term capital gains and qualified dividends, taxed at the preferential
+    0/15/20 schedule. `social_security` is gross benefits, taxed via §86.
 
     Raises ValueError for an unsupported year or filing status; callers that
     accept arbitrary years should pass `resolve_tax_year(year)`.
@@ -120,34 +151,51 @@ def estimate_federal_tax(
 
     ordinary_income = max(ordinary_income, Decimal("0"))
     social_security = max(social_security, Decimal("0"))
+    qualified_income = max(qualified_income, Decimal("0"))
 
-    taxable_ss = taxable_social_security(filing_status, ordinary_income, social_security)
+    # Capital gains and dividends count toward §86 provisional income.
+    other_income = ordinary_income + qualified_income
+    taxable_ss = taxable_social_security(filing_status, other_income, social_security)
     std_deduction = tax_tables.STANDARD_DEDUCTION[tax_year][filing_status]
-    gross_taxable = ordinary_income + taxable_ss
+
+    # The standard deduction comes off ordinary income first (qualified income sits
+    # "on top"); total taxable income then splits into its ordinary and qualified
+    # parts for the two rate schedules.
+    gross_taxable = ordinary_income + taxable_ss + qualified_income
     taxable_income = max(gross_taxable - std_deduction, Decimal("0"))
+    qualified_taxable = min(qualified_income, taxable_income)
+    ordinary_taxable = taxable_income - qualified_taxable
 
     brackets = tax_tables.FEDERAL_BRACKETS[tax_year][filing_status]
-    federal_tax = federal_tax_for(brackets, taxable_income).quantize(_CENTS, ROUND_HALF_UP)
-    room, next_rate = bracket_headroom(brackets, taxable_income)
+    breakpoints = tax_tables.CAPITAL_GAINS_BREAKPOINTS[tax_year][filing_status]
+    ordinary_tax = federal_tax_for(brackets, ordinary_taxable)
+    qualified_tax = preferential_tax(breakpoints, ordinary_taxable, qualified_taxable)
+    federal_tax = (ordinary_tax + qualified_tax).quantize(_CENTS, ROUND_HALF_UP)
 
-    # Effective rate is tax over the taxable income that actually entered the
-    # return (ordinary + includable SS), not over gross SS.
-    rate_base = ordinary_income + taxable_ss
+    # Roth-conversion headroom and the marginal rate are about ordinary income (a
+    # conversion adds ordinary income), so they read off the ordinary taxable base.
+    room, next_rate = bracket_headroom(brackets, ordinary_taxable)
+
+    # Effective rate is tax over the income that actually entered the return
+    # (ordinary + includable SS + qualified), not over gross SS.
+    rate_base = ordinary_income + taxable_ss + qualified_income
     effective_rate = float(federal_tax / rate_base) if rate_base > 0 else 0.0
-    after_tax = (ordinary_income + social_security) - federal_tax
+    after_tax = (ordinary_income + social_security + qualified_income) - federal_tax
 
     return FederalTaxEstimate(
         tax_year=tax_year,
         filing_status=filing_status,  # type: ignore[arg-type]
         ordinary_income=ordinary_income,
+        qualified_income=qualified_income,
         social_security_gross=social_security,
         taxable_social_security=taxable_ss.quantize(_CENTS, ROUND_HALF_UP),
         standard_deduction=std_deduction,
         taxable_income=taxable_income.quantize(_CENTS, ROUND_HALF_UP),
         federal_tax=federal_tax,
+        qualified_tax=qualified_tax.quantize(_CENTS, ROUND_HALF_UP),
         after_tax_income=after_tax.quantize(_CENTS, ROUND_HALF_UP),
         effective_rate=effective_rate,
-        marginal_rate=marginal_rate_for(brackets, taxable_income),
+        marginal_rate=marginal_rate_for(brackets, ordinary_taxable),
         roth_conversion_room=room.quantize(_CENTS, ROUND_HALF_UP) if room is not None else None,
         next_bracket_rate=next_rate,
     )

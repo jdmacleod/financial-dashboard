@@ -70,25 +70,47 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 **Why:** High-value for FIRE households; the headroom number answers "how much this year," the projection answers "is converting worth it over the plan."
 
-**Cons:** Substantial (L) — touches the FIRE projection engine (per-year tax over the drawdown). Med risk. Best after the full-income tax basis lands so non-retirement income counts toward each year's bracket.
+**Cons:** Substantial (L) — touches the FIRE projection engine (per-year tax over the drawdown). Med risk.
 
-**Depends on:** Bracket-headroom primitive (shipped) + FIRE projection engine + ideally the full-income tax basis (see tax-engine remaining-scope item).
+**Depends on:** Bracket-headroom primitive (shipped) + FIRE projection engine + the full-income tax basis (shipped 2026-06-25, see Completed) — its dependency is now satisfied, so this is the next item.
 
 ---
 
-### Tax-estimate engine — remaining scope (state tax, full-income basis)
+### Tax-estimate engine — remaining scope (state tax, AMT/NIIT)
 
-**What:** Extend the federal tax-estimate engine (shipped 2026-06-25, see Completed) with: (1) state income tax keyed off `households.state`; (2) a full-household-income basis (wages, taxable interest/dividends, capital gains) instead of the retirement-income-only basis; (3) preferential long-term capital-gains / qualified-dividend rates, and optionally AMT / NIIT.
+**What:** Extend the federal tax-estimate engine with: (1) state income tax keyed off `households.state`; (2) optionally AMT and NIIT (net investment income tax). The full-household-income basis and preferential long-term capital-gains / qualified-dividend rates shipped 2026-06-25 (see Completed).
 
-**Why:** The federal core is in and surfaced on the Cash Flow retirement panel, but it taxes only retirement income (RMD + pension + taxable SS) and ignores state tax, so it understates total liability for households with wages or large taxable investment income.
+**Why:** The federal engine now taxes the full household income (ordinary + qualified preferential + taxable SS), but ignores state tax, so it still understates total liability for households in taxing states.
 
-**Cons:** State brackets for 50 states are a large annual-maintenance surface; the full-income basis needs an income-aggregation layer. Multi-PR.
+**Cons:** State brackets for 50 states are a large annual-maintenance surface — best as its own PR with the same isolate-and-cite discipline as `tax_tables.py`. NIIT/AMT are narrower add-ons.
 
-**Depends on:** Federal tax engine + `households.state` (both shipped 2026-06-25).
+**Depends on:** Federal tax engine + full-income basis + `households.state` (all shipped 2026-06-25).
 
 ---
 
 ## Completed
+
+### Full-household-income tax basis + preferential cap-gains/QD rates (Identity layer)
+
+**Completed:** 2026-06-25 (branch `feat/tax-full-income-basis`) — Broadened the
+federal tax-estimate engine from a retirement-income-only basis to the household's
+full taxable income. `tax_tables.py` gained the year-keyed long-term capital-gains /
+qualified-dividend rate breakpoints (0/15/20%, 2025 + 2026, all filing statuses;
+verified via published IRS Rev. Proc. figures). `tax.py` gained `preferential_tax()`
+(qualified income stacked on top of ordinary taxable income, taxed at the
+preferential schedule) and `estimate_federal_tax()` now takes a `qualified_income`
+component; capital gains/dividends also count toward §86 provisional income. The
+cash-flow report classifies every income category by tax treatment (ordinary /
+qualified / Social Security / excluded) and feeds the full basis in; the estimate
+moved from `RetirementIncomeBreakdown` to a top-level `CashFlowReport.federal_tax_estimate`
+so it now surfaces for wage-earners with no retirement income, not just retirees, in
+its own "Estimated federal tax" panel (with a preferential-rate line when qualified
+income is present). Two documented estimate simplifications: `capital_gains` is
+treated as long-term and `dividends` as qualified. Remaining (see open item): state
+tax + AMT/NIIT. Tests: 4 engine unit (preferential stacking across 0/15/20, QD raising
+taxable SS, qualified-income preferential rate, zero-default backward compat) + report
+unit (full-income basis surfaces for a wage earner) + 1 frontend (wage-earner panel +
+preferential line).
 
 ### Social Security claiming plan feeds FIRE projections (Identity layer)
 

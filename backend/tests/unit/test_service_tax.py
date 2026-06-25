@@ -16,6 +16,7 @@ from app.services.tax import (
     estimate_federal_tax,
     federal_tax_for,
     marginal_rate_for,
+    preferential_tax,
     resolve_tax_year,
     taxable_social_security,
 )
@@ -145,6 +146,72 @@ def test_resolve_tax_year_clamps() -> None:
     assert resolve_tax_year(2026) == 2026
     assert resolve_tax_year(2030) == 2026  # future -> latest supported
     assert resolve_tax_year(2010) == 2025  # past -> earliest supported
+
+
+def test_preferential_tax_spans_zero_fifteen_twenty() -> None:
+    # 2025 Single breakpoints: 0% to 48,350, 15% to 533,400, 20% above.
+    bp = tax_tables.CAPITAL_GAINS_BREAKPOINTS[2025][tax_tables.SINGLE]
+    # All qualified income sits below the 0% ceiling -> untaxed.
+    assert preferential_tax(bp, Decimal("10000"), Decimal("20000")) == Decimal("0")
+    # Stacked on 40,000 ordinary: 8,350 fills the 0% room, 11,650 taxed at 15%.
+    assert preferential_tax(bp, Decimal("40000"), Decimal("20000")) == Decimal("1747.50")
+    # Stacked above the 15% ceiling: a slice at 15%, the rest at 20%.
+    #   ordinary 530,000; qualified 10,000 -> 3,400 @15% (to 533,400) + 6,600 @20%.
+    assert preferential_tax(bp, Decimal("530000"), Decimal("10000")) == Decimal("1830.00")
+
+
+def test_estimate_qualified_income_preferential_rate() -> None:
+    # Single 2025: wages 80,000 ordinary + 10,000 qualified (LTCG + qual. dividends).
+    #   taxable income = 90,000 - 15,750 std = 74,250
+    #   ordinary taxable = 64,250; qualified taxable = 10,000
+    #   ordinary tax = 1,192.50 + 4,386 + 3,470.50 = 9,049
+    #   qualified stacks above 64,250 (> 48,350 zero ceiling) -> all 15% = 1,500
+    est = estimate_federal_tax(
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        ordinary_income=Decimal("80000"),
+        qualified_income=Decimal("10000"),
+        social_security=Decimal("0"),
+    )
+    assert est.qualified_income == Decimal("10000")
+    assert est.taxable_income == Decimal("74250.00")
+    assert est.qualified_tax == Decimal("1500.00")
+    assert est.federal_tax == Decimal("10549.00")
+    # Marginal/headroom remain ordinary-bracket concepts (Roth conversions are
+    # ordinary income), read off ordinary taxable income, not the qualified slice.
+    assert est.marginal_rate == 0.22
+
+
+def test_estimate_qualified_income_raises_taxable_social_security() -> None:
+    # Capital gains count toward §86 provisional income, so adding qualified
+    # income can push more Social Security into the taxable base.
+    base = estimate_federal_tax(
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        ordinary_income=Decimal("20000"),
+        social_security=Decimal("20000"),
+    )
+    with_gains = estimate_federal_tax(
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        ordinary_income=Decimal("20000"),
+        qualified_income=Decimal("20000"),
+        social_security=Decimal("20000"),
+    )
+    assert with_gains.taxable_social_security > base.taxable_social_security
+
+
+def test_estimate_qualified_income_defaults_to_zero() -> None:
+    # Backward compatibility: omitting qualified_income reproduces the prior result.
+    est = estimate_federal_tax(
+        tax_year=2025,
+        filing_status=tax_tables.MFJ,
+        ordinary_income=Decimal("60000"),
+        social_security=Decimal("40000"),
+    )
+    assert est.qualified_income == Decimal("0")
+    assert est.qualified_tax == Decimal("0.00")
+    assert est.federal_tax == Decimal("7023.00")  # unchanged from the retiree case
 
 
 def test_qss_uses_mfj_schedule_but_single_ss_base() -> None:

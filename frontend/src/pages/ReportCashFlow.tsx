@@ -438,58 +438,80 @@ export default function ReportCashFlow() {
                   </div>
                 ))}
               </div>
-              {data.retirement_income.federal_tax_estimate && (
-                <div
-                  style={{
-                    marginTop: "14px",
-                    paddingTop: "12px",
-                    borderTop: "1px solid var(--bd)",
-                    display: "flex",
-                    flexWrap: "wrap",
-                    justifyContent: "space-between",
-                    gap: "8px",
-                    fontSize: "12px",
-                    color: "var(--text2)",
-                  }}
-                >
-                  <span>
-                    Est. federal tax ({data.retirement_income.federal_tax_estimate.tax_year}):{" "}
-                    <strong style={{ color: "var(--liab)" }}>
-                      {formatCurrency(data.retirement_income.federal_tax_estimate.federal_tax)}
-                    </strong>{" "}
-                    · after-tax{" "}
-                    <strong style={{ color: "var(--up)" }}>
-                      {formatCurrency(data.retirement_income.federal_tax_estimate.after_tax_income)}
-                    </strong>{" "}
-                    ({(data.retirement_income.federal_tax_estimate.marginal_rate * 100).toFixed(0)}%
-                    marginal)
-                  </span>
-                  <span style={{ color: "var(--faint)" }}>
-                    Estimate — federal only, retirement income basis
-                  </span>
+            </div>
+          )}
+
+          {/* Estimated federal tax — full household income basis (all ordinary
+              income, qualified dividends + long-term gains at preferential rates,
+              and taxable Social Security). Shown whenever a filing status is set
+              and there is taxable income, independent of retirement income. */}
+          {data.federal_tax_estimate && (
+            <div
+              style={{
+                background: "var(--card)",
+                border: "1px solid var(--bd)",
+                borderRadius: "14px",
+                padding: "18px 20px",
+                marginBottom: "16px",
+              }}
+            >
+              <div
+                style={{
+                  fontSize: "11px",
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--faint)",
+                  marginBottom: "12px",
+                }}
+              >
+                Estimated federal tax
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "space-between",
+                  gap: "8px",
+                  fontSize: "12px",
+                  color: "var(--text2)",
+                }}
+              >
+                <span>
+                  Est. federal tax ({data.federal_tax_estimate.tax_year}):{" "}
+                  <strong style={{ color: "var(--liab)" }}>
+                    {formatCurrency(data.federal_tax_estimate.federal_tax)}
+                  </strong>{" "}
+                  · after-tax{" "}
+                  <strong style={{ color: "var(--up)" }}>
+                    {formatCurrency(data.federal_tax_estimate.after_tax_income)}
+                  </strong>{" "}
+                  ({(data.federal_tax_estimate.marginal_rate * 100).toFixed(0)}% marginal)
+                </span>
+                <span style={{ color: "var(--faint)" }}>Estimate — federal only</span>
+              </div>
+              {Number(data.federal_tax_estimate.qualified_income) > 0 && (
+                <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--text2)" }}>
+                  Incl. qualified dividends + long-term gains{" "}
+                  <strong style={{ color: "var(--text)" }}>
+                    {formatCurrency(data.federal_tax_estimate.qualified_income)}
+                  </strong>{" "}
+                  taxed{" "}
+                  <strong style={{ color: "var(--liab)" }}>
+                    {formatCurrency(data.federal_tax_estimate.qualified_tax)}
+                  </strong>{" "}
+                  at preferential rates.
                 </div>
               )}
-              {data.retirement_income.federal_tax_estimate?.roth_conversion_room &&
-                Number(data.retirement_income.federal_tax_estimate.roth_conversion_room) > 0 &&
-                data.retirement_income.federal_tax_estimate.next_bracket_rate != null && (
-                  <div
-                    style={{
-                      marginTop: "8px",
-                      fontSize: "12px",
-                      color: "var(--text2)",
-                    }}
-                  >
+              {data.federal_tax_estimate.roth_conversion_room &&
+                Number(data.federal_tax_estimate.roth_conversion_room) > 0 &&
+                data.federal_tax_estimate.next_bracket_rate != null && (
+                  <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--text2)" }}>
                     Roth conversion room:{" "}
                     <strong style={{ color: "var(--up)" }}>
-                      {formatCurrency(
-                        data.retirement_income.federal_tax_estimate.roth_conversion_room,
-                      )}
+                      {formatCurrency(data.federal_tax_estimate.roth_conversion_room)}
                     </strong>{" "}
                     can be converted before the{" "}
-                    {(data.retirement_income.federal_tax_estimate.next_bracket_rate * 100).toFixed(
-                      0,
-                    )}
-                    % bracket.
+                    {(data.federal_tax_estimate.next_bracket_rate * 100).toFixed(0)}% bracket.
                   </div>
                 )}
             </div>
