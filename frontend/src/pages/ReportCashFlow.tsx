@@ -469,6 +469,29 @@ export default function ReportCashFlow() {
                   </span>
                 </div>
               )}
+              {data.retirement_income.federal_tax_estimate?.roth_conversion_room &&
+                Number(data.retirement_income.federal_tax_estimate.roth_conversion_room) > 0 &&
+                data.retirement_income.federal_tax_estimate.next_bracket_rate != null && (
+                  <div
+                    style={{
+                      marginTop: "8px",
+                      fontSize: "12px",
+                      color: "var(--text2)",
+                    }}
+                  >
+                    Roth conversion room:{" "}
+                    <strong style={{ color: "var(--up)" }}>
+                      {formatCurrency(
+                        data.retirement_income.federal_tax_estimate.roth_conversion_room,
+                      )}
+                    </strong>{" "}
+                    can be converted before the{" "}
+                    {(data.retirement_income.federal_tax_estimate.next_bracket_rate * 100).toFixed(
+                      0,
+                    )}
+                    % bracket.
+                  </div>
+                )}
             </div>
           )}
 

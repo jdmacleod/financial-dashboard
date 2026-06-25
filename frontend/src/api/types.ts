@@ -381,6 +381,8 @@ export interface FederalTaxEstimate {
   after_tax_income: string
   effective_rate: number
   marginal_rate: number
+  roth_conversion_room: string | null
+  next_bracket_rate: number | null
 }
 
 export interface RetirementIncomeBreakdown {
