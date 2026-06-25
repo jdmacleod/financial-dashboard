@@ -11,10 +11,12 @@ from decimal import Decimal
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.models.account import Account
 from app.db.models.category import Category
 from app.db.models.debt import Debt
 from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
+from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 
@@ -628,3 +630,104 @@ async def test_projection_returns_headline_summary(
     assert "projections" in body
     assert "summary" in body
     assert Decimal(str(body["summary"]["fire_number"])) == Decimal("50000.00") / Decimal("0.04")
+
+
+async def _add_pretax_account(
+    db_session: AsyncSession,
+    member: HouseholdMember,
+    balance: str,
+) -> None:
+    account = Account(
+        household_id=member.household_id,
+        owner_member_id=member.id,
+        account_type="retirement_ira",
+        nickname="Traditional IRA",
+        tax_treatment="pretax",
+        is_active=True,
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    db_session.add(account)
+    await db_session.flush()
+    db_session.add(
+        AccountSnapshot(
+            account_id=account.id,
+            snapshot_date=date.today(),
+            balance=Decimal(balance),
+            source="manual",
+            created_at=_now(),
+        )
+    )
+    await db_session.flush()
+
+
+async def test_roth_ladder_rejects_invalid_ceiling_rate(
+    client: AsyncClient,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    headers = auth_headers(primary_user, primary_member, "primary")
+    scenario_id = await _create_scenario(client, primary_user, primary_member)
+    resp = await client.get(
+        f"/api/v1/fire-scenarios/{scenario_id}/roth-ladder?ceiling_rate=0.13",
+        headers=headers,
+    )
+    assert resp.status_code == 422, resp.text
+
+
+async def test_roth_ladder_unavailable_without_filing_status(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    # DOB set, but the household has no filing status -> unavailable with a note.
+    primary_member.date_of_birth = date(1968, 3, 1)
+    await db_session.flush()
+    headers = auth_headers(primary_user, primary_member, "primary")
+    scenario_id = await _create_scenario(client, primary_user, primary_member)
+    resp = await client.get(
+        f"/api/v1/fire-scenarios/{scenario_id}/roth-ladder",
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["available"] is False
+    assert "filing status" in body["note"].lower()
+
+
+async def test_roth_ladder_returns_conversion_schedule(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    # Born 1968 -> RMD age 75; retire at 62 -> gap years. Filing status set and a
+    # pretax balance present, so the ladder is available with a conversion schedule.
+    primary_member.date_of_birth = date(1968, 3, 1)
+    household.filing_status = "single"
+    await db_session.flush()
+    await _add_pretax_account(db_session, primary_member, "1500000.00")
+
+    headers = auth_headers(primary_user, primary_member, "primary")
+    scenario_id = await _create_scenario(client, primary_user, primary_member)
+    await client.patch(
+        f"/api/v1/fire-scenarios/{scenario_id}",
+        json={"target_retirement_age": 62, "expected_annual_return": "0.07"},
+        headers=headers,
+    )
+
+    resp = await client.get(
+        f"/api/v1/fire-scenarios/{scenario_id}/roth-ladder?ceiling_rate=0.12",
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["available"] is True
+    assert body["rmd_start_age"] == 75
+    assert body["gap_start_age"] == 62
+    assert len(body["years"]) > 0
+    assert Decimal(str(body["years"][0]["conversion"])) > 0
+    # With 7% growth, draining the pretax bucket at 12% beats large future RMDs.
+    assert Decimal(str(body["lifetime_tax_saved"])) > 0

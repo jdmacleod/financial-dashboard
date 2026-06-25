@@ -64,18 +64,6 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Roth-conversion modeling — multi-year projection (Identity layer)
-
-**What:** The single-year bracket-headroom primitive shipped 2026-06-25 (see Completed). Remaining: project conversions across multiple years in the FIRE drawdown, showing how filling low-income-year brackets now shrinks future RMDs and lifetime tax — the RMD/tax tradeoff over time.
-
-**Why:** High-value for FIRE households; the headroom number answers "how much this year," the projection answers "is converting worth it over the plan."
-
-**Cons:** Substantial (L) — touches the FIRE projection engine (per-year tax over the drawdown). Med risk.
-
-**Depends on:** Bracket-headroom primitive (shipped) + FIRE projection engine + the full-income tax basis (shipped 2026-06-25, see Completed) — its dependency is now satisfied, so this is the next item.
-
----
-
 ### Tax-estimate engine — remaining scope (state tax, AMT/NIIT)
 
 **What:** Extend the federal tax-estimate engine with: (1) state income tax keyed off `households.state`; (2) optionally AMT and NIIT (net investment income tax). The full-household-income basis and preferential long-term capital-gains / qualified-dividend rates shipped 2026-06-25 (see Completed).
@@ -89,6 +77,32 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### Roth-conversion-ladder analysis — multi-year gap-year projection (Identity layer)
+
+**Completed:** 2026-06-25 (branch `feat/roth-conversion-ladder`) — Models the
+standard Roth-conversion ladder over the FIRE gap years (retirement age → RMD
+start age): each year converts pretax→Roth up to the top of a chosen federal
+bracket (the strategy, fill-to-target-bracket), shrinking the pretax balance so
+future RMDs and the tax on them fall. Built as a **standalone analysis** (the FIRE
+projection itself stops at the accumulation FIRE year, so the gap/drawdown years
+aren't in its window): a pure, DB-free `app/services/roth_ladder.py` simulates a
+single pretax bucket plus per-year ordinary/SS income, runs it **with vs. without**
+conversions to a horizon (default age 90), and reports lifetime federal tax saved.
+New `tax.bracket_ceiling_for_rate()` (top of a target bracket); the conversion
+correctly accounts for the standard-deduction slack so taxable income lands on the
+bracket ceiling. Endpoint `GET /fire-scenarios/{id}/roth-ladder?ceiling_rate=&retirement_age=&horizon_age=`
+(query-param driven, interactively explorable, no migration); gates with a `note`
+when filing status / DOB / pretax balance is missing. The FireDetail page gained a
+"Roth conversion ladder" section with a target-bracket selector, gap-year table, and
+a lifetime-tax-saved (or -cost) headline. Notably the model is honest: with no
+growth and low other income it shows conversions can _cost_ lifetime tax (RMDs would
+stay in lower brackets), not just save. Scope: federal only, ignores state tax and
+the second-order SS-provisional feedback of a conversion. Tests: 6 pure-sim unit
+(fills to ceiling, deduction-aware amount, saves-with-growth, costs-without-growth,
+income reduces room, no gap years) + 3 integration (422 validation, unavailable
+gating, available schedule) + 4 frontend (headline, cost framing, note, bracket
+refetch).
 
 ### Full-household-income tax basis + preferential cap-gains/QD rates (Identity layer)
 
