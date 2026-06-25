@@ -119,3 +119,22 @@ class TestMilestones:
         early = next(m for m in ms if m.key == "early_withdrawal")
         assert early.date == date(2060, 4, 1)
         assert early.year == 2060
+
+    def test_no_retirement_target_milestone_when_unset(self) -> None:
+        ms = milestones(date(1990, 6, 15))
+        assert ms is not None
+        assert all(m.key != "retirement_target" for m in ms)
+
+    def test_retirement_target_milestone_added_and_ordered(self) -> None:
+        ms = milestones(date(1990, 6, 15), retirement_target_age=60)
+        assert ms is not None
+        target = next(m for m in ms if m.key == "retirement_target")
+        assert target.label == "Target retirement"
+        assert target.age_label == "60"
+        assert target.year == 2050
+        assert target.date == date(2050, 6, 15)
+        # Sorted by date: target (60) sits after early_withdrawal (59½) and
+        # before social_security_earliest (62).
+        keys = [m.key for m in ms]
+        assert keys.index("retirement_target") == keys.index("early_withdrawal") + 1
+        assert keys.index("retirement_target") < keys.index("social_security_earliest")

@@ -44,6 +44,7 @@ class MemberService:
             display_name=data.display_name,
             role=data.role,
             date_of_birth=data.date_of_birth,
+            retirement_target_age=data.retirement_target_age,
             is_active=True,
             created_at=now,
             updated_at=now,
@@ -90,6 +91,10 @@ class MemberService:
             member.role = data.role
         if data.date_of_birth is not None:
             member.date_of_birth = data.date_of_birth
+        # Use model_fields_set so an explicit null clears the target while an
+        # omitted field leaves it untouched (a profile field, self-editable).
+        if "retirement_target_age" in data.model_fields_set:
+            member.retirement_target_age = data.retirement_target_age
         if data.is_active is not None:
             member.is_active = data.is_active
 

@@ -65,6 +65,7 @@ const members: MemberResponse[] = [
     display_name: "Wei Chen",
     role: "primary",
     date_of_birth: "1982-04-15",
+    retirement_target_age: null,
     is_active: true,
     settings: {},
     created_at: "2026-01-01T00:00:00Z",

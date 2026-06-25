@@ -41,6 +41,27 @@ async def test_age_milestones_lists_member_events(
     assert all(m["reached"] is False for m in row["milestones"])
 
 
+async def test_age_milestones_includes_retirement_target_when_set(
+    client: AsyncClient,
+    db_session: AsyncSession,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    primary_member.date_of_birth = date(1990, 6, 15)
+    primary_member.retirement_target_age = 60
+    await db_session.flush()
+
+    resp = await client.get(
+        "/api/v1/reports/age-milestones",
+        headers=auth_headers(primary_user, primary_member, "primary"),
+    )
+    assert resp.status_code == 200, resp.text
+    milestones = resp.json()["members"][0]["milestones"]
+    target = next(m for m in milestones if m["key"] == "retirement_target")
+    assert target["label"] == "Target retirement"
+    assert target["year"] == 2050
+
+
 async def test_age_milestones_prompts_when_no_dob(
     client: AsyncClient,
     db_session: AsyncSession,

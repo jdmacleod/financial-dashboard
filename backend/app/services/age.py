@@ -136,13 +136,16 @@ class Milestone:
     year: int
 
 
-def milestones(dob: date | None) -> list[Milestone] | None:
+def milestones(
+    dob: date | None, retirement_target_age: int | None = None
+) -> list[Milestone] | None:
     """Age-triggered financial milestone dates for a member, ordered by date.
 
     Covers the early-withdrawal threshold (59½), the Social Security claiming
     window (earliest 62, full retirement age), Medicare (65), and the SECURE 2.0
-    RMD start age. Returns ``None`` when ``dob`` is unknown so callers can prompt
-    for a birthdate instead of rendering an empty timeline.
+    RMD start age. When ``retirement_target_age`` is set, a "Target retirement"
+    milestone is added at that age. Returns ``None`` when ``dob`` is unknown so
+    callers can prompt for a birthdate instead of rendering an empty timeline.
     """
     if dob is None:
         return None
@@ -158,6 +161,8 @@ def milestones(dob: date | None) -> list[Milestone] | None:
         ("full_retirement_age", "Social Security full retirement age", fra_months),
         ("rmd", "Required minimum distributions begin", rmd_age * 12),
     ]
+    if retirement_target_age is not None:
+        specs.append(("retirement_target", "Target retirement", retirement_target_age * 12))
 
     result = [
         Milestone(
