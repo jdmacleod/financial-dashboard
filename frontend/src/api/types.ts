@@ -385,6 +385,20 @@ export interface FederalTaxEstimate {
   next_bracket_rate: number | null
 }
 
+export interface SocialSecurityClaimingOption {
+  claiming_age: number
+  monthly_benefit: string
+  annual_benefit: string
+  pct_of_pia: number
+  is_fra: boolean
+}
+
+export interface SocialSecurityComparison {
+  pia_monthly: string
+  fra_months: number
+  options: SocialSecurityClaimingOption[]
+}
+
 export interface RetirementIncomeBreakdown {
   social_security: string
   pension: string

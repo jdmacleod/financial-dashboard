@@ -3,7 +3,95 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ApiError } from "@/api/client"
 import { membersApi } from "@/api/members"
 import { useAuth } from "@/hooks/useAuth"
+import { formatCurrency } from "@/lib/formatters"
 import type { MemberResponse } from "@/api/types"
+
+function fraLabel(months: number): string {
+  const y = Math.floor(months / 12)
+  const m = months % 12
+  return m === 0 ? `${y}` : `${y} yr ${m} mo`
+}
+
+function SocialSecurityEstimator({ member }: { member: MemberResponse }) {
+  const [benefit, setBenefit] = useState("")
+  const valid = benefit !== "" && Number(benefit) > 0
+
+  const { data, isFetching } = useQuery({
+    queryKey: ["ss-estimate", member.id, benefit],
+    queryFn: () => membersApi.socialSecurityEstimate(member.id, benefit),
+    enabled: valid && !!member.date_of_birth,
+  })
+
+  if (!member.date_of_birth) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-6">
+        <h2 className="text-sm font-semibold text-gray-900 mb-1">Social Security claiming</h2>
+        <p className="text-sm text-gray-400">
+          Add your date of birth above to estimate benefits by claiming age.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-6 space-y-4">
+      <div>
+        <h2 className="text-sm font-semibold text-gray-900">Social Security claiming</h2>
+        <p className="text-xs text-gray-400 mt-0.5">
+          Enter your estimated monthly benefit at Full Retirement Age (from your SSA statement) to
+          see how claiming earlier or later changes it.
+        </p>
+      </div>
+      <div>
+        <label htmlFor="ss-pia" className="block text-sm font-medium text-gray-700 mb-1">
+          Estimated monthly benefit at FRA
+        </label>
+        <input
+          id="ss-pia"
+          inputMode="decimal"
+          value={benefit}
+          placeholder="e.g. 2000"
+          onChange={(e) => setBenefit(e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+      </div>
+
+      {valid && data && (
+        <div>
+          <p className="text-xs text-gray-400 mb-2">
+            Full Retirement Age: {fraLabel(data.fra_months)}
+          </p>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-xs text-gray-400 text-left">
+                <th className="py-1 font-medium">Claim age</th>
+                <th className="py-1 font-medium text-right">Monthly</th>
+                <th className="py-1 font-medium text-right">Annual</th>
+                <th className="py-1 font-medium text-right">% of FRA</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {data.options.map((o) => (
+                <tr key={o.claiming_age} className={o.is_fra ? "font-medium text-indigo-700" : ""}>
+                  <td className="py-1.5">
+                    {o.claiming_age}
+                    {o.is_fra && <span className="ml-1 text-xs text-indigo-500">FRA</span>}
+                  </td>
+                  <td className="py-1.5 text-right">{formatCurrency(o.monthly_benefit)}</td>
+                  <td className="py-1.5 text-right text-gray-500">
+                    {formatCurrency(o.annual_benefit)}
+                  </td>
+                  <td className="py-1.5 text-right text-gray-500">{o.pct_of_pia.toFixed(0)}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      {valid && isFetching && !data && <p className="text-xs text-gray-400">Calculating…</p>}
+    </div>
+  )
+}
 
 const ROLE_LABELS: Record<string, string> = {
   primary: "Primary",
@@ -205,6 +293,7 @@ export default function Profile() {
       {loadError && <div className="text-sm text-red-500 py-4">Failed to load your profile.</div>}
 
       {member && <ProfileForm key={member.id} member={member} />}
+      {member && <SocialSecurityEstimator key={`ss-${member.id}`} member={member} />}
     </div>
   )
 }
