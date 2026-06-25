@@ -1,5 +1,17 @@
 # TODOS
 
+### Negative-net-worth frontend rendering — validation (follow-on from H7)
+
+**What:** Validate that the app renders a negative net worth without breaking. H7 (Brooks) ships at ~+$12.2k; the negative path is a documented manual test (set H7's student loan to ~$66k so liabilities ~$79k > assets ~$65k). Confirm the Net Worth chart Y-axis auto-scale, the KPI/currency formatters, the dashboard, and the FIRE starting-portfolio all handle a negative/zero net worth. Any breakage found is app code, not seed data.
+
+**Why:** Every demo household is now ≥ ~$12.2k positive, so negative net worth has never hit the chart axis or FIRE base. The backend net-worth computation is unconditional arithmetic (verified positive for H7), but the frontend rendering of negative values is unvalidated. Flagged in the H7 CEO casting plan (App-code risk #1).
+
+**Cons:** Requires a temporary negative-variant seed + browser check; may surface chart/FIRE fixes (unestimated until reproduced).
+
+**Depends on:** H7 seed (shipped).
+
+---
+
 ### DESIGN.md — HearthLedger design system document
 
 **What:** Run `/design-consultation` to produce a `DESIGN.md` at the repo root documenting HearthLedger-specific design tokens: type scale (Archivo headings, Spectral body), color palette (indigo-600 accent, gray-200 borders), component vocabulary (section header pattern, range toggle pill style, modal pattern), and spacing rules.
