@@ -10,6 +10,7 @@ vi.mock("@/api/members", () => ({
   membersApi: {
     get: vi.fn(),
     update: vi.fn(),
+    socialSecurityEstimate: vi.fn(),
   },
 }))
 
@@ -113,6 +114,55 @@ describe("Profile", () => {
     expect(screen.getByText(/can't be in the future/)).toBeInTheDocument()
     expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled()
     expect(membersApi.update).not.toHaveBeenCalled()
+  })
+
+  it("shows the Social Security claiming table after entering a benefit", async () => {
+    const user = userEvent.setup()
+    vi.mocked(membersApi.get).mockResolvedValue(member)
+    vi.mocked(membersApi.socialSecurityEstimate).mockResolvedValue({
+      pia_monthly: "2000.00",
+      fra_months: 804,
+      options: [
+        {
+          claiming_age: 62,
+          monthly_benefit: "1400.00",
+          annual_benefit: "16800.00",
+          pct_of_pia: 70,
+          is_fra: false,
+        },
+        {
+          claiming_age: 67,
+          monthly_benefit: "2000.00",
+          annual_benefit: "24000.00",
+          pct_of_pia: 100,
+          is_fra: true,
+        },
+        {
+          claiming_age: 70,
+          monthly_benefit: "2480.00",
+          annual_benefit: "29760.00",
+          pct_of_pia: 124,
+          is_fra: false,
+        },
+      ],
+    })
+    renderPage()
+
+    const input = await screen.findByLabelText("Estimated monthly benefit at FRA")
+    await user.type(input, "2000")
+
+    await waitFor(() => expect(screen.getByText("$1,400.00")).toBeInTheDocument())
+    expect(screen.getByText("$2,480.00")).toBeInTheDocument()
+    expect(screen.getByText("FRA")).toBeInTheDocument()
+    expect(membersApi.socialSecurityEstimate).toHaveBeenCalledWith("member-1", "2000")
+  })
+
+  it("prompts for date of birth when the member has none", async () => {
+    vi.mocked(membersApi.get).mockResolvedValue({ ...member, date_of_birth: null })
+    renderPage()
+    await waitFor(() =>
+      expect(screen.getByText(/Add your date of birth above to estimate/)).toBeInTheDocument(),
+    )
   })
 
   it("shows a permission error when the server rejects the change", async () => {

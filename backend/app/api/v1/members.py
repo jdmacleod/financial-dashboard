@@ -1,6 +1,7 @@
 import uuid
+from decimal import Decimal
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.visibility import VisibilityContext, get_visibility_ctx
@@ -12,9 +13,11 @@ from app.schemas.provisioning import (
     ProvisionResponse,
     TemporaryPasswordResponse,
 )
+from app.schemas.social_security import SocialSecurityComparison
 from app.schemas.user import UserResponse
 from app.services.member import MemberService
 from app.services.provisioning import ProvisionService
+from app.services.social_security import claiming_comparison
 
 router = APIRouter()
 
@@ -90,6 +93,31 @@ async def get_member(
 ) -> HouseholdMember:
     svc = MemberService(session)
     return await svc.get_by_id(ctx, member_id)
+
+
+@router.get(
+    "/members/{member_id}/social-security-estimate",
+    response_model=SocialSecurityComparison,
+)
+async def social_security_estimate(
+    member_id: uuid.UUID,
+    monthly_benefit_at_fra: Decimal = Query(ge=0, description="Estimated monthly benefit at FRA"),
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> SocialSecurityComparison:
+    """Adjusted Social Security benefit by claiming age (62-70) for this member.
+
+    `monthly_benefit_at_fra` is the member's PIA estimate (e.g. from the SSA
+    statement); the member's date of birth determines Full Retirement Age.
+    """
+    svc = MemberService(session)
+    member = await svc.get_by_id(ctx, member_id)
+    if member.date_of_birth is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Member has no date of birth; required to compute Full Retirement Age.",
+        )
+    return claiming_comparison(monthly_benefit_at_fra, member.date_of_birth)
 
 
 @router.patch("/members/{member_id}", response_model=MemberResponse)

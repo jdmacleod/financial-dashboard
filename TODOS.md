@@ -64,15 +64,15 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Social Security claiming-age modeling (Identity layer — deferred scope)
+### Social Security claiming-age — feed into FIRE supplemental income (Identity layer)
 
-**What:** Per-member Social Security claiming age with benefit adjustment (reduction before FRA, delayed-retirement credits to 70) and FRA lookup by birth year; feed the result into FIRE supplemental income.
+**What:** The benefit-adjustment engine + Profile claiming-age calculator shipped 2026-06-25 (see Completed). Remaining: persist a member's FRA benefit estimate (PIA) + chosen claiming age, and auto-seed a FIRE `social_security` income stream from the adjusted benefit at the claiming age (today the FIRE SS stream is a manual amount/start-year entry).
 
-**Why:** Claiming age is one of the biggest retirement levers. A self-contained engine the financial-identity layer was designed to host.
+**Why:** Closes the loop so the claiming-age decision flows into FIRE projections instead of being a standalone calculator.
 
-**Cons:** Benefit-adjustment math + FRA table; its own PR. Med risk (correctness).
+**Cons:** Needs a member PIA/claiming-age field (migration) + FIRE income-stream seeding logic. Small-to-medium.
 
-**Depends on:** `age.py` FRA table (shared with the milestone timeline).
+**Depends on:** Claiming-age engine (shipped) + FIRE income streams (`IncomeStream`, exists).
 
 ---
 
@@ -101,6 +101,20 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### Social Security claiming-age benefit adjustment (Identity layer)
+
+**Completed:** 2026-06-25 (branch `feat/ss-claiming-age`) — Benefit-adjustment
+engine (`app/services/social_security.py`): given a member's PIA (FRA benefit
+estimate) and date of birth, computes the benefit at each whole claiming age
+62-70 — early reduction (5/9 of 1%/mo for the first 36 months, 5/12 beyond) and
+delayed-retirement credit (2/3 of 1%/mo to 70), with FRA-by-birth-year from the
+existing `age.py`. Endpoint `GET /members/{id}/social-security-estimate?
+monthly_benefit_at_fra=` returns the comparison; a calculator on the Profile page
+shows the table (monthly/annual/% of FRA, FRA row flagged). Remaining (see open
+item): persist PIA + claiming age and feed the adjusted benefit into FIRE
+supplemental income. Tests: 6 engine unit (FRA-67 at 62 → 70%, at 70 → 124%; FRA
+66y2m) + 3 integration (estimate / no-DOB 400 / negative 422) + 2 frontend.
 
 ### Roth-conversion bracket headroom — first slice (Identity layer)
 

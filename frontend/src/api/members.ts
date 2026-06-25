@@ -1,10 +1,17 @@
 import { api } from "./client"
-import type { MemberResponse } from "./types"
+import type { MemberResponse, SocialSecurityComparison } from "./types"
 
 export const membersApi = {
   list: () => api.get<MemberResponse[]>("/members"),
 
   get: (id: string) => api.get<MemberResponse>(`/members/${id}`),
+
+  socialSecurityEstimate: (id: string, monthlyBenefitAtFra: string) =>
+    api.get<SocialSecurityComparison>(
+      `/members/${id}/social-security-estimate?monthly_benefit_at_fra=${encodeURIComponent(
+        monthlyBenefitAtFra,
+      )}`,
+    ),
 
   create: (data: {
     display_name: string
