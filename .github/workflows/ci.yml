@@ -90,6 +90,21 @@ jobs:
       - name: Build
         run: npm run build
 
+  frontend-docker-build:
+    name: Frontend (Alpine/musl Docker build smoke)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.0
+
+      # The frontend-quality `npm run build` runs on ubuntu glibc and uses the
+      # rolldown linux-x64-gnu native binding, so it cannot catch musl-only
+      # native-binding breakage (e.g. the vite 8.1.0 / rolldown 1.1.3 musl
+      # `vite-wasm-fallback` enum mismatch that slipped through #51). This job
+      # builds the real node:26-alpine image so any musl/Alpine-specific build
+      # regression fails CI instead of only failing `docker compose build`.
+      - name: Build frontend image (Alpine/musl)
+        run: docker build --target build -t hl-frontend-build-smoke ./frontend
+
   pre-commit:
     name: pre-commit (all hooks)
     runs-on: ubuntu-latest
