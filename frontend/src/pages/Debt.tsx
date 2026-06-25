@@ -83,11 +83,14 @@ function PayoffPlanCard({ plan }: { plan: DebtPayoffPlanResponse }) {
 }
 
 export default function Debt() {
-  const [extraPayment, setExtraPayment] = useState(0)
+  // Stored as a string so the field can be empty (no forced leading "0"); parsed
+  // to a number for the query and comparisons.
+  const [extraPayment, setExtraPayment] = useState("")
+  const extra = Number(extraPayment) || 0
 
   const { data, isLoading } = useQuery({
-    queryKey: ["debt-payoff", extraPayment],
-    queryFn: () => debtApi.payoffComparison(extraPayment),
+    queryKey: ["debt-payoff", extra],
+    queryFn: () => debtApi.payoffComparison(extra),
   })
 
   // Build chart data from avalanche monthly_series (sample every few months)
@@ -114,20 +117,25 @@ export default function Debt() {
 
       {/* Extra payment input */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4">
-        <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+        <label
+          htmlFor="extra-monthly-payment"
+          className="text-sm font-medium text-gray-700 whitespace-nowrap"
+        >
           Extra monthly payment:
         </label>
         <div className="flex items-center gap-2">
           <span className="text-gray-400">$</span>
           <input
+            id="extra-monthly-payment"
             type="number"
             min={0}
             value={extraPayment}
-            onChange={(e) => setExtraPayment(Number(e.target.value))}
+            onChange={(e) => setExtraPayment(e.target.value)}
+            placeholder="0"
             className="w-32 rounded-lg border border-gray-300 px-3 py-2 text-sm"
           />
         </div>
-        {extraPayment > 0 && (
+        {extra > 0 && (
           <span className="text-xs text-gray-400">Applied to target debt after minimums</span>
         )}
       </div>
