@@ -1,6 +1,6 @@
 # Phase 11 — Demo Households H4 (Park-Cole) and H5 (Langford)
 
-**Status:** Design
+**Status:** Implemented & verified (shipped v0.9.4.0 / PR #26; §7 checklist verified 2026-06-25)
 **Date:** 2026-06-21
 **Scope:** Add two new demo seed households, extend the shared category taxonomy, fix the seed guard to allow additive seeding, and make DATE_END env-configurable. No frontend changes, no Alembic migrations.
 
@@ -15,7 +15,7 @@ Phase 11 adds H4 Park-Cole and H5 Langford, which introduce household archetypes
 |                | H4 Park-Cole                                                 | H5 Langford                                                               |
 | -------------- | ------------------------------------------------------------ | ------------------------------------------------------------------------- |
 | Profile        | Late 20s Nashville renters, early debt payoff                | Sarasota retirees, RMD + Social Security                                  |
-| Net worth      | ~$154,500                                                    | ~$12,856,700                                                              |
+| Net worth      | ~$300,051 (start ~$154,500)                                  | ~$13,327,103 (start ~$12,856,700)                                         |
 | Novel concepts | Rent-only housing, debt cascade (3 loans), aspirational FIRE | RMD income, SS income, pension, Medicare IRMAA, ACA premium, LLC checking |
 
 Both households are specified in `docs/hearthledger-demo-data-spec-addendum.md`. The implementation spec for H1–H3 (`docs/hearthledger-demo-data-spec-revised.md`) defines the seed framework that H4/H5 extend.
@@ -425,15 +425,15 @@ No Alembic migrations, no new API endpoints, no frontend changes.
 
 ## 7. Design Review Checklist
 
-- [ ] No raw account queries outside `AccountRepository.get_visible()`
-- [ ] All seed inserts go through existing service methods or direct ORM (seed is not audited per spec)
-- [ ] No encrypted field values in audit log entries (seed bypasses audit log per rule in spec)
-- [ ] `rent`, `renters_insurance`, and Medicare categories don't create duplicate slugs with existing taxonomy
-- [ ] H5 Sarasota primary home (`linked_mortgage_account_id = null`) shows equity correctly in Assets page without crash (add test: `propertiesApi.getEquity` mock with `mortgage_balance_visible: false`)
-- [ ] H4 Assets page shows empty state without errors (no real estate accounts)
-- [ ] Seed summary output matches expected net worth targets (±$1K): H4 = $154,500, H5 = $12,856,700
-- [ ] `--household all` runs cleanly end-to-end without FK or enum errors
-- [ ] `--household 4` and `--household 5` both work on a DB that already has H1–H3 (per-household guard check)
-- [ ] H4 Honda Accord loan account shows `is_active = false` with $0 balance from October 2025 onward
-- [ ] H5 RMD transactions start in Q1 2025 — zero RMD transactions in 2024
-- [ ] H5 ACA premium uses $1,165 for 2024, $1,245 for 2025, $1,310 for 2026
+- [x] No raw account queries outside `AccountRepository.get_visible()`
+- [x] All seed inserts go through existing service methods or direct ORM (seed is not audited per spec)
+- [x] No encrypted field values in audit log entries (seed bypasses audit log per rule in spec)
+- [x] `rent`, `renters_insurance`, and Medicare categories don't create duplicate slugs with existing taxonomy
+- [x] H5 Sarasota primary home (`linked_mortgage_account_id = null`) shows equity correctly in Assets page without crash (add test: `propertiesApi.getEquity` mock with `mortgage_balance_visible: false`)
+- [x] H4 Assets page shows empty state without errors (no real estate accounts)
+- [x] Seed summary output matches net worth targets (±$1K): **H4 = $300,051, H5 = $13,327,103** (verified 2026-06-25 against live DB via `ReportService.current_net_worth` as of 2026-06-21, matching each seeder's recorded figure to the dollar). The original spec figures ($154,500 / $12,856,700) were _starting-balance_ snapshots; the as-of-2026 net worth is higher due to simulated growth + debt paydown over the horizon, plus the H4 Inherited IRA account added in the Phase B/C revision (commit c0cf39f, 13→14 accounts).
+- [x] `--household all` runs cleanly end-to-end without FK or enum errors
+- [x] `--household 4` and `--household 5` both work on a DB that already has H1–H3 (per-household guard check)
+- [x] H4 Honda Accord loan account shows `is_active = false` with $0 balance from October 2025 onward
+- [x] H5 RMD transactions start in Q1 2025 — zero RMD transactions in 2024
+- [x] H5 ACA premium uses $1,165 for 2024, $1,245 for 2025, $1,310 for 2026

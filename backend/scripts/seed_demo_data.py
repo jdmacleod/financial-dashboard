@@ -150,7 +150,9 @@ async def _inspect_household(session: AsyncSession, name: str) -> dict | None:
             SELECT
                 (SELECT COUNT(*) FROM household_members WHERE household_id = h.id) AS members,
                 (SELECT COUNT(*) FROM accounts      WHERE household_id = h.id) AS accounts,
-                (SELECT COUNT(*) FROM transactions  WHERE household_id = h.id) AS transactions
+                (SELECT COUNT(*) FROM transactions
+                    WHERE account_id IN (SELECT id FROM accounts WHERE household_id = h.id)
+                ) AS transactions
             FROM households h
             WHERE h.name = :name
         """),
