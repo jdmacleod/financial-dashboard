@@ -25,6 +25,31 @@ def test_verify_password_rejects_wrong_password() -> None:
     assert verify_password("WrongPassword", hashed) is False
 
 
+def test_hash_password_accepts_over_72_bytes() -> None:
+    # bcrypt 5.0 raises on >72 bytes unless truncated; we truncate, so this
+    # must not raise and must round-trip on the first 72 bytes.
+    long_pw = "a" * 100
+    hashed = hash_password(long_pw)
+    assert verify_password(long_pw, hashed) is True
+    # The 73rd byte onward is ignored (bcrypt's documented limit), so a value
+    # sharing the first 72 bytes verifies too.
+    assert verify_password("a" * 72, hashed) is True
+
+
+def test_verify_password_returns_false_on_malformed_hash() -> None:
+    assert verify_password("whatever", "not-a-bcrypt-hash") is False
+
+
+def test_verify_password_accepts_legacy_2b_hash() -> None:
+    # A $2b$ hash (the format the previous passlib backend produced) must still
+    # verify, so existing stored credentials keep working after the migration.
+    import bcrypt
+
+    legacy = bcrypt.hashpw(b"CorrectHorse123!", bcrypt.gensalt(prefix=b"2b")).decode()
+    assert legacy.startswith("$2b$")
+    assert verify_password("CorrectHorse123!", legacy) is True
+
+
 def test_access_token_payload_fields() -> None:
     user_id = str(uuid.uuid4())
     member_id = str(uuid.uuid4())

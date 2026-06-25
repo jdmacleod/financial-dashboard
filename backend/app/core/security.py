@@ -2,16 +2,25 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
+import bcrypt
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 from app.core.config import settings
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt hashes at most the first 72 bytes of the secret and, since 5.0, raises
+# on anything longer instead of silently truncating. We truncate explicitly to
+# preserve the prior behavior (passlib did the same), so passwords keep hashing
+# and verifying identically. Hashes use the standard $2b$ format, so credentials
+# created under the previous passlib backend verify unchanged.
+_BCRYPT_MAX_BYTES = 72
+
+
+def _prepare(password: str) -> bytes:
+    return password.encode("utf-8")[:_BCRYPT_MAX_BYTES]
 
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(_prepare(password), bcrypt.gensalt()).decode("utf-8")
 
 
 def generate_temporary_password() -> str:
@@ -24,7 +33,11 @@ def generate_temporary_password() -> str:
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    try:
+        return bcrypt.checkpw(_prepare(plain), hashed.encode("utf-8"))
+    except ValueError:
+        # Malformed/unknown hash string — treat as a non-match rather than raising.
+        return False
 
 
 def create_access_token(user_id: str, member_id: str | None, role: str) -> str:
