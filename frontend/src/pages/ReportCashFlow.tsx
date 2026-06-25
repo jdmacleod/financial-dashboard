@@ -561,7 +561,11 @@ export default function ReportCashFlow() {
                         ? () =>
                             void navigate({
                               to: "/reports/spending",
-                              search: { category: c.category_id! },
+                              search: {
+                                category: c.category_id!,
+                                from: dateRange.from,
+                                to: dateRange.to,
+                              },
                             })
                         : undefined
                     }
@@ -570,7 +574,7 @@ export default function ReportCashFlow() {
                 <div style={{ textAlign: "right", marginTop: "8px" }}>
                   <Link
                     to="/reports/spending"
-                    search={{ category: undefined }}
+                    search={{ category: undefined, from: dateRange.from, to: dateRange.to }}
                     style={{ fontSize: "11px", color: "var(--faint)", textDecoration: "none" }}
                   >
                     View full breakdown →

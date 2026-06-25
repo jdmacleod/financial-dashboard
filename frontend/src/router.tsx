@@ -144,6 +144,8 @@ const reportsSpendingRoute = createRoute({
   component: ReportSpending,
   validateSearch: (search: Record<string, unknown>) => ({
     category: typeof search.category === "string" ? search.category : undefined,
+    from: typeof search.from === "string" ? search.from : undefined,
+    to: typeof search.to === "string" ? search.to : undefined,
   }),
 })
 
