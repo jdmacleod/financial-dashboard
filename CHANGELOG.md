@@ -3,6 +3,17 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.22.0.0] - 2026-06-24
+
+### Added
+
+- **Your profile page.** A new "Your profile" page in the user dropdown lets you update your own display name and date of birth without going through a primary member. Setting your date of birth here powers the same age-based projections as before — FIRE timelines, Social Security and Medicare milestones, and required minimum distributions. A future-dated birthday is rejected, and your role is shown but can only be changed by a primary member.
+- **Set an account's tax treatment from the edit form.** The Edit account dialog now has a "Tax treatment" field (pre-tax, Roth, taxable, or unset). New accounts still inherit a sensible default from their type, but you can now correct accounts whose treatment isn't implied by the type — a generic IRA, after-tax 401(k) balances, or a rollover — so their required minimum distributions are calculated correctly.
+
+### Changed
+
+- **Members can edit their own date of birth.** Previously only a primary member could change anyone's birthdate. Now any member can update their own name and date of birth from their profile, while role and account activation remain primary-only.
+
 ## [0.21.0.0] - 2026-06-24
 
 ### Added

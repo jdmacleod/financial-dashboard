@@ -126,6 +126,100 @@ async def test_non_owner_partner_cannot_update_another_members_account(
     assert exc_info.value.status_code in (403, 404)
 
 
+async def test_create_seeds_tax_treatment_from_type(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A new retirement account inherits its tax treatment from the account type
+    when the caller doesn't specify one (RMD eligibility stays correct)."""
+    service = AccountService(db_session)
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await service.create(
+        ctx, AccountCreate(account_type="retirement_401k", nickname="My 401k")
+    )
+    assert account.tax_treatment == "pretax"
+
+
+async def test_create_unmapped_type_leaves_tax_treatment_null(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A type with no default mapping (checking) is left unclassified."""
+    service = AccountService(db_session)
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await service.create(ctx, AccountCreate(account_type="checking", nickname="Chase"))
+    assert account.tax_treatment is None
+
+
+async def test_create_explicit_tax_treatment_overrides_default(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """An explicit tax_treatment wins over the type-based default (after-tax 401k)."""
+    service = AccountService(db_session)
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await service.create(
+        ctx,
+        AccountCreate(account_type="retirement_401k", nickname="Roth 401k", tax_treatment="roth"),
+    )
+    assert account.tax_treatment == "roth"
+
+
+async def test_update_overrides_tax_treatment(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A correction via update changes the stored tax treatment."""
+    service = AccountService(db_session)
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await service.create(
+        ctx, AccountCreate(account_type="retirement_ira", nickname="Generic IRA")
+    )
+    assert account.tax_treatment == "pretax"
+    updated = await service.update(ctx, account.id, AccountUpdate(tax_treatment="roth"))
+    assert updated.tax_treatment == "roth"
+
+
+async def test_update_can_clear_tax_treatment_to_null(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Setting tax_treatment explicitly to None clears it (unclassified)."""
+    service = AccountService(db_session)
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await service.create(
+        ctx, AccountCreate(account_type="retirement_ira", nickname="Generic IRA")
+    )
+    updated = await service.update(ctx, account.id, AccountUpdate(tax_treatment=None))
+    assert updated.tax_treatment is None
+
+
+async def test_update_omitting_tax_treatment_leaves_it_unchanged(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """An update that doesn't mention tax_treatment must not wipe it."""
+    service = AccountService(db_session)
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    account = await service.create(
+        ctx, AccountCreate(account_type="retirement_401k", nickname="My 401k")
+    )
+    updated = await service.update(ctx, account.id, AccountUpdate(nickname="Renamed 401k"))
+    assert updated.tax_treatment == "pretax"
+
+
 async def test_create_grant_rejects_joint_account(
     db_session: AsyncSession,
     household: Household,

@@ -92,6 +92,7 @@ function makeAccount(accountType: AccountResponse["account_type"]): AccountRespo
     institution_name: null,
     account_number_last4: null,
     include_in_net_worth: true,
+    tax_treatment: null,
     is_active: true,
     current_balance: "0.00",
     balance_as_of: null,

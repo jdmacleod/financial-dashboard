@@ -10,7 +10,7 @@ from app.core.audit import AUDIT_EXCLUDED_FIELDS, AuditRepository, _snapshot, au
 from app.core.encryption import decrypt, encrypt
 from app.core.visibility import VisibilityContext
 from app.db.models.access_grant import AccountAccessGrant
-from app.db.models.account import Account
+from app.db.models.account import DEFAULT_TAX_TREATMENT, Account
 from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
@@ -60,6 +60,7 @@ def _account_to_response(
         institution_name=institution_name,
         account_number_last4=last4,
         include_in_net_worth=account.include_in_net_worth,
+        tax_treatment=account.tax_treatment,
         is_active=account.is_active,
         current_balance=balance,
         balance_as_of=balance_date,
@@ -192,6 +193,10 @@ class AccountService:
                 detail="Partners may only create joint or own-member accounts",
             )
         now = datetime.now(UTC)
+        # When the caller doesn't set tax treatment, seed it from the account
+        # type (mirrors migration 0014's backfill) so RMD eligibility is correct
+        # for new retirement accounts without manual entry.
+        tax_treatment = data.tax_treatment or DEFAULT_TAX_TREATMENT.get(data.account_type)
         account = Account(
             household_id=ctx.household_id,
             owner_member_id=data.owner_member_id,
@@ -201,6 +206,7 @@ class AccountService:
             account_number_enc=encrypt(data.account_number) if data.account_number else None,
             routing_number_enc=encrypt(data.routing_number) if data.routing_number else None,
             include_in_net_worth=data.include_in_net_worth,
+            tax_treatment=tax_treatment,
             is_active=True,
             notes_enc=encrypt(data.notes) if data.notes else None,
             created_at=now,
@@ -243,6 +249,10 @@ class AccountService:
             account.routing_number_enc = encrypt(data.routing_number)
         if data.include_in_net_worth is not None:
             account.include_in_net_worth = data.include_in_net_worth
+        # Explicit override (incl. clearing to NULL/unclassified) — use
+        # model_fields_set so an omitted field is left untouched.
+        if "tax_treatment" in data.model_fields_set:
+            account.tax_treatment = data.tax_treatment
         if data.notes is not None:
             account.notes_enc = encrypt(data.notes)
 

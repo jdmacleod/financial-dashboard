@@ -130,6 +130,43 @@ async def test_partner_cannot_update_member(
     assert resp.status_code == 403
 
 
+async def test_partner_can_update_own_date_of_birth(
+    client: AsyncClient,
+    household: Household,
+    make_member: object,
+    make_user: object,
+) -> None:
+    partner_member = await make_member(role="partner")
+    partner_user = await make_user(partner_member, "partner@example.com")
+
+    resp = await client.patch(
+        f"/api/v1/members/{partner_member.id}",
+        json={"date_of_birth": "1985-07-04", "display_name": "My New Name"},
+        headers=auth_headers(partner_user, partner_member, "partner"),
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["date_of_birth"] == "1985-07-04"
+    assert body["display_name"] == "My New Name"
+
+
+async def test_partner_cannot_promote_self(
+    client: AsyncClient,
+    household: Household,
+    make_member: object,
+    make_user: object,
+) -> None:
+    partner_member = await make_member(role="partner")
+    partner_user = await make_user(partner_member, "partner@example.com")
+
+    resp = await client.patch(
+        f"/api/v1/members/{partner_member.id}",
+        json={"role": "primary"},
+        headers=auth_headers(partner_user, partner_member, "partner"),
+    )
+    assert resp.status_code == 403
+
+
 async def test_primary_can_deactivate_member(
     client: AsyncClient,
     household: Household,

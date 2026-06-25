@@ -12,6 +12,7 @@ import { AppLayout } from "@/components/app/AppLayout"
 import Login from "@/pages/Login"
 import Setup from "@/pages/Setup"
 import Members from "@/pages/Members"
+import Profile from "@/pages/Profile"
 import Accounts from "@/pages/Accounts"
 import Transactions from "@/pages/Transactions"
 import Categories from "@/pages/Categories"
@@ -98,6 +99,12 @@ const membersRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: "/members",
   component: Members,
+})
+
+const profileRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: "/profile",
+  component: Profile,
 })
 
 const accountsRoute = createRoute({
@@ -283,6 +290,7 @@ const routeTree = rootRoute.addChildren([
   appLayoutRoute.addChildren([
     indexRoute,
     membersRoute,
+    profileRoute,
     accountsRoute,
     accountTransactionsRoute,
     categoriesRoute,

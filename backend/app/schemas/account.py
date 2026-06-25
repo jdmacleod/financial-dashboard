@@ -26,6 +26,10 @@ AccountType = Literal[
     "other_liability",
 ]
 
+# Tax treatment of an account's balance. Drives RMD eligibility (pretax only).
+# None means unclassified — the type-based default did not apply.
+TaxTreatment = Literal["pretax", "roth", "taxable"]
+
 
 class AccountCreate(BaseModel):
     account_type: AccountType
@@ -35,6 +39,7 @@ class AccountCreate(BaseModel):
     account_number: str | None = None
     routing_number: str | None = None
     include_in_net_worth: bool = True
+    tax_treatment: TaxTreatment | None = None
     notes: Annotated[str | None, Field(max_length=2000)] = None
 
 
@@ -46,6 +51,7 @@ class AccountUpdate(BaseModel):
     account_number: str | None = None
     routing_number: str | None = None
     include_in_net_worth: bool | None = None
+    tax_treatment: TaxTreatment | None = None
     notes: Annotated[str | None, Field(max_length=2000)] = None
 
 
@@ -60,6 +66,7 @@ class AccountResponse(BaseModel):
     institution_name: str | None
     account_number_last4: str | None
     include_in_net_worth: bool
+    tax_treatment: str | None
     is_active: bool
     current_balance: Decimal | None
     balance_as_of: date | None
