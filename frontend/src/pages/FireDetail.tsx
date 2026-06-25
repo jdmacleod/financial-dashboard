@@ -201,6 +201,7 @@ export default function FireDetail() {
   const [showAddStream, setShowAddStream] = useState(false)
   const [detectError, setDetectError] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [ladderCeiling, setLadderCeiling] = useState("0.12")
 
   const { data: scenario, isLoading } = useQuery({
     queryKey: ["fire-scenario", scenarioId],
@@ -210,6 +211,12 @@ export default function FireDetail() {
   const { data: projection, isLoading: projLoading } = useQuery({
     queryKey: ["fire-projection", scenarioId],
     queryFn: () => fireApi.projection(scenarioId),
+    enabled: !!scenario,
+  })
+
+  const { data: rothLadder } = useQuery({
+    queryKey: ["fire-roth-ladder", scenarioId, ladderCeiling],
+    queryFn: () => fireApi.rothLadder(scenarioId, { ceiling_rate: ladderCeiling }),
     enabled: !!scenario,
   })
 
@@ -627,6 +634,105 @@ export default function FireDetail() {
                 <p className="text-xs text-gray-400 text-center py-2">
                   Showing first 10 of {projection.projections.length} years
                 </p>
+              )}
+            </div>
+          )}
+
+          {rothLadder && (
+            <div className="bg-white rounded-xl border border-gray-200 p-5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-gray-700">Roth conversion ladder</p>
+                <label className="flex items-center gap-1.5 text-xs text-gray-500">
+                  Fill to top of
+                  <select
+                    aria-label="Conversion target bracket"
+                    value={ladderCeiling}
+                    onChange={(e) => setLadderCeiling(e.target.value)}
+                    className="border border-gray-200 rounded px-1.5 py-1 text-xs"
+                  >
+                    {["0.10", "0.12", "0.22", "0.24", "0.32", "0.35"].map((r) => (
+                      <option key={r} value={r}>
+                        {Math.round(Number(r) * 100)}% bracket
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              {!rothLadder.available ? (
+                <p className="text-sm text-gray-400">{rothLadder.note}</p>
+              ) : rothLadder.years.length === 0 ? (
+                <p className="text-sm text-gray-400">
+                  No gap years before RMDs begin at age {rothLadder.rmd_start_age} — nothing to
+                  convert.
+                </p>
+              ) : (
+                <>
+                  <div
+                    className={`rounded-lg p-3 mb-3 ${Number(rothLadder.lifetime_tax_saved) >= 0 ? "bg-emerald-50" : "bg-amber-50"}`}
+                  >
+                    <p className="text-sm">
+                      Converting in the gap years (age {rothLadder.gap_start_age} →{" "}
+                      {rothLadder.rmd_start_age}){" "}
+                      {Number(rothLadder.lifetime_tax_saved) >= 0 ? "saves about " : "costs about "}
+                      <strong
+                        className={
+                          Number(rothLadder.lifetime_tax_saved) >= 0
+                            ? "text-emerald-700"
+                            : "text-amber-700"
+                        }
+                      >
+                        {formatCurrency(Math.abs(Number(rothLadder.lifetime_tax_saved)).toFixed(2))}
+                      </strong>{" "}
+                      in lifetime federal tax (to age {rothLadder.horizon_age}), converting{" "}
+                      {formatCurrency(rothLadder.total_converted)} total.
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Estimate — federal only, ignores state tax. A loss means the future RMDs would
+                      stay in lower brackets than the conversion.
+                    </p>
+                  </div>
+                  <div className="overflow-hidden rounded-lg border border-gray-200">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">
+                            Year
+                          </th>
+                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-500">
+                            Age
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">
+                            Convert
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">
+                            Tax
+                          </th>
+                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">
+                            Pretax left
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {rothLadder.years.map((y) => (
+                          <tr key={y.year}>
+                            <td className="px-3 py-2 text-gray-600">{y.year}</td>
+                            <td className="px-3 py-2 text-gray-500">{y.age}</td>
+                            <td className="px-3 py-2 text-right font-medium text-indigo-600">
+                              {formatCurrency(y.conversion)}
+                            </td>
+                            <td className="px-3 py-2 text-right text-amber-600">
+                              {formatCurrency(y.federal_tax)}
+                            </td>
+                            <td className="px-3 py-2 text-right text-gray-900">
+                              {formatCurrency(y.pretax_balance)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           )}

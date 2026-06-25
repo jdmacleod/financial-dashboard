@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.audit import AUDIT_EXCLUDED_FIELDS, AuditRepository, _snapshot
 from app.core.visibility import VisibilityContext
 from app.db.models.fire import FireScenario as FireScenarioModel
+from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
 from app.repositories.account import AccountRepository
 from app.schemas.fire import (
@@ -22,13 +23,16 @@ from app.schemas.fire import (
     FireScenarioUpdate,
     IncomeStream,
     IncomeStreamType,
+    RothLadderResponse,
+    RothLadderYear,
     YearProjectionResponse,
 )
 from app.services.age import full_retirement_age_months, rmd_start_age
 from app.services.fire_detector import FireInputDetector
 from app.services.fire_projector import FireScenario as FireScenarioDataclass
-from app.services.fire_projector import YearProjection, project
+from app.services.fire_projector import YearProjection, _stream_active, _stream_amount, project
 from app.services.rmd import uniform_lifetime_divisor
+from app.services.roth_ladder import project_roth_ladder
 from app.services.social_security import benefit_at_claiming_age
 
 
@@ -477,3 +481,91 @@ class FireScenarioService:
         ]
 
         return FireProjectionResponse(summary=summary, projections=projections)
+
+    async def roth_ladder(
+        self,
+        ctx: VisibilityContext,
+        scenario_id: uuid.UUID,
+        *,
+        ceiling_rate: Decimal,
+        retirement_age: int | None,
+        horizon_age: int,
+    ) -> RothLadderResponse:
+        """Roth-conversion-ladder estimate over the scenario's gap years.
+
+        Fills the target `ceiling_rate` bracket each year between retirement and the
+        RMD start age, then compares lifetime federal tax with vs. without the
+        conversions. Returns an unavailable response (with a note) when the filing
+        status, date of birth, or a pretax balance is missing."""
+        row = await self._get_row(ctx, scenario_id)
+
+        if row.member_id is not None:
+            target_member_id: uuid.UUID | None = row.member_id
+            dob = await self._get_member_dob(row.member_id)
+        else:
+            target_member_id = await self._get_primary_member_id(ctx)
+            dob = await self._get_primary_member_dob(ctx)
+
+        household = await self.session.get(Household, ctx.household_id)
+        filing_status = household.filing_status if household is not None else None
+        pretax_start = await self._pretax_start_balance(ctx, target_member_id)
+
+        if retirement_age is None:
+            retirement_age = row.target_retirement_age or 62
+
+        # Per-year baseline income (independent of conversions): non-Social-Security
+        # streams are ordinary income; the member's SS plan supplies the SS column.
+        income_streams = [IncomeStream(**s) for s in (row.additional_income_streams or [])]
+        ss_stream = await self._social_security_stream(target_member_id)
+        if ss_stream is not None:
+            income_streams = [
+                s for s in income_streams if s.type != IncomeStreamType.social_security
+            ]
+            income_streams.append(ss_stream)
+
+        income_by_year: dict[int, tuple[Decimal, Decimal]] = {}
+        if dob is not None:
+            for year in range(dob.year + retirement_age, dob.year + horizon_age + 1):
+                ordinary = sum(
+                    (
+                        _stream_amount(s, year)
+                        for s in income_streams
+                        if s.type != IncomeStreamType.social_security and _stream_active(s, year)
+                    ),
+                    Decimal("0"),
+                )
+                ss = sum(
+                    (
+                        _stream_amount(s, year)
+                        for s in income_streams
+                        if s.type == IncomeStreamType.social_security and _stream_active(s, year)
+                    ),
+                    Decimal("0"),
+                )
+                income_by_year[year] = (ordinary, ss)
+
+        result = project_roth_ladder(
+            dob=dob,
+            filing_status=filing_status,
+            pretax_start=pretax_start,
+            annual_return=row.expected_annual_return,
+            retirement_age=retirement_age,
+            horizon_age=horizon_age,
+            ceiling_rate=ceiling_rate,
+            income_by_year=income_by_year,
+        )
+
+        return RothLadderResponse(
+            available=result.available,
+            note=result.note,
+            ceiling_rate=result.ceiling_rate,
+            gap_start_year=result.gap_start_year,
+            gap_start_age=result.gap_start_age,
+            rmd_start_age=result.rmd_start_age,
+            horizon_age=result.horizon_age,
+            total_converted=result.total_converted,
+            lifetime_tax_with=result.lifetime_tax_with,
+            lifetime_tax_without=result.lifetime_tax_without,
+            lifetime_tax_saved=result.lifetime_tax_saved,
+            years=[RothLadderYear(**vars(r)) for r in result.years],
+        )

@@ -126,6 +126,22 @@ def preferential_tax(
     return at_15 * tax_tables.CAPITAL_GAINS_RATES[1] + at_20 * tax_tables.CAPITAL_GAINS_RATES[2]
 
 
+def bracket_ceiling_for_rate(brackets: tax_tables.BracketTable, rate: Decimal) -> Decimal | None:
+    """Taxable-income ceiling at the top of the bracket taxed at `rate`.
+
+    Used by Roth-conversion-ladder planning ("fill to the top of the 12%
+    bracket"): returns the taxable income at which that bracket ends (the next
+    bracket's lower bound). Returns None when `rate` is the top bracket (no
+    ceiling) or isn't present in the table.
+    """
+    for i, (_lower, r) in enumerate(brackets):
+        if r == rate:
+            if i + 1 < len(brackets):
+                return brackets[i + 1][0]
+            return None
+    return None
+
+
 def estimate_federal_tax(
     *,
     tax_year: int,

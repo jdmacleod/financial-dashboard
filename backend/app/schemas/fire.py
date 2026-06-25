@@ -120,6 +120,38 @@ class FireProjectionResponse(BaseModel):
     projections: list[YearProjectionResponse]
 
 
+class RothLadderYear(BaseModel):
+    year: int
+    age: int
+    pretax_balance: Decimal
+    ordinary_income: Decimal
+    social_security: Decimal
+    conversion: Decimal
+    federal_tax: Decimal
+
+
+class RothLadderResponse(BaseModel):
+    """Roth-conversion-ladder estimate over the FIRE gap years.
+
+    ``available`` is false (with ``note``) when prerequisites are missing
+    (filing status, date of birth, or a pretax balance). The headline is
+    ``lifetime_tax_saved`` — federal tax without conversions minus with.
+    """
+
+    available: bool
+    note: str | None = None
+    ceiling_rate: Decimal
+    gap_start_year: int | None
+    gap_start_age: int | None
+    rmd_start_age: int | None
+    horizon_age: int
+    total_converted: Decimal
+    lifetime_tax_with: Decimal
+    lifetime_tax_without: Decimal
+    lifetime_tax_saved: Decimal
+    years: list[RothLadderYear]
+
+
 class DebtWithAccountResponse(BaseModel):
     debt_id: uuid.UUID
     account_id: uuid.UUID

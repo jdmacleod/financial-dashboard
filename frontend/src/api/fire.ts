@@ -4,6 +4,7 @@ import type {
   FireProjectionResponse,
   FireScenarioResponse,
   IncomeStream,
+  RothLadderResponse,
 } from "./types"
 
 export const fireApi = {
@@ -48,4 +49,13 @@ export const fireApi = {
     api.get<FireProjectionResponse>(
       `/fire-scenarios/${id}/projection${from_year !== undefined ? `?from_year=${from_year}` : ""}`,
     ),
+
+  rothLadder: (id: string, opts?: { ceiling_rate?: string; retirement_age?: number }) => {
+    const params = new URLSearchParams()
+    if (opts?.ceiling_rate) params.set("ceiling_rate", opts.ceiling_rate)
+    if (opts?.retirement_age !== undefined)
+      params.set("retirement_age", String(opts.retirement_age))
+    const qs = params.toString()
+    return api.get<RothLadderResponse>(`/fire-scenarios/${id}/roth-ladder${qs ? `?${qs}` : ""}`)
+  },
 }

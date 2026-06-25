@@ -706,6 +706,31 @@ export interface FireProjectionResponse {
   projections: YearProjectionResponse[]
 }
 
+export interface RothLadderYear {
+  year: number
+  age: number
+  pretax_balance: string
+  ordinary_income: string
+  social_security: string
+  conversion: string
+  federal_tax: string
+}
+
+export interface RothLadderResponse {
+  available: boolean
+  note: string | null
+  ceiling_rate: string
+  gap_start_year: number | null
+  gap_start_age: number | null
+  rmd_start_age: number | null
+  horizon_age: number
+  total_converted: string
+  lifetime_tax_with: string
+  lifetime_tax_without: string
+  lifetime_tax_saved: string
+  years: RothLadderYear[]
+}
+
 // ---- Debt Payoff ----
 
 export interface DebtWithAccountResponse {
