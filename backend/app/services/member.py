@@ -57,9 +57,27 @@ class MemberService:
     async def update(
         self, ctx: VisibilityContext, member_id: uuid.UUID, data: MemberUpdate
     ) -> HouseholdMember:
-        if not ctx.is_primary:
+        # Self-or-primary: a primary may edit any member; anyone else may edit
+        # only their own record (CEO-review Decision 3, self-service profile).
+        is_self = ctx.member_id is not None and member_id == ctx.member_id
+        if not ctx.is_primary and not is_self:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
         member = await self.get_by_id(ctx, member_id)
+
+        # Role and activation remain primary-only, even when editing yourself —
+        # a member can't promote themselves or deactivate their own account.
+        if not ctx.is_primary:
+            if data.role is not None and data.role != member.role:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only a primary member can change roles",
+                )
+            if data.is_active is not None and data.is_active != member.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only a primary member can change activation",
+                )
+
         self._prev_snapshot = _snapshot(member, exclude=AUDIT_EXCLUDED_FIELDS)
 
         # Prevent downgrading the last primary

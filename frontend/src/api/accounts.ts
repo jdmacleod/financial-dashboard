@@ -1,5 +1,5 @@
 import { api } from "./client"
-import type { AccessGrantResponse, AccountResponse, AccountType } from "./types"
+import type { AccessGrantResponse, AccountResponse, AccountType, TaxTreatment } from "./types"
 
 export const accountsApi = {
   list: () => api.get<AccountResponse[]>("/accounts"),
@@ -14,6 +14,7 @@ export const accountsApi = {
     account_number?: string | null
     routing_number?: string | null
     include_in_net_worth?: boolean
+    tax_treatment?: TaxTreatment | null
     notes?: string | null
   }) => api.post<AccountResponse>("/accounts", data),
 
@@ -27,6 +28,7 @@ export const accountsApi = {
       account_number: string | null
       routing_number: string | null
       include_in_net_worth: boolean
+      tax_treatment: TaxTreatment | null
       notes: string | null
     }>,
   ) => api.patch<AccountResponse>(`/accounts/${id}`, data),

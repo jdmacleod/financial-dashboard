@@ -50,6 +50,30 @@ async def test_update_account(
     assert update_resp.json()["nickname"] == "Renamed"
 
 
+async def test_tax_treatment_seeded_and_overridable(
+    client: AsyncClient, household: Household, primary_member: HouseholdMember, primary_user: User
+) -> None:
+    headers = auth_headers(primary_user, primary_member, "primary")
+    create_resp = await client.post(
+        "/api/v1/accounts",
+        json={"account_type": "retirement_401k", "nickname": "My 401k"},
+        headers=headers,
+    )
+    assert create_resp.status_code == 201
+    account_id = create_resp.json()["id"]
+    # Seeded from the account type.
+    assert create_resp.json()["tax_treatment"] == "pretax"
+
+    # Correct it to roth (e.g. an after-tax 401k).
+    update_resp = await client.patch(
+        f"/api/v1/accounts/{account_id}",
+        json={"tax_treatment": "roth"},
+        headers=headers,
+    )
+    assert update_resp.status_code == 200
+    assert update_resp.json()["tax_treatment"] == "roth"
+
+
 async def test_deactivate_account(
     client: AsyncClient, household: Household, primary_member: HouseholdMember, primary_user: User
 ) -> None:

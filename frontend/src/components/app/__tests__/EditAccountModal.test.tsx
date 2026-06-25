@@ -28,6 +28,7 @@ const mockAccount: AccountResponse = {
   institution_name: "Chase",
   account_number_last4: "1234",
   include_in_net_worth: true,
+  tax_treatment: null,
   is_active: true,
   current_balance: "8000.00",
   balance_as_of: "2026-06-01",
@@ -222,6 +223,50 @@ describe("EditAccountModal", () => {
       expect(accountsApi.update).toHaveBeenCalledWith(
         "acct-1",
         expect.objectContaining({ account_number: null }),
+      )
+    })
+  })
+
+  it("pre-fills tax treatment from the account and sends an override on save", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    vi.mocked(accountsApi.update).mockResolvedValue(mockAccount)
+
+    const iraAccount: AccountResponse = {
+      ...mockAccount,
+      account_type: "retirement_ira",
+      tax_treatment: "pretax",
+    }
+    renderModal(iraAccount, onClose)
+
+    const select = screen.getByLabelText("Tax treatment") as HTMLSelectElement
+    expect(select.value).toBe("pretax")
+
+    await user.selectOptions(select, "roth")
+    await user.click(screen.getByRole("button", { name: /save/i }))
+
+    await waitFor(() => {
+      expect(accountsApi.update).toHaveBeenCalledWith(
+        "acct-1",
+        expect.objectContaining({ tax_treatment: "roth" }),
+      )
+    })
+  })
+
+  it("sends tax_treatment as null when set to Not set", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountsApi.update).mockResolvedValue(mockAccount)
+
+    const iraAccount: AccountResponse = { ...mockAccount, tax_treatment: "pretax" }
+    renderModal(iraAccount)
+
+    await user.selectOptions(screen.getByLabelText("Tax treatment"), "")
+    await user.click(screen.getByRole("button", { name: /save/i }))
+
+    await waitFor(() => {
+      expect(accountsApi.update).toHaveBeenCalledWith(
+        "acct-1",
+        expect.objectContaining({ tax_treatment: null }),
       )
     })
   })

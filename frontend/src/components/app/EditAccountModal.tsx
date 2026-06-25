@@ -15,6 +15,8 @@ const editSchema = z.object({
   notes: z.string().optional(),
   include_in_net_worth: z.boolean(),
   ownership_entity_id: z.string().nullable(),
+  // "" = unclassified (NULL); otherwise pretax | roth | taxable.
+  tax_treatment: z.enum(["", "pretax", "roth", "taxable"]),
 })
 type EditForm = z.infer<typeof editSchema>
 
@@ -63,6 +65,7 @@ export default function EditAccountModal({ account, onClose }: EditAccountModalP
       notes: account.notes ?? "",
       include_in_net_worth: account.include_in_net_worth,
       ownership_entity_id: account.ownership_entity_id,
+      tax_treatment: account.tax_treatment ?? "",
     },
   })
 
@@ -75,6 +78,7 @@ export default function EditAccountModal({ account, onClose }: EditAccountModalP
         notes: data.notes || null,
         include_in_net_worth: data.include_in_net_worth,
         ownership_entity_id: data.ownership_entity_id || null,
+        tax_treatment: data.tax_treatment || null,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["accounts"] })
@@ -191,6 +195,22 @@ export default function EditAccountModal({ account, onClose }: EditAccountModalP
               </select>
             </div>
           )}
+
+          {/* Tax treatment — drives RMD eligibility (pretax only) */}
+          <div>
+            <label htmlFor="edit-tax-treatment" style={LABEL_STYLE}>
+              Tax treatment
+            </label>
+            <select id="edit-tax-treatment" {...register("tax_treatment")} style={INPUT_STYLE}>
+              <option value="">Not set</option>
+              <option value="pretax">Pre-tax (traditional)</option>
+              <option value="roth">Roth (after-tax)</option>
+              <option value="taxable">Taxable</option>
+            </select>
+            <p style={{ marginTop: "4px", fontSize: "11px", color: "var(--label)" }}>
+              Pre-tax retirement balances drive required minimum distributions.
+            </p>
+          </div>
 
           {/* Account number — only shown to primary/partner */}
           {canViewAccountNumber && (

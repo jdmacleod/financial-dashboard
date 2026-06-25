@@ -839,6 +839,9 @@ export function AppLayout() {
 
                   {/* Settings links */}
                   <div style={{ padding: "6px 12px 8px" }}>
+                    <DropdownLink to="/profile" onClick={() => setUserMenuOpen(false)}>
+                      Your profile
+                    </DropdownLink>
                     <DropdownLink to="/members" onClick={() => setUserMenuOpen(false)}>
                       Members & roles
                     </DropdownLink>

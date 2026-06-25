@@ -70,7 +70,38 @@ async def test_create_rejected_for_non_primary(
     assert exc_info.value.status_code == 403
 
 
-async def test_update_rejected_for_non_primary(
+async def test_update_other_member_rejected_for_non_primary(
+    db_session: AsyncSession, household: Household, make_member: object, make_user: object
+) -> None:
+    partner_member = await make_member(role="partner")
+    partner_user = await make_user(partner_member, "partner@example.com")
+    other_member = await make_member(role="partner", display_name="Other")
+    service = MemberService(db_session)
+    ctx = _ctx(household, partner_member, "partner", partner_user)
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update(ctx, other_member.id, MemberUpdate(display_name="Renamed"))
+    assert exc_info.value.status_code == 403
+
+
+async def test_update_self_allowed_for_non_primary(
+    db_session: AsyncSession, household: Household, make_member: object, make_user: object
+) -> None:
+    from datetime import date
+
+    partner_member = await make_member(role="partner")
+    partner_user = await make_user(partner_member, "partner@example.com")
+    service = MemberService(db_session)
+    ctx = _ctx(household, partner_member, "partner", partner_user)
+    updated = await service.update(
+        ctx,
+        partner_member.id,
+        MemberUpdate(display_name="Renamed Self", date_of_birth=date(1985, 3, 1)),
+    )
+    assert updated.display_name == "Renamed Self"
+    assert updated.date_of_birth == date(1985, 3, 1)
+
+
+async def test_self_cannot_change_own_role(
     db_session: AsyncSession, household: Household, make_member: object, make_user: object
 ) -> None:
     partner_member = await make_member(role="partner")
@@ -78,7 +109,19 @@ async def test_update_rejected_for_non_primary(
     service = MemberService(db_session)
     ctx = _ctx(household, partner_member, "partner", partner_user)
     with pytest.raises(HTTPException) as exc_info:
-        await service.update(ctx, partner_member.id, MemberUpdate(display_name="Renamed"))
+        await service.update(ctx, partner_member.id, MemberUpdate(role="primary"))
+    assert exc_info.value.status_code == 403
+
+
+async def test_self_cannot_change_own_activation(
+    db_session: AsyncSession, household: Household, make_member: object, make_user: object
+) -> None:
+    partner_member = await make_member(role="partner")
+    partner_user = await make_user(partner_member, "partner@example.com")
+    service = MemberService(db_session)
+    ctx = _ctx(household, partner_member, "partner", partner_user)
+    with pytest.raises(HTTPException) as exc_info:
+        await service.update(ctx, partner_member.id, MemberUpdate(is_active=False))
     assert exc_info.value.status_code == 403
 
 

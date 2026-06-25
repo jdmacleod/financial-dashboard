@@ -71,6 +71,8 @@ export type AccountType =
   | "other_asset"
   | "other_liability"
 
+export type TaxTreatment = "pretax" | "roth" | "taxable"
+
 export interface AccountResponse {
   id: string
   nickname: string
@@ -80,6 +82,7 @@ export interface AccountResponse {
   institution_name: string | null
   account_number_last4: string | null
   include_in_net_worth: boolean
+  tax_treatment: TaxTreatment | null
   is_active: boolean
   current_balance: string | null
   balance_as_of: string | null
