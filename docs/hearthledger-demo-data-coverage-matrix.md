@@ -1,18 +1,20 @@
 # HearthLedger — Demo Dataset Coverage Matrix (Phase F)
 
-Post-revision summary of the six demo households after the demo-data extension
-(Phases A–E). Net-worth figures are the `ReportService`-computed values as of
-2026-06-21 (end of the seed window), matching each generator's printed summary.
+Post-revision summary of the seven demo households after the demo-data extension
+(Phases A–E) plus the H7 early-accumulation opener. Net-worth figures are the
+`ReportService`-computed values as of 2026-06-21 (end of the seed window), matching
+each generator's printed summary.
 
 ```
+H7  Brooks           Atlanta GA      Members: 1   NW: ~$12,200
+H4  Park-Cole        Nashville TN    Members: 2   NW: ~$279,500
 H1  Chen-Nakamura    Round Rock TX   Members: 2   NW: ~$1,003,300
 H2  Okonkwo-Rivera   Naperville IL   Members: 4   NW: ~$3,620,400
 H3  Whitfield-Torres Brentwood CA    Members: 4   NW: ~$9,902,500
-H4  Park-Cole        Nashville TN    Members: 2   NW: ~$279,500
 H5  Langford         Sarasota FL     Members: 2   NW: ~$13,327,100
 H6  Castellano       Scarsdale NY    Members: 1   NW: ~$18,290,000
 
-Six states; NW range ~$279,500 -> ~$18,290,000 (65x spread).
+Seven states; NW range ~$12,200 -> ~$18,290,000 (1,500x spread).
 Estate exposure represented:
   - state-only ...................... Illinois cliff (H2)
   - none (federal, married couple) .. H3, H5 (sheltered under the $30M couple exemption)
@@ -33,56 +35,98 @@ Estate exposure represented:
 
 ✓ = represented in that household.
 
-| Planning surface / feature                           | H1  |  H2  |   H3   | H4  | H5  |  H6   |
-| ---------------------------------------------------- | :-: | :--: | :----: | :-: | :-: | :---: |
-| Equity comp — RSU (sell-to-cover)                    |     |      |   ✓    |     |     |       |
-| Equity comp — ISO (held tranche, AMT)                |     |      |   ✓    |     |     |       |
-| Equity comp — ESPP (discount, lookback)              |  ✓  |      |        |  ✓  |     |       |
-| Equity comp — NSO (exercise & hold, private co.)     |     |      |        |  ✓  |     |       |
-| Concentrated single-stock position                   |     |      |   ✓    |     |     |   ✓   |
-| Cost-basis lots                                      |  ✓  |      |   ✓    |  ✓  |     |   ✓   |
-| Revocable living trust (titling)                     |     |  ✓   |   ✓    |     |  ✓  |   ✓   |
-| Bypass / credit-shelter trust (documented, unfunded) |     |  ✓   |        |     |     |       |
-| ILIT (irrevocable life insurance trust)              |     |      |        |     |     |   ✓   |
-| CRT (charitable remainder unitrust)                  |     |      |        |     |     |   ✓   |
-| Donor-advised fund (held away)                       |     |      |   ✓    |     |     |   ✓   |
-| QCD (RMD-satisfying, income-excluded)                |     |      |        |     |  ✓  |   ✓   |
-| Backdoor Roth                                        |     |  ✓   |   ✓    |     |  ✓  |       |
-| Mega-backdoor Roth (after-tax 401k, in-plan conv.)   |  ✓  |      |        |     |     |       |
-| Roth-conversion window (pre-RMD)                     |     |      |        |     |  ✓  |       |
-| Inherited IRA (SECURE 10-year)                       |     |      |        |  ✓  |     |   ✓   |
-| Capital commitment (PE, capital calls)               |     |      |        |     |     |   ✓   |
-| SBLOC (revolving credit line)                        |     |      |   ✓    |     |     |   ✓   |
-| Margin loan (brokerage, maintenance call)            |     |      |   ✓    |     |     |       |
-| Umbrella liability                                   |  ✓  |  ✓   |        |     |  ✓  |   ✓   |
-| Permanent / cash-value life (asset)                  |     |      |        |     |  ✓  |   ✓   |
-| ILIT-owned permanent life (excluded from NW)         |     |      |        |     |     |   ✓   |
-| Disability insurance                                 |  ✓  |      |        |     |     |       |
-| Long-term-care insurance                             |     |  ✓   |        |     |  ✓  |   ✓   |
-| Scheduled / specialty insurance                      |     |      |   ✓    |     |     |   ✓   |
-| Collectible asset (manually valued)                  |     |      | ✓ wine |     |     | ✓ art |
-| 529 superfunding (5-year election)                   |     |  ✓   |        |     |     |       |
-| Private-school tuition                               |     |  ✓   |        |     |     |       |
-| State estate tax exposure                            |     | ✓ IL |        |     |     | ✓ NY  |
-| Single-member RBAC (one principal, no grants)        |     |      |        |     |     |   ✓   |
-| Single-filer tax / single-filer IRMAA                |     |      |        |     |     |   ✓   |
-| Market-dip discontinuity (non-monotonic NW)          |  ✓  |  ✓   |   ✓    |  ✓  |  ✓  |   ✓   |
-| Unemployment gap (income stop + spend-down)          |     |      |        |  ✓  |     |       |
-| Eldercare / sandwich-generation cash flow            |     |  ✓   |        |     |     |       |
-| Bonus / liquidity income spike                       |     |      |   ✓    |     |     |       |
+| Planning surface / feature                           | H1  |  H2  |   H3   | H4  | H5  |  H6   | H7  |
+| ---------------------------------------------------- | :-: | :--: | :----: | :-: | :-: | :---: | :-: |
+| Equity comp — RSU (sell-to-cover)                    |     |      |   ✓    |     |     |       |     |
+| Equity comp — ISO (held tranche, AMT)                |     |      |   ✓    |     |     |       |     |
+| Equity comp — ESPP (discount, lookback)              |  ✓  |      |        |  ✓  |     |       |     |
+| Equity comp — NSO (exercise & hold, private co.)     |     |      |        |  ✓  |     |       |     |
+| Concentrated single-stock position                   |     |      |   ✓    |     |     |   ✓   |     |
+| Cost-basis lots                                      |  ✓  |      |   ✓    |  ✓  |     |   ✓   |     |
+| Revocable living trust (titling)                     |     |  ✓   |   ✓    |     |  ✓  |   ✓   |     |
+| Bypass / credit-shelter trust (documented, unfunded) |     |  ✓   |        |     |     |       |     |
+| ILIT (irrevocable life insurance trust)              |     |      |        |     |     |   ✓   |     |
+| CRT (charitable remainder unitrust)                  |     |      |        |     |     |   ✓   |     |
+| Donor-advised fund (held away)                       |     |      |   ✓    |     |     |   ✓   |     |
+| QCD (RMD-satisfying, income-excluded)                |     |      |        |     |  ✓  |   ✓   |     |
+| Backdoor Roth                                        |     |  ✓   |   ✓    |     |  ✓  |       |     |
+| Mega-backdoor Roth (after-tax 401k, in-plan conv.)   |  ✓  |      |        |     |     |       |     |
+| Roth-conversion window (pre-RMD)                     |     |      |        |     |  ✓  |       |     |
+| Inherited IRA (SECURE 10-year)                       |     |      |        |  ✓  |     |   ✓   |     |
+| Capital commitment (PE, capital calls)               |     |      |        |     |     |   ✓   |     |
+| SBLOC (revolving credit line)                        |     |      |   ✓    |     |     |   ✓   |     |
+| Margin loan (brokerage, maintenance call)            |     |      |   ✓    |     |     |       |     |
+| Umbrella liability                                   |  ✓  |  ✓   |        |     |  ✓  |   ✓   |     |
+| Permanent / cash-value life (asset)                  |     |      |        |     |  ✓  |   ✓   |     |
+| ILIT-owned permanent life (excluded from NW)         |     |      |        |     |     |   ✓   |     |
+| Disability insurance                                 |  ✓  |      |        |     |     |       |     |
+| Long-term-care insurance                             |     |  ✓   |        |     |  ✓  |   ✓   |     |
+| Scheduled / specialty insurance                      |     |      |   ✓    |     |     |   ✓   |     |
+| Collectible asset (manually valued)                  |     |      | ✓ wine |     |     | ✓ art |     |
+| 529 superfunding (5-year election)                   |     |  ✓   |        |     |     |       |     |
+| Private-school tuition                               |     |  ✓   |        |     |     |       |     |
+| State estate tax exposure                            |     | ✓ IL |        |     |     | ✓ NY  |     |
+| Single-member RBAC (one principal, no grants)        |     |      |        |     |     |   ✓   |  ✓  |
+| Single-filer tax / single-filer IRMAA                |     |      |        |     |     |   ✓   |     |
+| Market-dip discontinuity (non-monotonic NW)          |  ✓  |  ✓   |   ✓    |  ✓  |  ✓  |   ✓   |  ✓  |
+| Unemployment gap (income stop + spend-down)          |     |      |        |  ✓  |     |       |     |
+| Eldercare / sandwich-generation cash flow            |     |  ✓   |        |     |     |       |     |
+| Bonus / liquidity income spike                       |     |      |   ✓    |     |     |       |     |
+| Early accumulation — low net worth, debt-as-hero     |     |      |        |     |     |       |  ✓  |
+| Multi-debt avalanche != snowball (extra payment)     |     |      |        |     |     |       |  ✓  |
+| HSA invested (triple-tax)                            |     |      |        |  ✓  |     |       |  ✓  |
 
 All four equity-compensation grant types (RSU, ISO, ESPP, NSO) are now exercised
 by a household: RSU/ISO at H3, ESPP at H1/H4, and NSO at H4 (a private-company
 exercise-and-hold tranche). Both revolving credit-line types are represented —
 SBLOC at H3/H6 and a brokerage margin loan at H3.
 
+H7 Brooks is deliberately the low-complexity entry household: it carries none of
+the affluent surfaces above. Its job is the lifecycle opening chapter and the
+validation paths the other six can't reach (low net worth, debt elimination as the
+hero, and a multi-debt avalanche-vs-snowball comparison that actually diverges with
+an extra payment — verified to save ~$367 at $500/mo extra).
+
+---
+
+## Life-stage casting matrix
+
+The lineup is cast across life stages, not just net-worth tiers. Net worth is driven
+by two different forces: **LIFECYCLE** households (H7, H4, H1) are pinned to roughly
+the top 10–15% for their age; **FEATURE** households (H2, H3, H5, H6) are pinned to
+the minimum wealth that credibly trips their target feature (an IL estate cliff needs
+~$4M, a NY single estate cliff needs >$15M, PE/ILIT/CRT need UHNW), which is well
+above the top-15% band. Estate/PE/trust features can't be demonstrated on a top-15%
+household, so the upper tiers are intentionally wealthier — not "unrealistically rich."
+
+| H   | Household        | Age(s) | NW      | %-for-age           | Life stage             | Driver                 |
+| --- | ---------------- | ------ | ------- | ------------------- | ---------------------- | ---------------------- |
+| H7  | Brooks           | 27     | ~$12.2k | top ~10-15% income  | Early accumulation     | LIFECYCLE              |
+| H4  | Park-Cole        | 28/29  | $279.5k | top ~10% NW-for-age | Early-career affluent  | LIFECYCLE              |
+| H1  | Chen-Nakamura    | 42/44  | $1.0M   | top ~10-15%         | Mid-career peak-saving | LIFECYCLE              |
+| H2  | Okonkwo-Rivera   | 45/47  | $3.6M   | top ~5%             | Established family     | FEATURE (IL estate)    |
+| H3  | Whitfield-Torres | 51/54  | $9.9M   | top ~1-2%           | Peak-earning exec      | FEATURE (equity/SBLOC) |
+| H5  | Langford         | 64/74  | $13.3M  | top ~1%             | Recently retired       | FEATURE (Roth window)  |
+| H6  | Castellano       | 74     | $18.3M  | top <1%             | Widowed, legacy/estate | FEATURE (NY estate)    |
+
+Axis note: H1–H6's "%-for-age" is a **net-worth** percentile. H7's is an **income**-
+for-age percentile (top ~10-15%); its net-worth percentile for age is deliberately
+low — that is the point of the rung. **H4 is early-career _affluent_** ($279.5k reads
+65th-percentile against _all_ US households but is ~top-decile for under-30); it is not
+a "modest" household. H7 is the rung below it: building from a low base.
+
+Negative-net-worth rendering is a documented manual test, not a shipped variant: set
+H7's student loan to ~$66k (liabilities ~$79k > assets ~$65k) to drive net worth
+negative and eyeball the Net Worth chart/KPIs and the FIRE base. H7 ships positive
+(~$12.2k); the negative-NW frontend rendering path is not yet validated.
+
 ---
 
 ## Final acceptance criteria (Phase F)
 
-1. **`--household 6` and `--household all` run clean and idempotently** under
-   deterministic seeding. ✓ Verified: all six seed; a second `--household all`
-   skips all six.
+1. **`--household 7` and `--household all` run clean and idempotently** under
+   deterministic seeding. ✓ Verified: all seven seed; a second `--household all`
+   skips all seven.
 2. **Each household's computed net worth matches its sanity-check target.** ✓
    Every generator's printed `net_worth` equals `ReportService.current_net_worth`
    as of 2026-06-21. H6 = $18,290,000, matching the spec inventory.
