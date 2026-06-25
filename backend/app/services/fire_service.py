@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import UTC, date, datetime
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -11,6 +12,7 @@ from app.core.audit import AUDIT_EXCLUDED_FIELDS, AuditRepository, _snapshot
 from app.core.visibility import VisibilityContext
 from app.db.models.fire import FireScenario as FireScenarioModel
 from app.db.models.member import HouseholdMember
+from app.repositories.account import AccountRepository
 from app.schemas.fire import (
     FireDetectionResponse,
     FireProjectionResponse,
@@ -21,9 +23,36 @@ from app.schemas.fire import (
     IncomeStream,
     YearProjectionResponse,
 )
+from app.services.age import rmd_start_age
 from app.services.fire_detector import FireInputDetector
 from app.services.fire_projector import FireScenario as FireScenarioDataclass
-from app.services.fire_projector import project
+from app.services.fire_projector import YearProjection, project
+from app.services.rmd import uniform_lifetime_divisor
+
+
+def _project_rmds(
+    year_projections: list[YearProjection],
+    dob: date | None,
+    pretax_start: Decimal,
+    annual_return: Decimal,
+) -> dict[int, Decimal]:
+    """Estimated RMD per projection year. The pretax balance grows at the
+    scenario's expected return and is drawn down by each year's distribution
+    once the member reaches their SECURE 2.0 start age. An estimate: it ignores
+    taxes and any non-RMD withdrawals from the pretax bucket."""
+    start_age = rmd_start_age(dob)
+    rmds: dict[int, Decimal] = {}
+    pretax = pretax_start
+    for yp in year_projections:
+        pretax *= Decimal(1) + annual_return
+        rmd = Decimal("0")
+        if start_age is not None and yp.age is not None and yp.age >= start_age and pretax > 0:
+            divisor = uniform_lifetime_divisor(yp.age)
+            if divisor is not None:
+                rmd = (pretax / divisor).quantize(Decimal("0.01"))
+                pretax -= rmd
+        rmds[yp.year] = rmd
+    return rmds
 
 
 def _to_response(row: FireScenarioModel) -> FireScenarioResponse:
@@ -54,6 +83,7 @@ class FireScenarioService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
         self.audit_repo = AuditRepository(session)
+        self.account_repo = AccountRepository(session)
 
     def _assert_writable(self, ctx: VisibilityContext) -> None:
         if not ctx.can_write:
@@ -287,6 +317,34 @@ class FireScenarioService:
         )
         return result.scalar_one_or_none()
 
+    async def _get_primary_member_id(self, ctx: VisibilityContext) -> uuid.UUID | None:
+        result = await self.session.execute(
+            select(HouseholdMember.id)
+            .where(
+                HouseholdMember.household_id == ctx.household_id,
+                HouseholdMember.role == "primary",
+                HouseholdMember.is_active.is_(True),
+            )
+            .limit(1)
+        )
+        return result.scalar_one_or_none()
+
+    async def _pretax_start_balance(
+        self, ctx: VisibilityContext, member_id: uuid.UUID | None
+    ) -> Decimal:
+        """Current total balance of the member's pretax retirement accounts, used
+        as the starting point for projecting required minimum distributions."""
+        if member_id is None:
+            return Decimal("0")
+        accounts = await self.account_repo.get_visible(ctx, is_active=True)
+        total = Decimal("0")
+        for account in accounts:
+            if account.tax_treatment == "pretax" and account.owner_member_id == member_id:
+                snap = await self.account_repo.latest_snapshot(account.id)
+                if snap is not None:
+                    total += snap[0]
+        return total
+
     async def project(
         self,
         ctx: VisibilityContext,
@@ -298,9 +356,12 @@ class FireScenarioService:
         if from_year is None:
             from_year = datetime.now(UTC).year
 
+        target_member_id: uuid.UUID | None
         if row.member_id is not None:
+            target_member_id = row.member_id
             dob = await self._get_member_dob(row.member_id)
         else:
+            target_member_id = await self._get_primary_member_id(ctx)
             dob = await self._get_primary_member_dob(ctx)
 
         scenario = FireScenarioDataclass(
@@ -314,6 +375,11 @@ class FireScenarioService:
         )
 
         year_projections = project(scenario, from_year, dob)
+
+        pretax_start = await self._pretax_start_balance(ctx, target_member_id)
+        rmd_by_year = _project_rmds(
+            year_projections, dob, pretax_start, scenario.expected_annual_return
+        )
 
         fire_year: int | None = None
         fire_age: int | None = None
@@ -358,6 +424,7 @@ class FireScenarioService:
                 effective_withdrawal=yp.effective_withdrawal,
                 fire_number=yp.fire_number,
                 is_fire_year=yp.is_fire_year,
+                required_distribution=rmd_by_year[yp.year],
             )
             for yp in year_projections
         ]

@@ -311,6 +311,11 @@ export default function FireDetail() {
 
   const fireYear = projection?.summary.fire_year
 
+  // Show the RMD column only when a required distribution actually falls within
+  // the 10-year window we render — most projections are decades from RMD age.
+  const showRmd =
+    projection?.projections.slice(0, 10).some((p) => Number(p.required_distribution) > 0) ?? false
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -579,6 +584,11 @@ export default function FireDetail() {
                     <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">
                       Savings
                     </th>
+                    {showRmd && (
+                      <th className="px-3 py-2 text-right text-xs font-semibold text-gray-500">
+                        RMD
+                      </th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -602,6 +612,13 @@ export default function FireDetail() {
                       >
                         {formatCurrency(p.annual_savings)}
                       </td>
+                      {showRmd && (
+                        <td className="px-3 py-2 text-right text-amber-600">
+                          {Number(p.required_distribution) > 0
+                            ? formatCurrency(p.required_distribution)
+                            : "—"}
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
