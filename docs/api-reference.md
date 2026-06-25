@@ -977,6 +977,36 @@ Per-member required minimum distributions (RMDs) from pretax retirement balances
 }
 ```
 
+### `GET /reports/age-milestones`
+
+Per-member timeline of age-based financial milestones. For each active household member with a date of birth, returns an ordered list of upcoming events: penalty-free withdrawals (59½), earliest Social Security (62), Medicare (65), Social Security full retirement age (looked up by birth year), and the year required minimum distributions begin (SECURE 2.0 start age). Each milestone carries a `reached` flag (true when its date is on or before today). Members with no date of birth get an empty `milestones` list and a `note` prompting one to be added.
+
+**Response:**
+
+```json
+{
+  "members": [
+    {
+      "member_id": "uuid",
+      "display_name": "Pat Saver",
+      "date_of_birth": "1990-06-15",
+      "current_age": 36,
+      "milestones": [
+        {
+          "key": "early_withdrawal",
+          "label": "Penalty-free withdrawals",
+          "age_label": "59y 6m",
+          "date": "2049-12-15",
+          "year": 2049,
+          "reached": false
+        }
+      ],
+      "note": null
+    }
+  ]
+}
+```
+
 ### `GET /reports/property-pnl`
 
 Income vs. expenses for a real estate property.
@@ -1720,6 +1750,7 @@ Returns a year-by-year FIRE projection using the scenario's income streams, port
       "annual_savings": "48000.00",
       "supplemental_income": "0.00",
       "effective_withdrawal": "48000.00",
+      "required_distribution": "0.00",
       "fire_number": "1200000.00",
       "is_fire_year": false
     }
@@ -1727,7 +1758,7 @@ Returns a year-by-year FIRE projection using the scenario's income streams, port
 }
 ```
 
-`summary.fire_number` is computed as `target_annual_spend / safe_withdrawal_rate`. `fire_age` and `years_to_fire` are `null` when no FIRE crossing is found within the 75-year projection horizon. `age` per projection row is `null` if the primary member's date of birth is not recorded.
+`summary.fire_number` is computed as `target_annual_spend / safe_withdrawal_rate`. `fire_age` and `years_to_fire` are `null` when no FIRE crossing is found within the 75-year projection horizon. `age` per projection row is `null` if the primary member's date of birth is not recorded. `required_distribution` is the member's required minimum distribution drawn from their pretax balance that year, computed once the member reaches RMD age (SECURE 2.0); it is `0.00` before RMD age or when the member has no pretax balance or no date of birth.
 
 ---
 

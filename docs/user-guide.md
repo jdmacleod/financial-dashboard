@@ -185,7 +185,7 @@ The dashboard shows budget alerts for categories that have exceeded 90% of their
 
 ## Reports
 
-Reports live in the left sidebar. Net Worth, Spending, **Savings Rate**, **Budget Trend**, and **Required Distributions** are grouped under a dedicated **Reports** section near the bottom; Cash Flow, Investments, Real Estate, and Retirement sit in the main navigation above it.
+Reports live in the left sidebar. Net Worth, Spending, **Savings Rate**, **Budget Trend**, **Required Distributions**, and **Retirement Milestones** are grouped under a dedicated **Reports** section near the bottom; Cash Flow, Investments, Real Estate, and Retirement sit in the main navigation above it.
 
 ### Net Worth
 
@@ -237,6 +237,18 @@ Plots total budgeted vs actual spend for each month across a date range, with a 
 Shows each household member's required minimum distribution (RMD) — the amount the IRS makes you withdraw from pretax retirement accounts once you reach RMD age. For a member who has reached that age, the card shows the dollar amount required this year, the prior year-end pretax balance it's based on (with the snapshot date), and the IRS Uniform Lifetime divisor used. The RMD start age follows SECURE 2.0: 73 if you were born 1951–1959, 75 if born 1960 or later (72 for 1950 and earlier).
 
 For this report to compute a number, a member needs a [date of birth](#members) set, at least one retirement account marked `pretax` (traditional 401(k)/403(b)/IRA), and a balance snapshot dated in the prior calendar year. When something's missing, the card tells you exactly what to add. Roth and taxable balances are never subject to RMDs.
+
+### Retirement Milestones
+
+Shows each household member a forward-looking timeline of their age-based financial events:
+
+- **Penalty-free withdrawals** at age 59½ (when the 10% early-withdrawal penalty on retirement accounts ends)
+- **Social Security, earliest** at age 62
+- **Medicare** at age 65
+- **Social Security full retirement age**, looked up by birth year (65 for those born 1937 or earlier, graduating to 67 for 1960 or later)
+- **Required minimum distributions begin**, at the SECURE 2.0 start age (73 if born 1951–1959, 75 if born 1960 or later)
+
+Each milestone shows the calendar year and the age reached. Milestones already in the past are dimmed and marked reached; the next upcoming one is badged. A member with no [date of birth](#members) set gets a prompt to add one. This is the same age math that drives [Required Distributions](#required-distributions) and FIRE projections, surfaced as a timeline.
 
 ### Property P&L
 
@@ -298,7 +310,7 @@ After saving a scenario, the right panel shows the projection chart:
 - **Orange dashed line**: your FIRE number (grows with inflation each year)
 - **FIRE crossing annotation**: the year and age at which your portfolio crosses the FIRE number ("FIRE at age 52, 2039")
 
-Below the chart, a year-by-year table shows: year, age, portfolio value, annual income, annual savings, and effective withdrawal amount for each year.
+Below the chart, a year-by-year table shows: year, age, portfolio value, annual income, annual savings, and effective withdrawal amount for each year. Once a member reaches RMD age, a **Required distribution** column appears showing the forced withdrawal drawn from their pretax balance that year (the column is hidden when no RMD applies within the window).
 
 If the projection doesn't cross the FIRE number within 75 years, the chart shows the full 75-year horizon with no crossing annotation.
 
