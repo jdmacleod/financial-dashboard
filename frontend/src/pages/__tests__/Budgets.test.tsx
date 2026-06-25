@@ -109,6 +109,7 @@ function renderPage() {
 }
 
 beforeEach(() => {
+  localStorage.clear()
   vi.mocked(categoriesApi.list).mockResolvedValue(categories)
   vi.mocked(budgetsApi.list).mockResolvedValue(budgets)
   vi.mocked(reportsApi.budgetVsActuals).mockResolvedValue(report)
@@ -311,6 +312,93 @@ describe("All Budgets sort", () => {
       const restIdx = names.indexOf("Restaurants")
       expect(grocIdx).toBeLessThan(restIdx)
     })
+  })
+})
+
+// ── Sort preference persistence ───────────────────────────────────────────────
+
+describe("sort preference persistence", () => {
+  it("persists the Budget vs Actuals sort to localStorage on change", async () => {
+    renderPage()
+    const actuals = await screen.findByTestId("section-actuals")
+    const select = within(actuals).getByRole("combobox", { name: "Sort budget vs actuals" })
+    fireEvent.change(select, { target: { value: "name_asc" } })
+
+    await waitFor(() => expect(localStorage.getItem("hl.budgets.actualsSort")).toBe("name_asc"))
+  })
+
+  it("restores the persisted All Budgets sort on mount", async () => {
+    localStorage.setItem("hl.budgets.budgetsSort", "budget_desc")
+    renderPage()
+
+    const budgetsSection = await screen.findByTestId("section-budgets")
+    await waitFor(() => {
+      const select = within(budgetsSection).getByRole<HTMLSelectElement>("combobox", {
+        name: "Sort all budgets",
+      })
+      expect(select.value).toBe("budget_desc")
+    })
+    // Order reflects the restored sort: Utilities (1200) first.
+    const names = within(budgetsSection)
+      .getAllByText(/^(Groceries|Restaurants|Utilities)$/)
+      .map((el) => el.textContent)
+    expect(names[0]).toBe("Utilities")
+  })
+
+  it("falls back to the default when the persisted sort value is invalid", async () => {
+    localStorage.setItem("hl.budgets.actualsSort", "not_a_real_sort")
+    renderPage()
+
+    const actuals = await screen.findByTestId("section-actuals")
+    const select = within(actuals).getByRole<HTMLSelectElement>("combobox", {
+      name: "Sort budget vs actuals",
+    })
+    await waitFor(() => expect(select.value).toBe("pct_used_desc"))
+  })
+})
+
+// ── Quarterly budgets ──────────────────────────────────────────────────────────
+
+describe("quarterly budgets", () => {
+  it("shows a ÷3 proration badge for a quarterly category in the monthly view", async () => {
+    vi.mocked(reportsApi.budgetVsActuals).mockResolvedValue({
+      period: "2026-06",
+      categories: [
+        {
+          category_id: "cat-1",
+          name: "Groceries",
+          budget: "100.00",
+          actual: "50.00",
+          remaining: "50.00",
+          percentage_used: 50,
+          period: "quarterly",
+        },
+      ],
+    })
+    renderPage()
+
+    const actuals = await screen.findByTestId("section-actuals")
+    await waitFor(() => expect(within(actuals).getByText("quarterly÷3")).toBeInTheDocument())
+  })
+
+  it("shows a /qtr suffix and ÷3 monthly equivalent in All Budgets", async () => {
+    vi.mocked(budgetsApi.list).mockResolvedValue([
+      {
+        id: "b-q",
+        household_id: "hh-1",
+        category_id: "cat-1",
+        period: "quarterly",
+        amount: "300.00",
+        effective_from: "2026-01-01",
+        effective_to: null,
+      },
+    ])
+    renderPage()
+
+    const budgetsSection = await screen.findByTestId("section-budgets")
+    await waitFor(() => expect(within(budgetsSection).getByText("/qtr")).toBeInTheDocument())
+    // 300 / 3 = 100.00 per month.
+    expect(within(budgetsSection).getByText(/\(≈\$100\.00\/mo\)/)).toBeInTheDocument()
   })
 })
 

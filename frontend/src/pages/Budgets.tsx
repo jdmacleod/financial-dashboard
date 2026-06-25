@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useQuery, useQueries, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -9,13 +9,46 @@ import { budgetsApi } from "@/api/budgets"
 import { reportsApi } from "@/api/reports"
 import { categoriesApi } from "@/api/categories"
 import { formatCurrency } from "@/lib/formatters"
-import type { BudgetResponse, BudgetVsActualsItem } from "@/api/types"
+import type { BudgetPeriod, BudgetResponse, BudgetVsActualsItem } from "@/api/types"
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type RangeMode = "month" | "ytd" | "1y" | "all"
 type ActualsSort = "pct_used_desc" | "budget_desc" | "actual_desc" | "name_asc"
 type BudgetsSort = "name_asc" | "budget_desc" | "period"
+
+// ── Sort preference persistence ──────────────────────────────────────────────
+// Persist the chosen sort keys to localStorage so power users don't re-apply
+// them every visit. Stored values are validated against the allowed set on read,
+// so a renamed/removed sort option falls back to the default rather than sticking.
+
+const ACTUALS_SORTS: readonly ActualsSort[] = [
+  "pct_used_desc",
+  "budget_desc",
+  "actual_desc",
+  "name_asc",
+]
+const BUDGETS_SORTS: readonly BudgetsSort[] = ["name_asc", "budget_desc", "period"]
+const ACTUALS_SORT_KEY = "hl.budgets.actualsSort"
+const BUDGETS_SORT_KEY = "hl.budgets.budgetsSort"
+
+function loadSort<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
+  try {
+    const stored = localStorage.getItem(key)
+    if (stored && (allowed as readonly string[]).includes(stored)) return stored as T
+  } catch {
+    // localStorage unavailable (private mode / SSR) — use the default.
+  }
+  return fallback
+}
+
+function persistSort(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    // Persistence is a progressive enhancement; ignore write failures.
+  }
+}
 
 // ── Utilities ────────────────────────────────────────────────────────────────
 
@@ -63,7 +96,7 @@ function rangeMonths(
 function aggregateItems(reports: { categories: BudgetVsActualsItem[] }[]): BudgetVsActualsItem[] {
   const agg = new Map<
     string,
-    { name: string; budget: number; actual: number; period: "monthly" | "annual" }
+    { name: string; budget: number; actual: number; period: BudgetPeriod }
   >()
   for (const rpt of reports) {
     for (const item of rpt.categories) {
@@ -105,11 +138,32 @@ const CHART_COLORS = [
   "#84cc16",
 ]
 
+// ── Period helpers ───────────────────────────────────────────────────────────
+
+const PERIOD_DIVISOR: Record<BudgetPeriod, number> = { monthly: 1, quarterly: 3, annual: 12 }
+
+function periodAmountLabel(period: BudgetPeriod): string {
+  if (period === "annual") return "Annual amount"
+  if (period === "quarterly") return "Quarterly amount"
+  return "Monthly amount"
+}
+
+function prorationNote(period: BudgetPeriod): string | null {
+  const divisor = PERIOD_DIVISOR[period]
+  return divisor > 1 ? `Shown as ÷${divisor} per month in budget vs actuals.` : null
+}
+
+function periodSuffix(period: BudgetPeriod): string {
+  if (period === "annual") return "/yr"
+  if (period === "quarterly") return "/qtr"
+  return "/mo"
+}
+
 // ── Schemas ──────────────────────────────────────────────────────────────────
 
 const createSchema = z.object({
   category_id: z.string().min(1, "Required"),
-  period: z.enum(["monthly", "annual"]),
+  period: z.enum(["monthly", "quarterly", "annual"]),
   amount: z
     .string()
     .min(1, "Required")
@@ -119,7 +173,7 @@ const createSchema = z.object({
 type CreateForm = z.infer<typeof createSchema>
 
 const editSchema = z.object({
-  period: z.enum(["monthly", "annual"]),
+  period: z.enum(["monthly", "quarterly", "annual"]),
   amount: z
     .string()
     .min(1, "Required")
@@ -196,7 +250,7 @@ function AddBudgetModal({ onClose }: { onClose: () => void }) {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Period</label>
             <div className="flex gap-2">
-              {(["monthly", "annual"] as const).map((p) => (
+              {(["monthly", "quarterly", "annual"] as const).map((p) => (
                 <label key={p} className="flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="radio"
@@ -211,17 +265,15 @@ function AddBudgetModal({ onClose }: { onClose: () => void }) {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {period === "annual" ? "Annual amount" : "Monthly amount"}
+              {periodAmountLabel(period)}
             </label>
             <input
               {...register("amount")}
               placeholder={period === "annual" ? "e.g. 3800.00" : "e.g. 500.00"}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
-            {period === "annual" && (
-              <p className="mt-1 text-xs text-gray-400">
-                Shown as ÷12 per month in budget vs actuals.
-              </p>
+            {prorationNote(period) && (
+              <p className="mt-1 text-xs text-gray-400">{prorationNote(period)}</p>
             )}
             {errors.amount && <p className="mt-1 text-xs text-red-600">{errors.amount.message}</p>}
           </div>
@@ -273,7 +325,7 @@ function EditBudgetModal({
   } = useForm<EditForm>({
     resolver: zodResolver(editSchema),
     defaultValues: {
-      period: budget.period as "monthly" | "annual",
+      period: budget.period as BudgetPeriod,
       amount: budget.amount,
       effective_from: budget.effective_from,
       effective_to: budget.effective_to ?? "",
@@ -312,7 +364,7 @@ function EditBudgetModal({
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Period</label>
             <div className="flex gap-2">
-              {(["monthly", "annual"] as const).map((p) => (
+              {(["monthly", "quarterly", "annual"] as const).map((p) => (
                 <label key={p} className="flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="radio"
@@ -327,16 +379,14 @@ function EditBudgetModal({
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              {period === "annual" ? "Annual amount" : "Monthly amount"}
+              {periodAmountLabel(period)}
             </label>
             <input
               {...register("amount")}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
-            {period === "annual" && (
-              <p className="mt-1 text-xs text-gray-400">
-                Compared as ÷12 per month in budget vs actuals.
-              </p>
+            {prorationNote(period) && (
+              <p className="mt-1 text-xs text-gray-400">{prorationNote(period)}</p>
             )}
             {errors.amount && <p className="mt-1 text-xs text-red-600">{errors.amount.message}</p>}
           </div>
@@ -400,7 +450,7 @@ function BudgetRow({
   onDelete: () => void
 }) {
   const [editing, setEditing] = useState(false)
-  const periodLabel = budget.period === "annual" ? "/yr" : "/mo"
+  const periodLabel = periodSuffix(budget.period)
 
   return (
     <>
@@ -409,9 +459,13 @@ function BudgetRow({
           <p className="text-sm font-medium text-gray-900">
             {formatCurrency(budget.amount)}
             <span className="text-gray-400 font-normal">{periodLabel}</span>
-            {budget.period === "annual" && (
+            {budget.period !== "monthly" && (
               <span className="ml-1.5 text-xs text-gray-400">
-                (≈{formatCurrency(String((Number(budget.amount) / 12).toFixed(2)))}/mo)
+                (≈
+                {formatCurrency(
+                  String((Number(budget.amount) / PERIOD_DIVISOR[budget.period]).toFixed(2)),
+                )}
+                /mo)
               </span>
             )}
           </p>
@@ -568,8 +622,15 @@ export default function Budgets() {
   const [rangeMode, setRangeMode] = useState<RangeMode>("month")
   const [showAdd, setShowAdd] = useState(false)
   const [filterText, setFilterText] = useState("")
-  const [actualsSort, setActualsSort] = useState<ActualsSort>("pct_used_desc")
-  const [budgetsSort, setBudgetsSort] = useState<BudgetsSort>("name_asc")
+  const [actualsSort, setActualsSort] = useState<ActualsSort>(() =>
+    loadSort(ACTUALS_SORT_KEY, ACTUALS_SORTS, "pct_used_desc"),
+  )
+  const [budgetsSort, setBudgetsSort] = useState<BudgetsSort>(() =>
+    loadSort(BUDGETS_SORT_KEY, BUDGETS_SORTS, "name_asc"),
+  )
+
+  useEffect(() => persistSort(ACTUALS_SORT_KEY, actualsSort), [actualsSort])
+  useEffect(() => persistSort(BUDGETS_SORT_KEY, budgetsSort), [budgetsSort])
 
   const { data: budgets } = useQuery({
     queryKey: ["budgets"],
@@ -673,8 +734,9 @@ export default function Budgets() {
       if (budgetsSort === "name_asc") return nameA.localeCompare(nameB)
       if (budgetsSort === "budget_desc") return Number(b.amount) - Number(a.amount)
       if (budgetsSort === "period") {
+        // Order by cadence: monthly → quarterly → annual (PERIOD_DIVISOR is 1/3/12).
         if (a.period === b.period) return nameA.localeCompare(nameB)
-        return a.period === "monthly" ? -1 : 1
+        return PERIOD_DIVISOR[a.period] - PERIOD_DIVISOR[b.period]
       }
       return 0
     })
@@ -836,8 +898,10 @@ export default function Budgets() {
                         <span className="text-sm font-medium text-gray-900 truncate">
                           {item.name}
                         </span>
-                        {item.period === "annual" && rangeMode === "month" && (
-                          <span className="text-xs text-gray-400 flex-shrink-0">annual÷12</span>
+                        {item.period !== "monthly" && rangeMode === "month" && (
+                          <span className="text-xs text-gray-400 flex-shrink-0">
+                            {item.period}÷{PERIOD_DIVISOR[item.period]}
+                          </span>
                         )}
                       </div>
                       <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
