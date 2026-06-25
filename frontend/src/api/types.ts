@@ -614,6 +614,7 @@ export interface YearProjectionResponse {
   effective_withdrawal: string
   fire_number: string
   is_fire_year: boolean
+  required_distribution: string
 }
 
 export interface FireProjectionSummary {

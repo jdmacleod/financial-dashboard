@@ -102,6 +102,9 @@ class YearProjectionResponse(BaseModel):
     effective_withdrawal: Decimal
     fire_number: Decimal
     is_fire_year: bool
+    # Estimated required minimum distribution from pretax retirement balances in
+    # this year (0 before RMD age or when the member has no pretax balance).
+    required_distribution: Decimal
 
 
 class FireProjectionSummary(BaseModel):

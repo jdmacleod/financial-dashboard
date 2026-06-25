@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -16,6 +16,7 @@ from app.db.models.account import Account
 from app.db.models.category import Category
 from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
+from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 from app.schemas.fire import FireScenarioCreate, FireScenarioUpdate, IncomeStream, IncomeStreamType
@@ -305,6 +306,96 @@ async def test_project_returns_projections(
     assert result.summary is not None
     assert len(result.projections) > 0
     assert result.summary.fire_number > Decimal(0)
+
+
+async def _pretax_account_with_balance(
+    db_session: AsyncSession, household: Household, member: HouseholdMember, balance: str
+) -> Account:
+    account = Account(
+        household_id=household.id,
+        owner_member_id=member.id,
+        account_type="retirement_401k",
+        nickname="401k",
+        tax_treatment="pretax",
+        include_in_net_worth=True,
+        is_active=True,
+        created_at=datetime.now(UTC),
+        updated_at=datetime.now(UTC),
+    )
+    db_session.add(account)
+    await db_session.flush()
+    db_session.add(
+        AccountSnapshot(
+            account_id=account.id,
+            snapshot_date=date(2025, 12, 31),
+            balance=Decimal(balance),
+            source="manual",
+            created_at=datetime.now(UTC),
+        )
+    )
+    await db_session.flush()
+    return account
+
+
+async def test_project_includes_rmd_for_member_at_rmd_age(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A member past RMD age with a pretax balance gets a nonzero required
+    distribution projected each year; it stays 0 with no pretax balance."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    primary_member.date_of_birth = date(1950, 1, 1)  # age 76 in 2026, well past start age
+    await db_session.flush()
+    await _pretax_account_with_balance(db_session, household, primary_member, "1000000")
+
+    svc = FireScenarioService(db_session)
+    scenario = await svc.create(
+        ctx, FireScenarioCreate(name="RMD", target_annual_spend=Decimal("60000"))
+    )
+    result = await svc.project(ctx, scenario.id, from_year=2026)
+
+    assert result.projections[0].required_distribution > Decimal(0)
+
+
+async def test_project_no_rmd_before_start_age(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    primary_member.date_of_birth = date(1990, 1, 1)  # age 36 in 2026
+    await db_session.flush()
+    await _pretax_account_with_balance(db_session, household, primary_member, "500000")
+
+    svc = FireScenarioService(db_session)
+    scenario = await svc.create(
+        ctx, FireScenarioCreate(name="Young", target_annual_spend=Decimal("60000"))
+    )
+    result = await svc.project(ctx, scenario.id, from_year=2026)
+
+    assert result.projections[0].required_distribution == Decimal(0)
+
+
+async def test_project_no_rmd_without_pretax_balance(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    primary_member.date_of_birth = date(1950, 1, 1)  # past RMD age, but no pretax account
+    await db_session.flush()
+
+    svc = FireScenarioService(db_session)
+    scenario = await svc.create(
+        ctx, FireScenarioCreate(name="No pretax", target_annual_spend=Decimal("60000"))
+    )
+    result = await svc.project(ctx, scenario.id, from_year=2026)
+
+    assert all(p.required_distribution == Decimal(0) for p in result.projections)
 
 
 async def test_create_fire_scenario_with_member_id(
