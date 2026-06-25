@@ -92,6 +92,150 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
+### Member retirement target age (Identity layer — deferred from v0.21.0.0)
+
+**What:** Add a `member.retirement_target_age` column (nullable smallint) plus a small UI to set it. Drives when FIRE switches from accumulation to withdrawal and anchors the milestone timeline.
+
+**Why:** Approach C (the financial-identity layer) called for it, but it shipped without a consumer, so the column was descoped to avoid dead schema. It becomes load-bearing once the milestone timeline (below) or a FIRE enhancement reads it.
+
+**Cons:** Additive migration + a form field; low risk. Only worth doing alongside a consumer.
+
+**Depends on:** Nothing hard; pairs with the milestone timeline.
+
+---
+
+### Account tax-treatment override UI (Identity layer — deferred from v0.21.0.0)
+
+**What:** A select in the account create/edit form to set `tax_treatment` (pretax / roth / taxable), overriding the account-type-based seed from migration 0014.
+
+**Why:** RMD eligibility keys off `tax_treatment`. The column is seeded automatically, but accounts whose treatment isn't implied by type (a generic "IRA", after-tax 401k balances, a rollover) can't be corrected today, so their RMD may be wrong.
+
+**Cons:** Small frontend form change plus exposing the field on the account schema/API.
+
+**Depends on:** `account.tax_treatment` (shipped v0.21.0.0).
+
+---
+
+### Self-service profile page + self-or-primary DOB authz (Identity layer — deferred from v0.21.0.0)
+
+**What:** A "Your profile" page under the user dropdown, and a self-or-primary authorization rule so a member can edit their own date of birth (primary can edit anyone; role changes stay primary-only).
+
+**Why:** This is the one place the implementation diverged from an approved CEO-review decision (Decision 3: self-or-primary). DOB editing currently lives in the Members admin drawer and is primary-only, so a partner can't fix their own birthdate without the primary.
+
+**Cons:** New page + a self-or-primary check in `MemberService.update`; small but security-relevant (it widens who can mutate a member).
+
+**Depends on:** DOB editing UI (shipped v0.21.0.0).
+
+---
+
+### Wire RMD into FIRE projections (Identity layer T9 — in progress)
+
+**What:** Feed each member's computed required minimum distribution into the FIRE projection as post-retirement supplemental income, so projections reflect forced withdrawals.
+
+**Why:** FIRE already consumes member DOB and the RMD engine exists; connecting them makes long-horizon projections account for the cash RMDs actually produce.
+
+**Cons:** Couples `fire_service` to `RmdService`; needs care so a member with no pretax balance or no DOB is a clean no-op.
+
+**Depends on:** RMD engine (shipped v0.21.0.0). Being implemented now.
+
+---
+
+### Age-milestone timeline UI (Identity layer T10 — deferred from v0.21.0.0)
+
+**What:** A forward-looking timeline (Profile or Retirement page) rendering each member's upcoming age-triggered events: 59½ early withdrawals, 62 Social Security earliest, 65 Medicare, full retirement age, and RMD start. Needs a `milestones()` helper plus an FRA-by-birth-year table in `app/services/age.py` (only `rmd_start_age` exists today).
+
+**Why:** The "felt payoff" of the identity layer — entering a birthday surfaces "RMDs begin 2041, Medicare 2033" instead of an inert number. Empty/partial states (no DOB) are load-bearing.
+
+**Cons:** New `age.py` helpers (FRA table is a graduated lookup), a new UI surface, and design polish (run `/plan-design-review` first).
+
+**Depends on:** `age.py` (shipped v0.21.0.0); pairs with retirement target age.
+
+---
+
+### Batch prior-year snapshot reads in the RMD engine (Identity layer E4 — deferred from v0.21.0.0)
+
+**What:** `rmd._prior_year_end_pretax_balance` issues one query per pretax account (an N+1). Batch the prior-year snapshot reads into a single keyed query, mirroring `report.py`'s batched-balance pattern.
+
+**Why:** Eng-review flagged it. Harmless at household scale, but it's the documented N+1 and the report service already has the batched pattern to copy.
+
+**Cons:** Minor refactor; needs a test that the batched result matches the per-account loop.
+
+**Depends on:** RMD engine (shipped v0.21.0.0).
+
+---
+
+### Structured logging in the RMD engine (Identity layer T12 — deferred from v0.21.0.0)
+
+**What:** Add an info-level log line in `RmdService.required_distributions` (member, attained age, pretax base, snapshot date, computed RMD) so a "why is my RMD $0" report is reconstructable from logs.
+
+**Why:** Observability was specced but not built; the engine has several silent empty/partial branches.
+
+**Cons:** Trivial; a few log statements.
+
+**Depends on:** RMD engine (shipped v0.21.0.0).
+
+---
+
+### Social Security claiming-age modeling (Identity layer — deferred scope)
+
+**What:** Per-member Social Security claiming age with benefit adjustment (reduction before FRA, delayed-retirement credits to 70) and FRA lookup by birth year; feed the result into FIRE supplemental income.
+
+**Why:** Claiming age is one of the biggest retirement levers. A self-contained engine the financial-identity layer was designed to host.
+
+**Cons:** Benefit-adjustment math + FRA table; its own PR. Med risk (correctness).
+
+**Depends on:** `age.py` FRA table (shared with the milestone timeline).
+
+---
+
+### Filing status attribute (Identity layer — deferred scope)
+
+**What:** Store household/member filing status (single / MFJ / HoH).
+
+**Why:** Cheap to store, but only pays off once a tax-estimate engine consumes it (brackets, standard deduction, SS provisional-income taxation).
+
+**Cons:** Mild YAGNI until the tax engine is scheduled; best shipped with its consumer.
+
+**Depends on:** Tax-estimate engine (below).
+
+---
+
+### State of residence attribute (Identity layer — deferred scope)
+
+**What:** Store the household's state of residence for future state-tax modeling.
+
+**Why:** Needed for any state-level tax estimate; HearthLedger is federal/USD-focused today.
+
+**Cons:** Placeholder until state-tax logic exists; not scheduled.
+
+**Depends on:** State-tax modeling (not scheduled).
+
+---
+
+### Roth-conversion modeling (Identity layer — deferred scope)
+
+**What:** Project converting pretax balances to Roth in low-income years to shrink future RMDs, showing the RMD/tax tradeoff over time.
+
+**Why:** High-value for FIRE households once `tax_treatment` (shipped) and a tax estimate exist.
+
+**Cons:** Substantial (L); depends on a tax estimate. Med risk.
+
+**Depends on:** `account.tax_treatment` (shipped v0.21.0.0) + tax-estimate engine.
+
+---
+
+### Federal/state tax-estimate engine (Identity layer — deferred scope)
+
+**What:** Estimate federal (and optionally state) tax: brackets, standard deduction, Social Security provisional-income taxation, applied to RMD/SS/withdrawal figures so they can be shown after-tax.
+
+**Why:** Turns gross retirement numbers into spendable ones and unblocks filing status, state, and Roth-conversion modeling.
+
+**Cons:** XL, with ongoing annual table maintenance and real correctness risk. Its own multi-PR program.
+
+**Depends on:** Filing status + state of residence attributes.
+
+---
+
 ## Completed
 
 ### Include SBLOC/margin in transaction-tracked liability valuation
