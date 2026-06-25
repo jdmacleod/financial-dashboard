@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { vi, describe, it, expect, beforeEach } from "vitest"
 import Investments from "@/pages/Investments"
@@ -141,6 +142,28 @@ describe("Investments page", () => {
       expect(
         screen.getByText("No snapshot history yet — add snapshots to see the balance chart."),
       ).toBeInTheDocument()
+    })
+  })
+
+  it("orders accounts by value by default and re-sorts by name", async () => {
+    const { accountsApi: mock } = await import("@/api/accounts")
+    ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { ...brokerageAccount, id: "low", nickname: "Acorns", current_balance: "5000.00" },
+      { ...brokerageAccount, id: "high", nickname: "Vanguard 401k", current_balance: "750000.00" },
+    ])
+    const user = userEvent.setup()
+    renderPage()
+
+    // Default = Value ↓: the $750k Vanguard sorts before the $5k Acorns.
+    const vanguard = await screen.findByText("Vanguard 401k")
+    const acorns = screen.getByText("Acorns")
+    expect(vanguard.compareDocumentPosition(acorns) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    await user.selectOptions(screen.getByLabelText("Sort accounts"), "name_asc")
+    await waitFor(() => {
+      const a = screen.getByText("Acorns")
+      const v = screen.getByText("Vanguard 401k")
+      expect(a.compareDocumentPosition(v) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     })
   })
 })
