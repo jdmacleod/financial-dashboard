@@ -26,6 +26,8 @@ const member: MemberResponse = {
   role: "partner",
   date_of_birth: "1985-07-04",
   retirement_target_age: null,
+  ss_monthly_benefit_at_fra: null,
+  ss_claiming_age: null,
   is_active: true,
   settings: {},
   created_at: "2025-01-01T00:00:00Z",
@@ -148,13 +150,36 @@ describe("Profile", () => {
     })
     renderPage()
 
-    const input = await screen.findByLabelText("Estimated monthly benefit at FRA")
+    const input = await screen.findByLabelText("Monthly benefit at FRA")
     await user.type(input, "2000")
 
     await waitFor(() => expect(screen.getByText("$1,400.00")).toBeInTheDocument())
     expect(screen.getByText("$2,480.00")).toBeInTheDocument()
     expect(screen.getByText("FRA")).toBeInTheDocument()
     expect(membersApi.socialSecurityEstimate).toHaveBeenCalledWith("member-1", "2000")
+  })
+
+  it("saves the SS benefit estimate and claiming age", async () => {
+    const user = userEvent.setup()
+    vi.mocked(membersApi.get).mockResolvedValue(member)
+    vi.mocked(membersApi.update).mockResolvedValue({
+      ...member,
+      ss_monthly_benefit_at_fra: "2000",
+      ss_claiming_age: 70,
+    })
+    renderPage()
+
+    const input = await screen.findByLabelText("Monthly benefit at FRA")
+    await user.type(input, "2000")
+    await user.selectOptions(screen.getByLabelText("Planned claiming age"), "70")
+    await user.click(screen.getByRole("button", { name: /^save$/i }))
+
+    await waitFor(() => {
+      expect(membersApi.update).toHaveBeenCalledWith("member-1", {
+        ss_monthly_benefit_at_fra: "2000",
+        ss_claiming_age: 70,
+      })
+    })
   })
 
   it("prompts for date of birth when the member has none", async () => {

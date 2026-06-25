@@ -21,13 +21,15 @@ from app.schemas.fire import (
     FireScenarioResponse,
     FireScenarioUpdate,
     IncomeStream,
+    IncomeStreamType,
     YearProjectionResponse,
 )
-from app.services.age import rmd_start_age
+from app.services.age import full_retirement_age_months, rmd_start_age
 from app.services.fire_detector import FireInputDetector
 from app.services.fire_projector import FireScenario as FireScenarioDataclass
 from app.services.fire_projector import YearProjection, project
 from app.services.rmd import uniform_lifetime_divisor
+from app.services.social_security import benefit_at_claiming_age
 
 
 def _project_rmds(
@@ -317,6 +319,41 @@ class FireScenarioService:
         )
         return result.scalar_one_or_none()
 
+    async def _social_security_stream(self, member_id: uuid.UUID | None) -> IncomeStream | None:
+        """Derive a Social Security income stream from a member's saved claiming plan.
+
+        None unless the member has a date of birth, a PIA (FRA benefit estimate),
+        and a claiming age. The benefit is the PIA adjusted for the claiming age,
+        starting the year the member reaches it."""
+        if member_id is None:
+            return None
+        result = await self.session.execute(
+            select(
+                HouseholdMember.date_of_birth,
+                HouseholdMember.ss_monthly_benefit_at_fra,
+                HouseholdMember.ss_claiming_age,
+            ).where(HouseholdMember.id == member_id)
+        )
+        row = result.one_or_none()
+        if row is None:
+            return None
+        dob, pia, claiming_age = row
+        if dob is None or pia is None or claiming_age is None:
+            return None
+        fra_months = full_retirement_age_months(dob)
+        assert fra_months is not None  # dob is not None here
+        monthly = benefit_at_claiming_age(pia, fra_months, claiming_age * 12)
+        return IncomeStream(
+            id=f"ss-{member_id}",
+            label="Social Security (estimated)",
+            type=IncomeStreamType.social_security,
+            amount_annual=monthly * 12,
+            growth_rate_annual=Decimal("0"),
+            start_year=dob.year + claiming_age,
+            end_year=None,
+            is_pre_retirement=False,
+        )
+
     async def _get_primary_member_id(self, ctx: VisibilityContext) -> uuid.UUID | None:
         result = await self.session.execute(
             select(HouseholdMember.id)
@@ -364,13 +401,23 @@ class FireScenarioService:
             target_member_id = await self._get_primary_member_id(ctx)
             dob = await self._get_primary_member_dob(ctx)
 
+        income_streams = [IncomeStream(**s) for s in (row.additional_income_streams or [])]
+        ss_stream = await self._social_security_stream(target_member_id)
+        if ss_stream is not None:
+            # The member's saved SS plan is authoritative: drop any manual
+            # social_security stream so the derived one doesn't double-count.
+            income_streams = [
+                s for s in income_streams if s.type != IncomeStreamType.social_security
+            ]
+            income_streams.append(ss_stream)
+
         scenario = FireScenarioDataclass(
             id=row.id,
             target_annual_spend=row.target_annual_spend,
             safe_withdrawal_rate=row.safe_withdrawal_rate,
             expected_annual_return=row.expected_annual_return,
             expected_inflation_rate=row.expected_inflation_rate,
-            income_streams=[IncomeStream(**s) for s in (row.additional_income_streams or [])],
+            income_streams=income_streams,
             detected_portfolio_value=row.detected_portfolio_value,
         )
 

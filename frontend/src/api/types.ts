@@ -52,6 +52,8 @@ export interface MemberResponse {
   role: "primary" | "partner" | "dependent"
   date_of_birth: string | null
   retirement_target_age: number | null
+  ss_monthly_benefit_at_fra: string | null
+  ss_claiming_age: number | null
   is_active: boolean
   settings: Record<string, unknown>
   created_at: string

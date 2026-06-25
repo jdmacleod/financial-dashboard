@@ -45,6 +45,8 @@ class MemberService:
             role=data.role,
             date_of_birth=data.date_of_birth,
             retirement_target_age=data.retirement_target_age,
+            ss_monthly_benefit_at_fra=data.ss_monthly_benefit_at_fra,
+            ss_claiming_age=data.ss_claiming_age,
             is_active=True,
             created_at=now,
             updated_at=now,
@@ -95,6 +97,10 @@ class MemberService:
         # omitted field leaves it untouched (a profile field, self-editable).
         if "retirement_target_age" in data.model_fields_set:
             member.retirement_target_age = data.retirement_target_age
+        if "ss_monthly_benefit_at_fra" in data.model_fields_set:
+            member.ss_monthly_benefit_at_fra = data.ss_monthly_benefit_at_fra
+        if "ss_claiming_age" in data.model_fields_set:
+            member.ss_claiming_age = data.ss_claiming_age
         if data.is_active is not None:
             member.is_active = data.is_active
 

@@ -12,14 +12,36 @@ function fraLabel(months: number): string {
   return m === 0 ? `${y}` : `${y} yr ${m} mo`
 }
 
+const CLAIM_AGES = [62, 63, 64, 65, 66, 67, 68, 69, 70]
+
 function SocialSecurityEstimator({ member }: { member: MemberResponse }) {
-  const [benefit, setBenefit] = useState("")
+  const queryClient = useQueryClient()
+  const [benefit, setBenefit] = useState(member.ss_monthly_benefit_at_fra ?? "")
+  const [claimAge, setClaimAge] = useState(member.ss_claiming_age?.toString() ?? "")
+  const [saved, setSaved] = useState(false)
   const valid = benefit !== "" && Number(benefit) > 0
 
   const { data, isFetching } = useQuery({
     queryKey: ["ss-estimate", member.id, benefit],
     queryFn: () => membersApi.socialSecurityEstimate(member.id, benefit),
     enabled: valid && !!member.date_of_birth,
+  })
+
+  const hasChanges =
+    benefit !== (member.ss_monthly_benefit_at_fra ?? "") ||
+    claimAge !== (member.ss_claiming_age?.toString() ?? "")
+
+  const save = useMutation({
+    mutationFn: () =>
+      membersApi.update(member.id, {
+        ss_monthly_benefit_at_fra: benefit || null,
+        ss_claiming_age: claimAge ? Number(claimAge) : null,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["current-member", member.id] })
+      queryClient.invalidateQueries({ queryKey: ["members"] })
+      setSaved(true)
+    },
   })
 
   if (!member.date_of_birth) {
@@ -38,22 +60,60 @@ function SocialSecurityEstimator({ member }: { member: MemberResponse }) {
       <div>
         <h2 className="text-sm font-semibold text-gray-900">Social Security claiming</h2>
         <p className="text-xs text-gray-400 mt-0.5">
-          Enter your estimated monthly benefit at Full Retirement Age (from your SSA statement) to
-          see how claiming earlier or later changes it.
+          Enter your estimated monthly benefit at Full Retirement Age (from your SSA statement) and
+          the age you plan to claim. Saved values feed your FIRE projections.
         </p>
       </div>
-      <div>
-        <label htmlFor="ss-pia" className="block text-sm font-medium text-gray-700 mb-1">
-          Estimated monthly benefit at FRA
-        </label>
-        <input
-          id="ss-pia"
-          inputMode="decimal"
-          value={benefit}
-          placeholder="e.g. 2000"
-          onChange={(e) => setBenefit(e.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        />
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label htmlFor="ss-pia" className="block text-sm font-medium text-gray-700 mb-1">
+            Monthly benefit at FRA
+          </label>
+          <input
+            id="ss-pia"
+            inputMode="decimal"
+            value={benefit}
+            placeholder="e.g. 2000"
+            onChange={(e) => {
+              setBenefit(e.target.value)
+              setSaved(false)
+            }}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+        </div>
+        <div>
+          <label htmlFor="ss-claim-age" className="block text-sm font-medium text-gray-700 mb-1">
+            Planned claiming age
+          </label>
+          <select
+            id="ss-claim-age"
+            value={claimAge}
+            onChange={(e) => {
+              setClaimAge(e.target.value)
+              setSaved(false)
+            }}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="">Not set</option>
+            {CLAIM_AGES.map((a) => (
+              <option key={a} value={a}>
+                {a}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => save.mutate()}
+          disabled={!hasChanges || save.isPending}
+          className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {save.isPending ? "Saving…" : "Save"}
+        </button>
+        {saved && !hasChanges && <span className="text-sm text-emerald-700">Saved.</span>}
       </div>
 
       {valid && data && (
@@ -71,19 +131,28 @@ function SocialSecurityEstimator({ member }: { member: MemberResponse }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {data.options.map((o) => (
-                <tr key={o.claiming_age} className={o.is_fra ? "font-medium text-indigo-700" : ""}>
-                  <td className="py-1.5">
-                    {o.claiming_age}
-                    {o.is_fra && <span className="ml-1 text-xs text-indigo-500">FRA</span>}
-                  </td>
-                  <td className="py-1.5 text-right">{formatCurrency(o.monthly_benefit)}</td>
-                  <td className="py-1.5 text-right text-gray-500">
-                    {formatCurrency(o.annual_benefit)}
-                  </td>
-                  <td className="py-1.5 text-right text-gray-500">{o.pct_of_pia.toFixed(0)}%</td>
-                </tr>
-              ))}
+              {data.options.map((o) => {
+                const selected = claimAge !== "" && Number(claimAge) === o.claiming_age
+                return (
+                  <tr
+                    key={o.claiming_age}
+                    className={
+                      selected ? "font-semibold text-indigo-700" : o.is_fra ? "text-indigo-600" : ""
+                    }
+                  >
+                    <td className="py-1.5">
+                      {o.claiming_age}
+                      {o.is_fra && <span className="ml-1 text-xs text-indigo-500">FRA</span>}
+                      {selected && <span className="ml-1 text-xs text-indigo-500">your plan</span>}
+                    </td>
+                    <td className="py-1.5 text-right">{formatCurrency(o.monthly_benefit)}</td>
+                    <td className="py-1.5 text-right text-gray-500">
+                      {formatCurrency(o.annual_benefit)}
+                    </td>
+                    <td className="py-1.5 text-right text-gray-500">{o.pct_of_pia.toFixed(0)}%</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

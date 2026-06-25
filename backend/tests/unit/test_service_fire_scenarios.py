@@ -308,6 +308,72 @@ async def test_project_returns_projections(
     assert result.summary.fire_number > Decimal(0)
 
 
+async def test_project_includes_member_social_security_stream(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A member's saved SS plan is projected as a social_security income stream
+    starting the year they reach their claiming age."""
+    primary_member.date_of_birth = date(1960, 1, 1)  # FRA 67
+    primary_member.ss_monthly_benefit_at_fra = Decimal("2000")
+    primary_member.ss_claiming_age = 67  # claims in 2027; $2000/mo -> $24,000/yr
+    await db_session.flush()
+
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    svc = FireScenarioService(db_session)
+    scenario = await svc.create(
+        ctx, FireScenarioCreate(name="SS Test", target_annual_spend=Decimal("60000"))
+    )
+
+    result = await svc.project(ctx, scenario.id, from_year=2026)
+    by_year = {p.year: p for p in result.projections}
+    # Before claiming age: no SS supplemental income.
+    assert by_year[2026].supplemental_income == Decimal("0")
+    # Claiming year onward: the adjusted annual benefit appears.
+    assert by_year[2027].supplemental_income == Decimal("24000")
+
+
+async def test_project_member_ss_supersedes_manual_stream(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A manual social_security stream is dropped in favor of the member's saved
+    plan, so SS is never double-counted."""
+    primary_member.date_of_birth = date(1960, 1, 1)
+    primary_member.ss_monthly_benefit_at_fra = Decimal("2000")
+    primary_member.ss_claiming_age = 67
+    await db_session.flush()
+
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    svc = FireScenarioService(db_session)
+    manual_ss = IncomeStream(
+        id="manual-ss",
+        label="Manual SS",
+        type=IncomeStreamType.social_security,
+        amount_annual=Decimal("99999"),
+        growth_rate_annual=Decimal("0"),
+        start_year=2027,
+        is_pre_retirement=False,
+    )
+    scenario = await svc.create(
+        ctx,
+        FireScenarioCreate(
+            name="SS Dedup",
+            target_annual_spend=Decimal("60000"),
+            additional_income_streams=[manual_ss],
+        ),
+    )
+
+    result = await svc.project(ctx, scenario.id, from_year=2026)
+    by_year = {p.year: p for p in result.projections}
+    # The derived $24,000 wins; the manual $99,999 is excluded (no double-count).
+    assert by_year[2027].supplemental_income == Decimal("24000")
+
+
 async def _pretax_account_with_balance(
     db_session: AsyncSession, household: Household, member: HouseholdMember, balance: str
 ) -> Account:
