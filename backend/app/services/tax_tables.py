@@ -13,10 +13,13 @@ Sources (verified 2026-06-25):
   - Social Security provisional-income base amounts: 26 U.S.C. §86 (statutory,
     NOT inflation-indexed; unchanged since 1993).
 
-Scope (v1): ordinary-income brackets and the standard deduction only. Preferential
-long-term capital-gains / qualified-dividend rates, AMT, NIIT, additional Medicare
-tax, itemized deductions, credits, and the senior add-on deduction are out of scope
-and tracked separately.
+Scope (v1): ordinary-income brackets, the standard deduction, and the preferential
+long-term capital-gains / qualified-dividend rate schedule (0/15/20%). AMT, NIIT,
+additional Medicare tax, itemized deductions, credits, the senior add-on deduction,
+and state income tax are out of scope and tracked separately.
+
+Capital-gains rate breakpoints (2025 = IRS Rev. Proc. 2024-40, 2026 = Rev. Proc.
+2025-32) verified 2026-06-25 via published IRS / Tax Foundation figures.
 
 Married-filing-separately (MFS) uses the Single schedule for the lower brackets and
 half the MFJ thresholds at the top two brackets (the standard MFS construction).
@@ -146,6 +149,33 @@ STANDARD_DEDUCTION: dict[int, dict[str, Decimal]] = {
         QSS: Decimal("32200"),
     },
 }
+
+# Long-term capital-gains / qualified-dividend preferential rate schedule. Rates
+# are a fixed 0% / 15% / 20%; only the breakpoints are inflation-indexed. Each
+# entry is (zero_rate_ceiling, fifteen_rate_ceiling) measured against TOTAL taxable
+# income: qualified income stacked on top of ordinary taxable income is taxed at 0%
+# up to the first ceiling, 15% up to the second, and 20% above it.
+type CapGainsBreakpoints = tuple[Decimal, Decimal]
+
+CAPITAL_GAINS_RATES = (Decimal("0.00"), Decimal("0.15"), Decimal("0.20"))
+
+CAPITAL_GAINS_BREAKPOINTS: dict[int, dict[str, CapGainsBreakpoints]] = {
+    2025: {
+        SINGLE: (Decimal("48350"), Decimal("533400")),
+        MFJ: (Decimal("96700"), Decimal("600050")),
+        HOH: (Decimal("64750"), Decimal("566700")),
+        MFS: (Decimal("48350"), Decimal("300000")),
+    },
+    2026: {
+        SINGLE: (Decimal("49450"), Decimal("545500")),
+        MFJ: (Decimal("98900"), Decimal("613700")),
+        HOH: (Decimal("66200"), Decimal("579600")),
+        MFS: (Decimal("49450"), Decimal("306850")),
+    },
+}
+# QSS uses the MFJ schedule (mirrors the ordinary brackets above).
+CAPITAL_GAINS_BREAKPOINTS[2025][QSS] = CAPITAL_GAINS_BREAKPOINTS[2025][MFJ]
+CAPITAL_GAINS_BREAKPOINTS[2026][QSS] = CAPITAL_GAINS_BREAKPOINTS[2026][MFJ]
 
 # §86 base amounts (base1 -> up to 50% taxable, base2 -> up to 85% taxable).
 # MFS living with spouse is $0/$0 (up to 85% taxable from the first dollar); we

@@ -256,32 +256,79 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         rmd: "36000.00",
         total: "100000.00",
         has_data: true,
-        federal_tax_estimate: {
-          tax_year: 2025,
-          filing_status: "married_filing_jointly",
-          ordinary_income: "60000.00",
-          social_security_gross: "40000.00",
-          taxable_social_security: "34000.00",
-          standard_deduction: "31500.00",
-          taxable_income: "62500.00",
-          federal_tax: "7023.00",
-          after_tax_income: "92977.00",
-          effective_rate: 0.0747,
-          marginal_rate: 0.12,
-          roth_conversion_room: "34450.00",
-          next_bracket_rate: 0.22,
-        },
+      },
+      federal_tax_estimate: {
+        tax_year: 2025,
+        filing_status: "married_filing_jointly",
+        ordinary_income: "60000.00",
+        qualified_income: "0.00",
+        social_security_gross: "40000.00",
+        taxable_social_security: "34000.00",
+        standard_deduction: "31500.00",
+        taxable_income: "62500.00",
+        federal_tax: "7023.00",
+        qualified_tax: "0.00",
+        after_tax_income: "92977.00",
+        effective_rate: 0.0747,
+        marginal_rate: 0.12,
+        roth_conversion_room: "34450.00",
+        next_bracket_rate: 0.22,
       },
     })
     renderPage()
     await waitFor(() => expect(screen.getByText("$7,023.00")).toBeInTheDocument())
+    expect(screen.getByText("Estimated federal tax")).toBeInTheDocument()
     expect(screen.getByText("$92,977.00")).toBeInTheDocument()
     expect(screen.getByText(/% marginal/)).toBeInTheDocument()
     expect(screen.getByText(/federal only/)).toBeInTheDocument()
+    // No qualified income -> no preferential-rate line.
+    expect(screen.queryByText(/preferential rates/)).toBeNull()
     // Roth conversion headroom line.
     expect(screen.getByText("$34,450.00")).toBeInTheDocument()
     expect(screen.getByText(/Roth conversion room/)).toBeInTheDocument()
     expect(screen.getByText(/before the 22% bracket/)).toBeInTheDocument()
+  })
+
+  it("shows the estimate with preferential-rate line for a wage earner with no retirement income", async () => {
+    const { reportsApi: mock } = await import("@/api/reports")
+    ;(mock.cashFlow as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...mockCashFlow,
+      // No retirement income at all...
+      retirement_income: {
+        social_security: "0.00",
+        pension: "0.00",
+        rmd: "0.00",
+        total: "0.00",
+        has_data: false,
+      },
+      // ...yet the household estimate still appears (full-income basis).
+      federal_tax_estimate: {
+        tax_year: 2025,
+        filing_status: "single",
+        ordinary_income: "80000.00",
+        qualified_income: "10000.00",
+        social_security_gross: "0.00",
+        taxable_social_security: "0.00",
+        standard_deduction: "15750.00",
+        taxable_income: "74250.00",
+        federal_tax: "10549.00",
+        qualified_tax: "1500.00",
+        after_tax_income: "79451.00",
+        effective_rate: 0.1172,
+        marginal_rate: 0.22,
+        roth_conversion_room: "0.00",
+        next_bracket_rate: 0.24,
+      },
+    })
+    renderPage()
+    await waitFor(() => expect(screen.getByText("Estimated federal tax")).toBeInTheDocument())
+    // Retirement panel is hidden, but the tax estimate is not.
+    expect(screen.queryByText("Retirement income")).toBeNull()
+    expect(screen.getByText("$10,549.00")).toBeInTheDocument()
+    // Qualified dividends + long-term gains line at preferential rates.
+    expect(screen.getByText(/preferential rates/)).toBeInTheDocument()
+    expect(screen.getByText("$10,000.00")).toBeInTheDocument()
+    expect(screen.getByText("$1,500.00")).toBeInTheDocument()
   })
 
   it("omits the Roth conversion line when there is no headroom (top bracket)", async () => {
@@ -294,21 +341,23 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         rmd: "36000.00",
         total: "100000.00",
         has_data: true,
-        federal_tax_estimate: {
-          tax_year: 2025,
-          filing_status: "married_filing_jointly",
-          ordinary_income: "60000.00",
-          social_security_gross: "40000.00",
-          taxable_social_security: "34000.00",
-          standard_deduction: "31500.00",
-          taxable_income: "62500.00",
-          federal_tax: "7023.00",
-          after_tax_income: "92977.00",
-          effective_rate: 0.0747,
-          marginal_rate: 0.37,
-          roth_conversion_room: null,
-          next_bracket_rate: null,
-        },
+      },
+      federal_tax_estimate: {
+        tax_year: 2025,
+        filing_status: "married_filing_jointly",
+        ordinary_income: "60000.00",
+        qualified_income: "0.00",
+        social_security_gross: "40000.00",
+        taxable_social_security: "34000.00",
+        standard_deduction: "31500.00",
+        taxable_income: "62500.00",
+        federal_tax: "7023.00",
+        qualified_tax: "0.00",
+        after_tax_income: "92977.00",
+        effective_rate: 0.0747,
+        marginal_rate: 0.37,
+        roth_conversion_room: null,
+        next_bracket_rate: null,
       },
     })
     renderPage()
