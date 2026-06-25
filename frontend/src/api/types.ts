@@ -23,11 +23,26 @@ export interface TemporaryPasswordResponse {
   temporary_password: string
 }
 
+export type FilingStatus =
+  | "single"
+  | "married_filing_jointly"
+  | "married_filing_separately"
+  | "head_of_household"
+  | "qualifying_surviving_spouse"
+
 export interface HouseholdResponse {
   id: string
   name: string
   settings: Record<string, unknown>
+  filing_status: FilingStatus | null
+  state: string | null
   created_at: string
+}
+
+export interface HouseholdUpdate {
+  name?: string
+  filing_status?: FilingStatus | null
+  state?: string | null
 }
 
 export interface MemberResponse {

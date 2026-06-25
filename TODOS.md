@@ -76,30 +76,6 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Filing status attribute (Identity layer — deferred scope)
-
-**What:** Store household/member filing status (single / MFJ / HoH).
-
-**Why:** Cheap to store, but only pays off once a tax-estimate engine consumes it (brackets, standard deduction, SS provisional-income taxation).
-
-**Cons:** Mild YAGNI until the tax engine is scheduled; best shipped with its consumer.
-
-**Depends on:** Tax-estimate engine (below).
-
----
-
-### State of residence attribute (Identity layer — deferred scope)
-
-**What:** Store the household's state of residence for future state-tax modeling.
-
-**Why:** Needed for any state-level tax estimate; HearthLedger is federal/USD-focused today.
-
-**Cons:** Placeholder until state-tax logic exists; not scheduled.
-
-**Depends on:** State-tax modeling (not scheduled).
-
----
-
 ### Roth-conversion modeling (Identity layer — deferred scope)
 
 **What:** Project converting pretax balances to Roth in low-income years to shrink future RMDs, showing the RMD/tax tradeoff over time.
@@ -120,11 +96,25 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 **Cons:** XL, with ongoing annual table maintenance and real correctness risk. Its own multi-PR program.
 
-**Depends on:** Filing status + state of residence attributes.
+**Depends on:** Filing status + state of residence attributes (both shipped 2026-06-25, migration 0018 — see Completed).
 
 ---
 
 ## Completed
+
+### Filing status + state of residence attributes (Identity layer — foundational)
+
+**Completed:** 2026-06-25 (branch `feat/identity-filing-status-state`, stacked on
+the Budgets branch) — Added two nullable household-level identity columns
+(migration `0018`): `filing_status` (PG enum: single / MFJ / MFS / HoH / QSS) and
+`state` (two-letter US/DC code, app-validated and uppercased). Exposed on
+`HouseholdResponse`/`HouseholdUpdate` (PATCH `/household`, primary-only, uses
+`model_fields_set` so explicit nulls clear them) and a new **Household & tax**
+settings page (`/settings/household`) with a primary-only edit form + read-only
+view for other members. Landed ahead of their consumer per the chosen sequencing
+(foundational attrs first); no report reads them yet — the federal/state
+tax-estimate engine is the next item. Tests: 6 backend integration (set/clear/
+validate/primary-only/partial-update) + 5 frontend.
 
 ### Quarterly budget period — Budgets tab
 
