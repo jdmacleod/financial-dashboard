@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.2.0] - 2026-06-25
+
+### Changed
+
+- **Password hashing moved from passlib to the `bcrypt` library directly.** No change to how you log in or to existing stored passwords — credentials hashed under the old library keep verifying unchanged (same `$2b$` bcrypt format, same 72-byte handling). This unblocks the `bcrypt` 5.0 upgrade, which the unmaintained passlib could not run.
+
+### For contributors
+
+- Dropped the `passlib` (and `types-passlib`) dependency and the `bcrypt<4.1` pin; `app/core/security.py` now calls `bcrypt` directly. Passwords are truncated to 72 bytes before hashing/verifying, matching bcrypt's documented limit (and passlib's prior behavior).
+
 ## [0.23.0.0] - 2026-06-24
 
 ### Added
