@@ -7,9 +7,9 @@ import { categoriesApi } from "@/api/categories"
 import { formatCurrency } from "@/lib/formatters"
 import { currentMonthRange, lastNMonthsRange } from "@/lib/dateRange"
 
-type Preset = "this_month" | "3m" | "6m" | "12m"
+type Preset = "this_month" | "3m" | "6m" | "12m" | "custom"
 
-function presetRange(p: Preset) {
+function presetRange(p: Exclude<Preset, "custom">) {
   if (p === "this_month") return currentMonthRange()
   if (p === "3m") return lastNMonthsRange(3)
   if (p === "6m") return lastNMonthsRange(6)
@@ -18,14 +18,21 @@ function presetRange(p: Preset) {
 
 export default function ReportSpending() {
   const search = useSearch({ from: "/app/reports/spending" })
-  const [preset, setPreset] = useState<Preset>("this_month")
+  // A from+to pair in the URL (e.g. a Cash Flow drill-down) opens in Custom mode
+  // on that exact range instead of snapping back to a default preset.
+  const hasCustomFromUrl = Boolean(search.from && search.to)
+  const [preset, setPreset] = useState<Preset>(hasCustomFromUrl ? "custom" : "this_month")
+  const [customFrom, setCustomFrom] = useState<string>(search.from ?? currentMonthRange().from)
+  const [customTo, setCustomTo] = useState<string>(search.to ?? currentMonthRange().to)
   const [drillCategory, setDrillCategory] = useState<string | null>(search.category ?? null)
 
-  const range = presetRange(preset)
+  const range = preset === "custom" ? { from: customFrom, to: customTo } : presetRange(preset)
+  const customInvalid = preset === "custom" && customFrom > customTo
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["reports", "spending", range, drillCategory],
     queryFn: () => reportsApi.spendingByCategory(range.from, range.to, drillCategory ?? undefined),
+    enabled: !customInvalid,
   })
 
   const { data: categories } = useQuery({
@@ -65,13 +72,14 @@ export default function ReportSpending() {
         )}
       </div>
 
-      <div className="flex gap-1">
+      <div className="flex flex-wrap items-center gap-1">
         {(
           [
             { label: "This month", key: "this_month" as Preset },
             { label: "3 months", key: "3m" as Preset },
             { label: "6 months", key: "6m" as Preset },
             { label: "12 months", key: "12m" as Preset },
+            { label: "Custom", key: "custom" as Preset },
           ] as { label: string; key: Preset }[]
         ).map((p) => (
           <button
@@ -89,7 +97,35 @@ export default function ReportSpending() {
             {p.label}
           </button>
         ))}
+
+        {preset === "custom" && (
+          <div className="flex items-center gap-1.5 ml-2 text-xs text-gray-600">
+            <input
+              type="date"
+              aria-label="From date"
+              value={customFrom}
+              max={customTo}
+              onChange={(e) => setCustomFrom(e.target.value)}
+              className="border border-gray-300 rounded px-2 py-1"
+            />
+            <span className="text-gray-400">→</span>
+            <input
+              type="date"
+              aria-label="To date"
+              value={customTo}
+              min={customFrom}
+              onChange={(e) => setCustomTo(e.target.value)}
+              className="border border-gray-300 rounded px-2 py-1"
+            />
+          </div>
+        )}
       </div>
+
+      {customInvalid && (
+        <p className="text-xs text-amber-600">
+          The “from” date must be on or before the “to” date.
+        </p>
+      )}
 
       {isLoading && <div className="text-sm text-gray-400 py-8 text-center">Loading…</div>}
       {error && <div className="text-sm text-red-500 py-4">Failed to load report.</div>}

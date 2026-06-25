@@ -14,18 +14,6 @@
 
 ---
 
-### Custom date mode for the Spending Report (follow-on from cash-flow-categories plan)
-
-**What:** Add a "Custom" date mode to the Spending Report so Cash Flow → Spending drill-down can carry an explicit `from`/`to` range. Today the Cash Flow bars pass only `?category=<id>` (D2-eng) because Cash Flow's YTD/1Y/All presets don't map cleanly onto Spending's this_month/3m/6m/12m presets, so the drilled report opens at its own default range.
-
-**Why:** Recorded as a committed follow-on in `docs/design/cash-flow-categories-unified-plan.md` (D2-eng — "A follow-on task (TODOS.md) will add a 'Custom' date mode") but never actually tracked here until now. Closing the loop so the drill-down lands on the matching date range, not just the matching category.
-
-**Cons:** Touches the Spending Report's preset model + `validateSearch` (new `from`/`to` params) and the Cash Flow navigation call sites. Small-to-medium.
-
-**Depends on:** Cash-flow-categories plan (shipped, PRs #38/#39).
-
----
-
 ### WCAG 2.1 AA accessibility audit — HearthLedger v1 (Post-Phase 7)
 
 **What:** Run a full WCAG 2.1 AA audit across all HearthLedger pages: color contrast ratios (4.5:1 body text, 3:1 large text), screen reader label completeness, keyboard navigation order, and focus indicator visibility.
@@ -77,6 +65,20 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### Custom date mode for the Spending Report (cash-flow drill-down range)
+
+**Completed:** 2026-06-25 (branch `feat/spending-custom-date-mode`) — Closes the
+D2-eng follow-on from the cash-flow-categories plan. The Spending Report gained a
+"Custom" preset with from/to date inputs (alongside this_month / 3m / 6m / 12m), and
+the route's `validateSearch` now accepts `from`/`to`. A `from`+`to` pair in the URL
+opens the report in Custom mode on that exact range. The Cash Flow → Spending
+drill-down (both the per-category bars and the "View full breakdown" link) now carries
+the cash-flow panel's current date range into the search, so the drilled report lands
+on the matching range, not just the matching category. An inverted range (from > to)
+shows a warning and skips the query. Tests: 3 added to ReportSpending (opens on URL
+range, refetch on input change, inverted-range guard) + 1 to ReportCashFlow (drill-down
+carries the range).
 
 ### Roth-conversion-ladder analysis — multi-year gap-year projection (Identity layer)
 

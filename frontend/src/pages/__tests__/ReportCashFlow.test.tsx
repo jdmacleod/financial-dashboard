@@ -60,10 +60,11 @@ const mockSpending = {
 }
 
 const mockUseRouterState = vi.fn(() => "")
+const mockNavigate = vi.fn()
 vi.mock("@tanstack/react-router", () => ({
   useRouterState: (opts: { select: (s: { location: { search: string } }) => unknown }) =>
     opts.select({ location: { search: mockUseRouterState() as string } }),
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mockNavigate,
   Link: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
     <a {...props}>{children}</a>
   ),
@@ -159,6 +160,17 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
     renderPage()
     await waitFor(() => {
       expect(screen.getByText("Top spending categories")).toBeInTheDocument()
+    })
+  })
+
+  it("drills into Spending carrying the current date range", async () => {
+    const user = userEvent.setup()
+    renderPage()
+    await waitFor(() => screen.getByRole("button", { name: /Housing/ }))
+    await user.click(screen.getByRole("button", { name: /Housing/ }))
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/reports/spending",
+      search: { category: "c1", from: expect.any(String), to: expect.any(String) },
     })
   })
 

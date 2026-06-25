@@ -61,10 +61,10 @@ const mockCategories = [
   },
 ]
 
-let mockSearchCategory: string | undefined = undefined
+let mockSearch: { category?: string; from?: string; to?: string } = {}
 
 vi.mock("@tanstack/react-router", () => ({
-  useSearch: () => ({ category: mockSearchCategory }),
+  useSearch: () => mockSearch,
 }))
 
 vi.mock("@/api/reports", () => ({
@@ -93,7 +93,7 @@ function renderPage() {
 describe("ReportSpending", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockSearchCategory = undefined
+    mockSearch = {}
   })
 
   it("renders the heading", () => {
@@ -115,10 +115,48 @@ describe("ReportSpending", () => {
     expect(screen.getByRole("button", { name: "3 months" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "6 months" })).toBeInTheDocument()
     expect(screen.getByRole("button", { name: "12 months" })).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Custom" })).toBeInTheDocument()
+  })
+
+  it("opens in Custom mode on the URL from/to range", async () => {
+    mockSearch = { from: "2026-01-01", to: "2026-03-31" }
+    const { reportsApi: mock } = await import("@/api/reports")
+    renderPage()
+    await waitFor(() => screen.getByText("Housing"))
+    // Date inputs are populated from the URL range...
+    expect((screen.getByLabelText("From date") as HTMLInputElement).value).toBe("2026-01-01")
+    expect((screen.getByLabelText("To date") as HTMLInputElement).value).toBe("2026-03-31")
+    // ...and the report is fetched for exactly that range.
+    expect(mock.spendingByCategory).toHaveBeenCalledWith("2026-01-01", "2026-03-31", undefined)
+  })
+
+  it("refetches when a custom date input changes", async () => {
+    const user = userEvent.setup()
+    const { reportsApi: mock } = await import("@/api/reports")
+    renderPage()
+    await user.click(screen.getByRole("button", { name: "Custom" }))
+    const from = screen.getByLabelText("From date")
+    await user.clear(from)
+    await user.type(from, "2025-06-15")
+    await waitFor(() => {
+      expect(mock.spendingByCategory).toHaveBeenCalledWith(
+        "2025-06-15",
+        expect.any(String),
+        undefined,
+      )
+    })
+  })
+
+  it("warns and skips the query for an inverted custom range", async () => {
+    mockSearch = { from: "2026-05-01", to: "2026-02-01" }
+    const { reportsApi: mock } = await import("@/api/reports")
+    renderPage()
+    expect(await screen.findByText(/must be on or before/)).toBeInTheDocument()
+    expect(mock.spendingByCategory).not.toHaveBeenCalled()
   })
 
   it("initializes drillCategory from URL category param", async () => {
-    mockSearchCategory = "cat1"
+    mockSearch = { category: "cat1" }
     const { reportsApi: mock } = await import("@/api/reports")
     renderPage()
     await waitFor(() => screen.getByText("Housing"))
@@ -130,7 +168,7 @@ describe("ReportSpending", () => {
   })
 
   it("shows All categories back button when drilled", async () => {
-    mockSearchCategory = "cat1"
+    mockSearch = { category: "cat1" }
     renderPage()
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "← All categories" })).toBeInTheDocument()
@@ -153,7 +191,7 @@ describe("ReportSpending", () => {
 
   it("clears drill category when preset button is clicked", async () => {
     const user = userEvent.setup()
-    mockSearchCategory = "cat1"
+    mockSearch = { category: "cat1" }
     renderPage()
     await waitFor(() => screen.getByRole("button", { name: "← All categories" }))
     await user.click(screen.getByRole("button", { name: "3 months" }))
