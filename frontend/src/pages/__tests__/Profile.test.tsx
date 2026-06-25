@@ -24,6 +24,7 @@ const member: MemberResponse = {
   display_name: "Pat Saver",
   role: "partner",
   date_of_birth: "1985-07-04",
+  retirement_target_age: null,
   is_active: true,
   settings: {},
   created_at: "2025-01-01T00:00:00Z",
@@ -63,6 +64,34 @@ describe("Profile", () => {
       expect(membersApi.update).toHaveBeenCalledWith("member-1", { date_of_birth: "1990-01-01" })
     })
     expect(await screen.findByText("Profile saved.")).toBeInTheDocument()
+  })
+
+  it("saves a target retirement age", async () => {
+    const user = userEvent.setup()
+    vi.mocked(membersApi.get).mockResolvedValue(member)
+    vi.mocked(membersApi.update).mockResolvedValue({ ...member, retirement_target_age: 60 })
+    renderPage()
+
+    const ageInput = await screen.findByLabelText("Target retirement age")
+    await user.type(ageInput, "60")
+    await user.click(screen.getByRole("button", { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(membersApi.update).toHaveBeenCalledWith("member-1", { retirement_target_age: 60 })
+    })
+  })
+
+  it("blocks an out-of-range retirement age", async () => {
+    const user = userEvent.setup()
+    vi.mocked(membersApi.get).mockResolvedValue(member)
+    renderPage()
+
+    const ageInput = await screen.findByLabelText("Target retirement age")
+    await user.type(ageInput, "150")
+
+    expect(screen.getByText(/whole age between 18 and 100/)).toBeInTheDocument()
+    expect(screen.getByRole("button", { name: /save changes/i })).toBeDisabled()
+    expect(membersApi.update).not.toHaveBeenCalled()
   })
 
   it("disables save when there are no changes", async () => {

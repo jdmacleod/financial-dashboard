@@ -45,6 +45,7 @@ const partnerMember: MemberResponse = {
   display_name: "Sam Smith",
   role: "partner",
   date_of_birth: null,
+  retirement_target_age: null,
   is_active: true,
   settings: {},
   created_at: "2025-01-01T00:00:00Z",

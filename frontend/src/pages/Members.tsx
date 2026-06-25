@@ -24,15 +24,21 @@ function MemberSlideOver({ member, onClose }: { member: MemberResponse; onClose:
   const [displayName, setDisplayName] = useState(member.display_name)
   const [role, setRole] = useState<"primary" | "partner" | "dependent">(member.role)
   const [dob, setDob] = useState(member.date_of_birth ?? "")
+  const [retirementAge, setRetirementAge] = useState(member.retirement_target_age?.toString() ?? "")
   const [confirmPromotion, setConfirmPromotion] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const today = new Date().toISOString().slice(0, 10)
   const dobInFuture = dob !== "" && dob > today
+  const retirementAgeNum = retirementAge === "" ? null : Number(retirementAge)
+  const retirementAgeInvalid =
+    retirementAgeNum !== null &&
+    (!Number.isInteger(retirementAgeNum) || retirementAgeNum < 18 || retirementAgeNum > 100)
   const hasChanges =
     displayName !== member.display_name ||
     role !== member.role ||
-    dob !== (member.date_of_birth ?? "")
+    dob !== (member.date_of_birth ?? "") ||
+    retirementAge !== (member.retirement_target_age?.toString() ?? "")
 
   const update = useMutation({
     mutationFn: () => {
@@ -40,10 +46,13 @@ function MemberSlideOver({ member, onClose }: { member: MemberResponse; onClose:
         display_name?: string
         role?: "primary" | "partner" | "dependent"
         date_of_birth?: string | null
+        retirement_target_age?: number | null
       } = {}
       if (displayName !== member.display_name) changes.display_name = displayName
       if (role !== member.role) changes.role = role
       if (dob !== (member.date_of_birth ?? "")) changes.date_of_birth = dob || null
+      if (retirementAge !== (member.retirement_target_age?.toString() ?? ""))
+        changes.retirement_target_age = retirementAgeNum
       return membersApi.update(member.id, changes)
     },
     onSuccess: () => {
@@ -141,6 +150,36 @@ function MemberSlideOver({ member, onClose }: { member: MemberResponse; onClose:
           )}
         </div>
 
+        <div>
+          <label
+            htmlFor="member-retirement-age"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
+            Target retirement age
+          </label>
+          <input
+            id="member-retirement-age"
+            type="number"
+            min={18}
+            max={100}
+            step={1}
+            value={retirementAge}
+            placeholder="e.g. 65"
+            onChange={(e) => {
+              setRetirementAge(e.target.value)
+              setError(null)
+            }}
+            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          />
+          <p className="mt-1 text-xs text-gray-400">
+            Optional. Adds a "Target retirement" marker to the milestone timeline. Leave blank to
+            remove it.
+          </p>
+          {retirementAgeInvalid && (
+            <p className="mt-1 text-xs text-red-600">Enter a whole age between 18 and 100.</p>
+          )}
+        </div>
+
         {confirmPromotion && (
           <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
             <p className="font-medium mb-1">Grant primary access?</p>
@@ -166,7 +205,7 @@ function MemberSlideOver({ member, onClose }: { member: MemberResponse; onClose:
           </button>
           <button
             onClick={handleSave}
-            disabled={update.isPending || !hasChanges || dobInFuture}
+            disabled={update.isPending || !hasChanges || dobInFuture || retirementAgeInvalid}
             className="flex-1 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-60"
           >
             {update.isPending ? "Saving…" : confirmPromotion ? "Confirm & Save" : "Save"}

@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 from typing import Any
 
-from sqlalchemy import Boolean, Date, DateTime, Enum, String
+from sqlalchemy import Boolean, Date, DateTime, Enum, SmallInteger, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -21,6 +21,9 @@ class HouseholdMember(Base):
         default="partner",
     )
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # The age the member plans to retire. Drives the "Target retirement" event on
+    # the milestone timeline; NULL when not set.
+    retirement_target_age: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     settings: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

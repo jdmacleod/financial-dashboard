@@ -36,7 +36,7 @@ class MilestoneService:
 
         rows: list[MemberMilestones] = []
         for member in members:
-            ms = milestones(member.date_of_birth)
+            ms = milestones(member.date_of_birth, member.retirement_target_age)
             items = (
                 [
                     MilestoneItem(

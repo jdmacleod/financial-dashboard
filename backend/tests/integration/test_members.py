@@ -130,6 +130,66 @@ async def test_partner_cannot_update_member(
     assert resp.status_code == 403
 
 
+async def test_can_set_and_clear_retirement_target_age(
+    client: AsyncClient,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+    make_member: object,
+) -> None:
+    target = await make_member(role="partner")
+    headers = auth_headers(primary_user, primary_member, "primary")
+
+    set_resp = await client.patch(
+        f"/api/v1/members/{target.id}",
+        json={"retirement_target_age": 62},
+        headers=headers,
+    )
+    assert set_resp.status_code == 200
+    assert set_resp.json()["retirement_target_age"] == 62
+
+    clear_resp = await client.patch(
+        f"/api/v1/members/{target.id}",
+        json={"retirement_target_age": None},
+        headers=headers,
+    )
+    assert clear_resp.status_code == 200
+    assert clear_resp.json()["retirement_target_age"] is None
+
+
+async def test_out_of_range_retirement_target_age_is_rejected(
+    client: AsyncClient,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+    make_member: object,
+) -> None:
+    target = await make_member(role="partner")
+    resp = await client.patch(
+        f"/api/v1/members/{target.id}",
+        json={"retirement_target_age": 150},
+        headers=auth_headers(primary_user, primary_member, "primary"),
+    )
+    assert resp.status_code == 422
+
+
+async def test_partner_can_set_own_retirement_target_age(
+    client: AsyncClient,
+    household: Household,
+    make_member: object,
+    make_user: object,
+) -> None:
+    partner_member = await make_member(role="partner")
+    partner_user = await make_user(partner_member, "partner@example.com")
+    resp = await client.patch(
+        f"/api/v1/members/{partner_member.id}",
+        json={"retirement_target_age": 55},
+        headers=auth_headers(partner_user, partner_member, "partner"),
+    )
+    assert resp.status_code == 200
+    assert resp.json()["retirement_target_age"] == 55
+
+
 async def test_partner_can_update_own_date_of_birth(
     client: AsyncClient,
     household: Household,

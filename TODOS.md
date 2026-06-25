@@ -92,18 +92,6 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Member retirement target age (Identity layer — deferred from v0.21.0.0)
-
-**What:** Add a `member.retirement_target_age` column (nullable smallint) plus a small UI to set it. Drives when FIRE switches from accumulation to withdrawal and anchors the milestone timeline.
-
-**Why:** Approach C (the financial-identity layer) called for it, but it shipped without a consumer, so the column was descoped to avoid dead schema. It becomes load-bearing once the milestone timeline (below) or a FIRE enhancement reads it.
-
-**Cons:** Additive migration + a form field; low risk. Only worth doing alongside a consumer.
-
-**Depends on:** Nothing hard; pairs with the milestone timeline.
-
----
-
 ### Batch prior-year snapshot reads in the RMD engine (Identity layer E4 — deferred from v0.21.0.0)
 
 **What:** `rmd._prior_year_end_pretax_balance` issues one query per pretax account (an N+1). Batch the prior-year snapshot reads into a single keyed query, mirroring `report.py`'s batched-balance pattern.
@@ -189,6 +177,18 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### Member retirement target age (Identity layer)
+
+**Completed:** v0.23.0.0 (2026-06-24) — Added `household_members.retirement_target_age`
+(nullable smallint, migration 0015), exposed it on the member create/update/response
+schemas (validated 18–100, clearable via `model_fields_set`), and added a "Target
+retirement age" field to the self-service Profile page and the Members admin drawer.
+Made load-bearing by the milestone timeline: `age.milestones()` now emits a "Target
+retirement" event at `dob + retirement_target_age` when set. The FIRE
+accumulation→withdrawal consumer was deliberately deferred — FIRE already has its own
+scenario-level `target_retirement_age`, so wiring a member-level default into it needs
+its own design rather than overlapping the existing field.
 
 ### Age-milestone timeline UI (Identity layer T10)
 

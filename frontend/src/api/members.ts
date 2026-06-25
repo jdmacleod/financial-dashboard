@@ -10,6 +10,7 @@ export const membersApi = {
     display_name: string
     role?: "primary" | "partner" | "dependent"
     date_of_birth?: string | null
+    retirement_target_age?: number | null
   }) => api.post<MemberResponse>("/members", data),
 
   update: (
@@ -18,6 +19,7 @@ export const membersApi = {
       display_name: string
       role: "primary" | "partner" | "dependent"
       date_of_birth: string | null
+      retirement_target_age: number | null
       is_active: boolean
     }>,
   ) => api.patch<MemberResponse>(`/members/${id}`, data),

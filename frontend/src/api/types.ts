@@ -36,6 +36,7 @@ export interface MemberResponse {
   display_name: string
   role: "primary" | "partner" | "dependent"
   date_of_birth: string | null
+  retirement_target_age: number | null
   is_active: boolean
   settings: Record<string, unknown>
   created_at: string

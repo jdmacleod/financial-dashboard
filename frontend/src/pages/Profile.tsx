@@ -21,18 +21,32 @@ function ProfileForm({ member }: { member: MemberResponse }) {
   const queryClient = useQueryClient()
   const [displayName, setDisplayName] = useState(member.display_name)
   const [dob, setDob] = useState(member.date_of_birth ?? "")
+  const [retirementAge, setRetirementAge] = useState(member.retirement_target_age?.toString() ?? "")
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
   const today = new Date().toISOString().slice(0, 10)
   const dobInFuture = dob !== "" && dob > today
-  const hasChanges = displayName !== member.display_name || dob !== (member.date_of_birth ?? "")
+  const retirementAgeNum = retirementAge === "" ? null : Number(retirementAge)
+  const retirementAgeInvalid =
+    retirementAgeNum !== null &&
+    (!Number.isInteger(retirementAgeNum) || retirementAgeNum < 18 || retirementAgeNum > 100)
+  const hasChanges =
+    displayName !== member.display_name ||
+    dob !== (member.date_of_birth ?? "") ||
+    retirementAge !== (member.retirement_target_age?.toString() ?? "")
 
   const update = useMutation({
     mutationFn: () => {
-      const changes: { display_name?: string; date_of_birth?: string | null } = {}
+      const changes: {
+        display_name?: string
+        date_of_birth?: string | null
+        retirement_target_age?: number | null
+      } = {}
       if (displayName !== member.display_name) changes.display_name = displayName
       if (dob !== (member.date_of_birth ?? "")) changes.date_of_birth = dob || null
+      if (retirementAge !== (member.retirement_target_age?.toString() ?? ""))
+        changes.retirement_target_age = retirementAgeNum
       return membersApi.update(member.id, changes)
     },
     onSuccess: () => {
@@ -106,6 +120,40 @@ function ProfileForm({ member }: { member: MemberResponse }) {
         )}
       </div>
 
+      <div>
+        <label
+          htmlFor="profile-retirement-age"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
+          Target retirement age
+        </label>
+        <input
+          id="profile-retirement-age"
+          type="number"
+          min={18}
+          max={100}
+          step={1}
+          value={retirementAge}
+          placeholder="e.g. 65"
+          onChange={(e) => {
+            setRetirementAge(e.target.value)
+            setSaved(false)
+            setError(null)
+          }}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <p className="mt-1 text-xs text-gray-400">
+          The age you plan to retire. Adds a "Target retirement" marker to your{" "}
+          <a href="/reports/milestones" className="text-indigo-600 hover:underline">
+            milestone timeline
+          </a>
+          . Leave blank to remove it.
+        </p>
+        {retirementAgeInvalid && (
+          <p className="mt-1 text-xs text-red-600">Enter a whole age between 18 and 100.</p>
+        )}
+      </div>
+
       {error && (
         <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
           {error}
@@ -120,7 +168,7 @@ function ProfileForm({ member }: { member: MemberResponse }) {
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={!hasChanges || dobInFuture || update.isPending}
+          disabled={!hasChanges || dobInFuture || retirementAgeInvalid || update.isPending}
           className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {update.isPending ? "Saving…" : "Save changes"}
