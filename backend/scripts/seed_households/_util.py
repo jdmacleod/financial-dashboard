@@ -9,9 +9,8 @@ from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import TYPE_CHECKING
 
-from passlib.context import CryptContext
-
 from app.core.encryption import encrypt
+from app.core.security import hash_password
 from app.db.models.access_grant import AccountAccessGrant
 from app.db.models.account import Account
 from app.db.models.advisory_note import AdvisoryNote
@@ -35,8 +34,7 @@ if TYPE_CHECKING:
     import random
 
 
-_pwd_ctx = CryptContext(schemes=["bcrypt"])
-DEMO_HASH: str = _pwd_ctx.hash("HearthDemo1!")
+DEMO_HASH: str = hash_password("HearthDemo1!")
 
 DATE_START = date(2024, 1, 1)
 _DATE_END_ENV = os.getenv("SEED_DATE_END")
