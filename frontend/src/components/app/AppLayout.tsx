@@ -517,6 +517,24 @@ export function AppLayout() {
             </svg>
             Required Distributions
           </SidebarNavLink>
+          <SidebarNavLink to="/reports/milestones" onClick={() => setSidebarOpen(false)}>
+            <svg
+              width="15"
+              height="15"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="8" y1="2" x2="8" y2="14" />
+              <circle cx="8" cy="4.5" r="1.4" />
+              <circle cx="8" cy="9" r="1.4" />
+              <circle cx="8" cy="13" r="1.1" />
+            </svg>
+            Retirement Milestones
+          </SidebarNavLink>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import { api } from "./client"
 import type {
+  AgeMilestonesReport,
   BudgetTrendReport,
   BudgetVsActualsReport,
   CashFlowReport,
@@ -38,6 +39,8 @@ export const reportsApi = {
     api.get<RequiredDistributionsReport>(
       `/reports/required-distributions${year ? `?year=${year}` : ""}`,
     ),
+
+  ageMilestones: () => api.get<AgeMilestonesReport>("/reports/age-milestones"),
 
   propertyPnl: (propertyId: string, from: string, to: string) =>
     api.get<PropertyPnLReport>(
