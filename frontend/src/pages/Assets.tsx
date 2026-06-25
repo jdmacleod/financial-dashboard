@@ -272,6 +272,8 @@ function PropertyCard({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+type PropertySort = "value_desc" | "name_asc" | "type_asc"
+
 export default function Assets() {
   const isPrimary = useAuth((s) => s.role === "primary")
   const range = useRange()
@@ -286,6 +288,7 @@ export default function Assets() {
     staleTime: 60_000,
   })
   const [showAdd, setShowAdd] = useState(false)
+  const [sort, setSort] = useState<PropertySort>("value_desc")
 
   // Stage 1: prefetch property records for all real-estate accounts
   const prefetchedPropertyQueries = useQueries({
@@ -354,6 +357,27 @@ export default function Assets() {
     () => realEstateAccounts.reduce((s, a) => s + Number(a.current_balance ?? 0), 0),
     [realEstateAccounts],
   )
+
+  // account_id → property type label, for the "Type A–Z" sort.
+  const propTypeByAccount = useMemo(() => {
+    const map: Record<string, string> = {}
+    realEstateAccounts.forEach((acct, i) => {
+      const type = prefetchedPropertyQueries[i]?.data?.property_type
+      if (type) map[acct.id] = PROPERTY_TYPE_LABELS[type] ?? type
+    })
+    return map
+  }, [realEstateAccounts, prefetchedPropertyQueries])
+
+  const sortedAccounts = useMemo(() => {
+    return [...realEstateAccounts].sort((a, b) => {
+      if (sort === "value_desc")
+        return Number(b.current_balance ?? 0) - Number(a.current_balance ?? 0)
+      if (sort === "name_asc") return a.nickname.localeCompare(b.nickname)
+      if (sort === "type_asc")
+        return (propTypeByAccount[a.id] ?? "").localeCompare(propTypeByAccount[b.id] ?? "")
+      return 0
+    })
+  }, [realEstateAccounts, sort, propTypeByAccount])
 
   if (isLoading) {
     return (
@@ -460,13 +484,49 @@ export default function Assets() {
           No properties yet. Add a real estate account to get started.
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {realEstateAccounts.map((a) => {
-            const propId = accountToPropId[a.id]
-            const linked = propId ? (policyMap[propId] ?? []) : []
-            return <PropertyCard key={a.id} account={a} from={from} linkedPolicies={linked} />
-          })}
-        </div>
+        <>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              marginBottom: "12px",
+            }}
+          >
+            <label
+              htmlFor="property-sort"
+              style={{ fontSize: "12px", color: "var(--label)", marginRight: "8px" }}
+            >
+              Sort by
+            </label>
+            <select
+              id="property-sort"
+              aria-label="Sort properties"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as PropertySort)}
+              style={{
+                fontSize: "12px",
+                color: "var(--text2)",
+                background: "var(--card)",
+                border: "1px solid var(--bd)",
+                borderRadius: "8px",
+                padding: "5px 8px",
+                cursor: "pointer",
+              }}
+            >
+              <option value="value_desc">Value ↓</option>
+              <option value="name_asc">Name A–Z</option>
+              <option value="type_asc">Type A–Z</option>
+            </select>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {sortedAccounts.map((a) => {
+              const propId = accountToPropId[a.id]
+              const linked = propId ? (policyMap[propId] ?? []) : []
+              return <PropertyCard key={a.id} account={a} from={from} linkedPolicies={linked} />
+            })}
+          </div>
+        </>
       )}
 
       {showAdd && (

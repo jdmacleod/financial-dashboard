@@ -278,4 +278,53 @@ describe("Assets — Real estate tab (Phase 6)", () => {
       ).toBeInTheDocument()
     })
   })
+
+  it("orders properties by value by default and re-sorts by name", async () => {
+    const { accountsApi: accounts } = await import("@/api/accounts")
+    ;(accounts.list as ReturnType<typeof vi.fn>).mockResolvedValue([
+      {
+        id: "re-low",
+        nickname: "Alpha Condo",
+        account_type: "real_estate",
+        owner_member_id: "m1",
+        institution_name: null,
+        account_number_last4: null,
+        include_in_net_worth: true,
+        is_active: true,
+        current_balance: "100000.00",
+        balance_as_of: "2026-06-01",
+        created_at: "2020-06-01T00:00:00Z",
+        updated_at: "2026-06-01T00:00:00Z",
+      },
+      {
+        id: "re-high",
+        nickname: "Zeta Ranch",
+        account_type: "real_estate",
+        owner_member_id: "m1",
+        institution_name: null,
+        account_number_last4: null,
+        include_in_net_worth: true,
+        is_active: true,
+        current_balance: "900000.00",
+        balance_as_of: "2026-06-01",
+        created_at: "2020-06-01T00:00:00Z",
+        updated_at: "2026-06-01T00:00:00Z",
+      },
+    ])
+    const user = userEvent.setup()
+    renderPage()
+
+    // Default = Value ↓: the $900k Zeta Ranch sorts before the $100k Alpha Condo.
+    const zeta = await screen.findByText("Zeta Ranch")
+    const alpha = screen.getByText("Alpha Condo")
+    expect(zeta.compareDocumentPosition(alpha) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    // Switch to Name A–Z: Alpha Condo now comes first.
+    await user.selectOptions(screen.getByLabelText("Sort properties"), "name_asc")
+    await waitFor(() => {
+      const a = screen.getByText("Alpha Condo")
+      const z = screen.getByText("Zeta Ranch")
+      expect(a.compareDocumentPosition(z) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    })
+  })
 })

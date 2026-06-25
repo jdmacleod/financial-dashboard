@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useMemo, useState } from "react"
 import { useQuery, useQueries } from "@tanstack/react-query"
 import { useRouterState } from "@tanstack/react-router"
 import {
@@ -206,6 +206,8 @@ function InvestmentCard({ account, from }: { account: AccountResponse; from: str
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+type InvestmentSort = "value_desc" | "name_asc"
+
 export default function Investments() {
   const range = useRange()
   const from = rangeFrom(range)
@@ -240,6 +242,16 @@ export default function Investments() {
     () => investmentAccounts.reduce((s, a) => s + Number(a.current_balance ?? 0), 0),
     [investmentAccounts],
   )
+
+  const [sort, setSort] = useState<InvestmentSort>("value_desc")
+  const sortedAccounts = useMemo(() => {
+    return [...investmentAccounts].sort((a, b) => {
+      if (sort === "value_desc")
+        return Number(b.current_balance ?? 0) - Number(a.current_balance ?? 0)
+      if (sort === "name_asc") return a.nickname.localeCompare(b.nickname)
+      return 0
+    })
+  }, [investmentAccounts, sort])
 
   if (isLoading) {
     return (
@@ -331,11 +343,46 @@ export default function Investments() {
           No brokerage accounts yet. Add an investment brokerage account to get started.
         </div>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-          {investmentAccounts.map((a) => (
-            <InvestmentCard key={a.id} account={a} from={from} />
-          ))}
-        </div>
+        <>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "flex-end",
+              marginBottom: "12px",
+            }}
+          >
+            <label
+              htmlFor="investment-sort"
+              style={{ fontSize: "12px", color: "var(--label)", marginRight: "8px" }}
+            >
+              Sort by
+            </label>
+            <select
+              id="investment-sort"
+              aria-label="Sort accounts"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as InvestmentSort)}
+              style={{
+                fontSize: "12px",
+                color: "var(--text2)",
+                background: "var(--card)",
+                border: "1px solid var(--bd)",
+                borderRadius: "8px",
+                padding: "5px 8px",
+                cursor: "pointer",
+              }}
+            >
+              <option value="value_desc">Value ↓</option>
+              <option value="name_asc">Name A–Z</option>
+            </select>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {sortedAccounts.map((a) => (
+              <InvestmentCard key={a.id} account={a} from={from} />
+            ))}
+          </div>
+        </>
       )}
 
       {/* Demo-data extension surfaces — each renders nothing when empty. */}
