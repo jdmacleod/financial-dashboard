@@ -270,3 +270,28 @@ class MemberRequiredDistribution(BaseModel):
 class RequiredDistributionsReport(BaseModel):
     year: int
     members: list[MemberRequiredDistribution]
+
+
+class MilestoneItem(BaseModel):
+    key: str
+    label: str
+    # Age the milestone occurs at, e.g. "59½"-equivalent "59y 6m" or "66y 2m".
+    age_label: str
+    date: date
+    year: int
+    # True once the milestone date is on or before today.
+    reached: bool
+
+
+class MemberMilestones(BaseModel):
+    member_id: uuid.UUID
+    display_name: str
+    date_of_birth: date | None
+    current_age: int | None
+    milestones: list[MilestoneItem]
+    # Set when no date of birth is on file (milestones cannot be computed).
+    note: str | None
+
+
+class AgeMilestonesReport(BaseModel):
+    members: list[MemberMilestones]

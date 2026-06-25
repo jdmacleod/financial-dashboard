@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.visibility import VisibilityContext, get_visibility_ctx
 from app.db.base import get_session
 from app.schemas.report import (
+    AgeMilestonesReport,
     BudgetTrendReport,
     BudgetVsActualsReport,
     CashFlowReport,
@@ -19,6 +20,7 @@ from app.schemas.report import (
     SavingsRateReport,
     SpendingByCategoryReport,
 )
+from app.services.milestone import MilestoneService
 from app.services.report import ReportService
 from app.services.rmd import RmdService
 
@@ -33,6 +35,15 @@ async def required_distributions_report(
 ) -> RequiredDistributionsReport:
     svc = RmdService(session)
     return await svc.required_distributions(ctx, year)
+
+
+@router.get("/reports/age-milestones", response_model=AgeMilestonesReport)
+async def age_milestones_report(
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> AgeMilestonesReport:
+    svc = MilestoneService(session)
+    return await svc.age_milestones(ctx)
 
 
 @router.get("/reports/net-worth", response_model=NetWorthReport)

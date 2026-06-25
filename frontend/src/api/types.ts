@@ -443,6 +443,28 @@ export interface RequiredDistributionsReport {
   members: MemberRequiredDistribution[]
 }
 
+export interface MilestoneItem {
+  key: string
+  label: string
+  age_label: string
+  date: string
+  year: number
+  reached: boolean
+}
+
+export interface MemberMilestones {
+  member_id: string
+  display_name: string
+  date_of_birth: string | null
+  current_age: number | null
+  milestones: MilestoneItem[]
+  note: string | null
+}
+
+export interface AgeMilestonesReport {
+  members: MemberMilestones[]
+}
+
 export interface PropertyExpenseItem {
   category_id: string | null
   name: string

@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from datetime import date
 
-from app.services.age import age_in_year, current_age, rmd_start_age, year_turning_age
+from app.services.age import (
+    age_in_year,
+    current_age,
+    full_retirement_age_months,
+    milestones,
+    rmd_start_age,
+    year_turning_age,
+)
 
 
 class TestCurrentAge:
@@ -63,3 +70,52 @@ class TestRmdStartAge:
     def test_born_1960_or_later_is_75(self) -> None:
         assert rmd_start_age(date(1960, 1, 1)) == 75
         assert rmd_start_age(date(1985, 6, 15)) == 75
+
+
+class TestFullRetirementAge:
+    def test_none_dob_returns_none(self) -> None:
+        assert full_retirement_age_months(None) is None
+
+    def test_1937_or_earlier_is_65(self) -> None:
+        assert full_retirement_age_months(date(1937, 1, 1)) == 65 * 12
+
+    def test_1943_to_1954_is_66(self) -> None:
+        assert full_retirement_age_months(date(1950, 1, 1)) == 66 * 12
+
+    def test_1955_steps_up_two_months(self) -> None:
+        assert full_retirement_age_months(date(1955, 1, 1)) == 66 * 12 + 2
+
+    def test_1960_or_later_is_67(self) -> None:
+        assert full_retirement_age_months(date(1960, 1, 1)) == 67 * 12
+        assert full_retirement_age_months(date(1990, 1, 1)) == 67 * 12
+
+
+class TestMilestones:
+    def test_none_dob_returns_none(self) -> None:
+        assert milestones(None) is None
+
+    def test_ordered_keys_and_years(self) -> None:
+        ms = milestones(date(1990, 6, 15))
+        assert ms is not None
+        assert [m.key for m in ms] == [
+            "early_withdrawal",
+            "social_security_earliest",
+            "medicare",
+            "full_retirement_age",
+            "rmd",
+        ]
+        assert [m.year for m in ms] == [2049, 2052, 2055, 2057, 2065]
+
+    def test_full_retirement_age_label_for_1955(self) -> None:
+        ms = milestones(date(1955, 3, 1))
+        assert ms is not None
+        fra = next(m for m in ms if m.key == "full_retirement_age")
+        assert fra.age_label == "66y 2m"
+
+    def test_59_and_a_half_crosses_year_boundary(self) -> None:
+        # Born October -> age 59½ falls the following calendar year.
+        ms = milestones(date(2000, 10, 1))
+        assert ms is not None
+        early = next(m for m in ms if m.key == "early_withdrawal")
+        assert early.date == date(2060, 4, 1)
+        assert early.year == 2060
