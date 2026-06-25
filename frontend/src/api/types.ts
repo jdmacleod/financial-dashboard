@@ -369,12 +369,27 @@ export interface CashFlowPeriod {
   savings_rate: number
 }
 
+export interface FederalTaxEstimate {
+  tax_year: number
+  filing_status: FilingStatus
+  ordinary_income: string
+  social_security_gross: string
+  taxable_social_security: string
+  standard_deduction: string
+  taxable_income: string
+  federal_tax: string
+  after_tax_income: string
+  effective_rate: number
+  marginal_rate: number
+}
+
 export interface RetirementIncomeBreakdown {
   social_security: string
   pension: string
   rmd: string
   total: string
   has_data: boolean
+  federal_tax_estimate: FederalTaxEstimate | null
 }
 
 export interface CashFlowReport {
