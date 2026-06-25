@@ -76,15 +76,15 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Roth-conversion modeling (Identity layer — deferred scope)
+### Roth-conversion modeling — multi-year projection (Identity layer)
 
-**What:** Project converting pretax balances to Roth in low-income years to shrink future RMDs, showing the RMD/tax tradeoff over time.
+**What:** The single-year bracket-headroom primitive shipped 2026-06-25 (see Completed). Remaining: project conversions across multiple years in the FIRE drawdown, showing how filling low-income-year brackets now shrinks future RMDs and lifetime tax — the RMD/tax tradeoff over time.
 
-**Why:** High-value for FIRE households once `tax_treatment` (shipped) and a tax estimate exist.
+**Why:** High-value for FIRE households; the headroom number answers "how much this year," the projection answers "is converting worth it over the plan."
 
-**Cons:** Substantial (L); depends on a tax estimate. Med risk.
+**Cons:** Substantial (L) — touches the FIRE projection engine (per-year tax over the drawdown). Med risk. Best after the full-income tax basis lands so non-retirement income counts toward each year's bracket.
 
-**Depends on:** `account.tax_treatment` (shipped v0.21.0.0) + tax-estimate engine (federal core shipped 2026-06-25; full-income basis still pending — see remaining-scope item).
+**Depends on:** Bracket-headroom primitive (shipped) + FIRE projection engine + ideally the full-income tax basis (see tax-engine remaining-scope item).
 
 ---
 
@@ -101,6 +101,19 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### Roth-conversion bracket headroom — first slice (Identity layer)
+
+**Completed:** 2026-06-25 (branch `feat/roth-conversion-bracket-headroom`) — The
+core Roth-conversion planning primitive, built on the federal tax engine:
+`bracket_headroom()` returns how much more ordinary income (a pretax → Roth
+conversion) fits before crossing into the next federal bracket, plus that next
+bracket's rate. Surfaced as `roth_conversion_room` + `next_bracket_rate` on
+`FederalTaxEstimate`, shown on the Cash Flow retirement panel ("Roth conversion
+room: $X can be converted before the Y% bracket") when there's headroom. Remaining
+(see open item): the multi-year conversion projection across the FIRE drawdown.
+Tests: 3 engine unit (headroom in/at-threshold/top-bracket + MFJ retiree room
+34,450) + 1 frontend (room shown; omitted in top bracket).
 
 ### Federal tax-estimate engine — first slice (Identity layer)
 

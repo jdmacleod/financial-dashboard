@@ -82,6 +82,25 @@ def marginal_rate_for(brackets: tax_tables.BracketTable, taxable_income: Decimal
     return float(rate)
 
 
+def bracket_headroom(
+    brackets: tax_tables.BracketTable, taxable_income: Decimal
+) -> tuple[Decimal | None, float | None]:
+    """Room left in the bracket containing `taxable_income` before the next rate.
+
+    Returns (room, next_rate): how much more ordinary income (e.g. a Roth
+    conversion) fits before crossing into the next bracket, and that next bracket's
+    rate. Returns (None, None) when already in the top bracket — no ceiling.
+    """
+    income = max(taxable_income, Decimal("0"))
+    for i, (lower, _rate) in enumerate(brackets):
+        upper = brackets[i + 1][0] if i + 1 < len(brackets) else None
+        if income >= lower and (upper is None or income < upper):
+            if upper is None:
+                return None, None
+            return upper - income, float(brackets[i + 1][1])
+    return None, None
+
+
 def estimate_federal_tax(
     *,
     tax_year: int,
@@ -109,6 +128,7 @@ def estimate_federal_tax(
 
     brackets = tax_tables.FEDERAL_BRACKETS[tax_year][filing_status]
     federal_tax = federal_tax_for(brackets, taxable_income).quantize(_CENTS, ROUND_HALF_UP)
+    room, next_rate = bracket_headroom(brackets, taxable_income)
 
     # Effective rate is tax over the taxable income that actually entered the
     # return (ordinary + includable SS), not over gross SS.
@@ -128,4 +148,6 @@ def estimate_federal_tax(
         after_tax_income=after_tax.quantize(_CENTS, ROUND_HALF_UP),
         effective_rate=effective_rate,
         marginal_rate=marginal_rate_for(brackets, taxable_income),
+        roth_conversion_room=room.quantize(_CENTS, ROUND_HALF_UP) if room is not None else None,
+        next_bracket_rate=next_rate,
     )

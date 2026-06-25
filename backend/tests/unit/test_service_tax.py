@@ -12,6 +12,7 @@ import pytest
 
 from app.services import tax_tables
 from app.services.tax import (
+    bracket_headroom,
     estimate_federal_tax,
     federal_tax_for,
     marginal_rate_for,
@@ -40,6 +41,21 @@ def test_marginal_rate_for() -> None:
     assert marginal_rate_for(brackets, Decimal("50000")) == 0.22
     assert marginal_rate_for(brackets, Decimal("0")) == 0.10
     assert marginal_rate_for(brackets, Decimal("700000")) == 0.37
+
+
+def test_bracket_headroom_single_2025() -> None:
+    brackets = tax_tables.FEDERAL_BRACKETS[2025][tax_tables.SINGLE]
+    # 50,000 sits in the 22% bracket (48,475-103,350): room to 24% = 53,350.
+    assert bracket_headroom(brackets, Decimal("50000")) == (Decimal("53350"), 0.24)
+    # 0 sits in the 10% bracket (0-11,925): room to 12% = 11,925.
+    assert bracket_headroom(brackets, Decimal("0")) == (Decimal("11925"), 0.12)
+    # On a threshold belongs to the higher bracket (48,475 -> 22% bracket).
+    assert bracket_headroom(brackets, Decimal("48475")) == (Decimal("54875"), 0.24)
+
+
+def test_bracket_headroom_top_bracket_has_none() -> None:
+    brackets = tax_tables.FEDERAL_BRACKETS[2025][tax_tables.SINGLE]
+    assert bracket_headroom(brackets, Decimal("700000")) == (None, None)
 
 
 def test_taxable_ss_below_base_is_zero() -> None:
@@ -89,6 +105,10 @@ def test_estimate_mfj_retiree_2025() -> None:
     assert est.marginal_rate == 0.12
     assert est.after_tax_income == Decimal("92977.00")  # 100,000 - 7,023
     assert est.effective_rate == pytest.approx(7023 / 94000, rel=1e-6)
+    # Roth headroom: taxable income 62,500 is in the 12% bracket (top 96,950 MFJ),
+    # so 34,450 more can be converted before the 22% bracket.
+    assert est.roth_conversion_room == Decimal("34450.00")
+    assert est.next_bracket_rate == 0.22
 
 
 def test_estimate_no_tax_when_below_standard_deduction() -> None:
