@@ -104,30 +104,6 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Wire RMD into FIRE projections (Identity layer T9 — in progress)
-
-**What:** Feed each member's computed required minimum distribution into the FIRE projection as post-retirement supplemental income, so projections reflect forced withdrawals.
-
-**Why:** FIRE already consumes member DOB and the RMD engine exists; connecting them makes long-horizon projections account for the cash RMDs actually produce.
-
-**Cons:** Couples `fire_service` to `RmdService`; needs care so a member with no pretax balance or no DOB is a clean no-op.
-
-**Depends on:** RMD engine (shipped v0.21.0.0). Being implemented now.
-
----
-
-### Age-milestone timeline UI (Identity layer T10 — deferred from v0.21.0.0)
-
-**What:** A forward-looking timeline (Profile or Retirement page) rendering each member's upcoming age-triggered events: 59½ early withdrawals, 62 Social Security earliest, 65 Medicare, full retirement age, and RMD start. Needs a `milestones()` helper plus an FRA-by-birth-year table in `app/services/age.py` (only `rmd_start_age` exists today).
-
-**Why:** The "felt payoff" of the identity layer — entering a birthday surfaces "RMDs begin 2041, Medicare 2033" instead of an inert number. Empty/partial states (no DOB) are load-bearing.
-
-**Cons:** New `age.py` helpers (FRA table is a graduated lookup), a new UI surface, and design polish (run `/plan-design-review` first).
-
-**Depends on:** `age.py` (shipped v0.21.0.0); pairs with retirement target age.
-
----
-
 ### Batch prior-year snapshot reads in the RMD engine (Identity layer E4 — deferred from v0.21.0.0)
 
 **What:** `rmd._prior_year_end_pretax_balance` issues one query per pretax account (an N+1). Batch the prior-year snapshot reads into a single keyed query, mirroring `report.py`'s batched-balance pattern.
@@ -213,6 +189,25 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### Age-milestone timeline UI (Identity layer T10)
+
+**Completed:** v0.21.0.0 (2026-06-24, PR #61) — Added a "Retirement Milestones"
+report (`/reports/milestones`) rendering each member's forward-looking timeline:
+59½ penalty-free withdrawals, Social Security earliest (62) and full retirement
+age (FRA-by-birth-year lookup added to `app/services/age.py`), Medicare (65), and
+RMD start. New `app/services/milestone.py` + `GET /reports/age-milestones`.
+Reached milestones are dimmed; the next upcoming one is badged; no-DOB members get
+a prompt. (Documented in CHANGELOG under 0.21.0.0 retroactively.)
+
+### Wire RMD into FIRE projections (Identity layer T9)
+
+**Completed:** v0.21.0.0 (2026-06-24, PR #60) — FIRE projections now draw each
+member's required minimum distribution from their pretax balance once they reach
+RMD age; `YearProjectionResponse` gained `required_distribution` and the FIRE
+detail table shows a Required distribution column (hidden when no RMD applies in
+the window). No-pretax / no-DOB members are a clean no-op. (Documented in CHANGELOG
+under 0.21.0.0 retroactively.)
 
 ### Self-service profile page + self-or-primary DOB authz (Identity layer T8)
 
