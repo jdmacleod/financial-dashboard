@@ -3,6 +3,12 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.8.1] - 2026-06-26
+
+### For contributors
+
+- `.gitignore` now excludes the machine-local `.claude/` directory (Claude Code settings and agent worktrees) and the root `test-results/` directory (Playwright run artifacts). The existing `frontend/test-results/` rule did not cover the root-level path.
+
 ## [0.23.8.0] - 2026-06-26
 
 ### Fixed

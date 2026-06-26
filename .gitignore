@@ -9,6 +9,8 @@ dist/
 .DS_Store
 frontend/test-results/
 frontend/playwright-report/
+/test-results/
+.claude/
 *.dump
 docs/*.zip
 *.dump.enc
