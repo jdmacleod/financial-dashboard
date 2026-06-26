@@ -127,12 +127,25 @@ ASSET_TYPES = frozenset(ASSET_BUCKET)
 LIABILITY_TYPES = frozenset(LIABILITY_BUCKET)
 # Liabilities whose point-in-time balance comes from the running transaction
 # sum at each date, so the value amortizes as payments/draws post. Revolving
-# credit (credit_card/heloc/sbloc/margin) plus amortizing consumer loans tracked
-# by transactions. A static Debt.current_balance would otherwise render a flat
-# line across the whole net-worth history and ignore every payment made — so
-# attaching a Debt record to any of these must not pin it to a single value.
+# credit (credit_card/heloc/sbloc/margin), amortizing consumer loans, and
+# mortgages — all tracked by transactions, matching AccountService's
+# _TRANSACTION_BASED_TYPES so the Accounts page and the net-worth report agree.
+# A static Debt.current_balance would otherwise render a flat line across the
+# whole net-worth history and ignore every payment made — so attaching a Debt
+# record to any of these must not pin it to a single value. (When an account has
+# no transactions to anchor the balance, the valuation falls back to the Debt
+# record, then a snapshot — see _liability_value_at.)
 TXN_TRACKED_LIABILITY_TYPES = frozenset(
-    {"credit_card", "heloc", "student_loan", "auto_loan", "personal_loan", "sbloc", "margin"}
+    {
+        "mortgage",
+        "credit_card",
+        "heloc",
+        "student_loan",
+        "auto_loan",
+        "personal_loan",
+        "sbloc",
+        "margin",
+    }
 )
 BREAKDOWN_KEYS = (
     "checking_savings",
