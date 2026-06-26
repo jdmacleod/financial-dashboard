@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.9.0] - 2026-06-26
+
+### Added
+
+- **The Investments and Real Estate pages now remember your sort choice.** Both pages already let you sort the list (Value ↓ / Name A–Z, plus Type A–Z on Real Estate), but the choice reset every time you left and came back. It now persists across visits, the same way the Accounts and Budgets pages already did. The preference is stored locally and validated on read, so a stale or hand-edited value falls back to the default.
+
+### For contributors
+
+- `Investments.tsx` (key `hl.investments.sort`) and `Assets.tsx` (key `hl.realestate.sort`) now load and save their sort state through the shared `lib/sortStorage.ts` helper (`loadSort`/`persistSort`), matching the Accounts and Budgets pages. All four list views now persist sort identically. New tests assert the restore-from-localStorage path in `Investments.test.tsx` and `Assets.test.tsx`; `localStorage.clear()` was added to both `beforeEach` blocks since the persisting control now writes to storage.
+
 ## [0.23.8.0] - 2026-06-26
 
 ### Fixed
