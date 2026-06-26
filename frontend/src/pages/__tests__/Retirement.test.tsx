@@ -153,6 +153,33 @@ describe("Retirement page", () => {
     })
   })
 
+  it("renders an inherited IRA in Tax-deferred", async () => {
+    const { accountsApi: mock } = await import("@/api/accounts")
+    ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([
+      ...retirementAccounts,
+      {
+        id: "r4",
+        nickname: "Inherited IRA (mother)",
+        account_type: "inherited_ira",
+        owner_member_id: "m1",
+        institution_name: "Fidelity",
+        account_number_last4: "8867",
+        include_in_net_worth: true,
+        is_active: true,
+        current_balance: "620000.00",
+        balance_as_of: "2026-06-01",
+        created_at: "2026-01-01T00:00:00Z",
+        updated_at: "2026-06-01T00:00:00Z",
+      },
+    ])
+    renderPage()
+    // inherited_ira (demo migration 0007) is tax-deferred; it now appears on the
+    // Retirement page rather than only counting in the net-worth totals.
+    await waitFor(() => {
+      expect(screen.getByText("Inherited IRA (mother)")).toBeInTheDocument()
+    })
+  })
+
   it("shows empty state when no retirement accounts", async () => {
     const { accountsApi: mock } = await import("@/api/accounts")
     ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([])
@@ -160,7 +187,7 @@ describe("Retirement page", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "No retirement accounts yet. Add a 401k, IRA, Roth IRA, HSA, or pension to get started.",
+          "No retirement accounts yet. Add a 401k, IRA, inherited IRA, Roth IRA, HSA, or pension to get started.",
         ),
       ).toBeInTheDocument()
     })

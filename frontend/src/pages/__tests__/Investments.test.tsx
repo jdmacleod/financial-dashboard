@@ -91,17 +91,17 @@ describe("Investments page", () => {
     })
   })
 
-  it("shows total brokerage KPI", async () => {
+  it("shows total investments KPI", async () => {
     renderPage()
     await waitFor(() => {
-      expect(screen.getByText("Total brokerage")).toBeInTheDocument()
+      expect(screen.getByText("Total investments")).toBeInTheDocument()
     })
   })
 
   it("shows account count in summary", async () => {
     renderPage()
     await waitFor(() => {
-      expect(screen.getByText("1 brokerage account")).toBeInTheDocument()
+      expect(screen.getByText("1 investment account")).toBeInTheDocument()
     })
   })
 
@@ -127,7 +127,7 @@ describe("Investments page", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "No brokerage accounts yet. Add an investment brokerage account to get started.",
+          "No investment accounts yet. Add an investment brokerage account to get started.",
         ),
       ).toBeInTheDocument()
     })
@@ -180,5 +180,30 @@ describe("Investments page", () => {
     const acorns = await screen.findByText("Acorns")
     const vanguard = screen.getByText("Vanguard 401k")
     expect(acorns.compareDocumentPosition(vanguard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  // Placed last: the leaked 2-account mock would otherwise break the
+  // single-account tests above (vi.clearAllMocks does not reset
+  // mockResolvedValue implementations).
+  it("lists a treasury account alongside brokerage accounts", async () => {
+    const { accountsApi: mock } = await import("@/api/accounts")
+    ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([
+      brokerageAccount,
+      {
+        ...brokerageAccount,
+        id: "tr1",
+        nickname: "Treasury / T-Bill Ladder",
+        account_type: "treasury",
+        account_number_last4: "6613",
+        current_balance: "700000.00",
+      },
+    ])
+    renderPage()
+    // The treasury (a snapshot-valued taxable investment, demo migration 0007)
+    // now appears on the Investments page, not just in the net-worth totals.
+    await waitFor(() => {
+      expect(screen.getByText("Treasury / T-Bill Ladder")).toBeInTheDocument()
+    })
+    expect(screen.getByText("2 investment accounts")).toBeInTheDocument()
   })
 })

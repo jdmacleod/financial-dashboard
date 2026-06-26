@@ -29,8 +29,16 @@ function rangeFrom(range: Range): string {
   return format(startOfYear(today), "yyyy-MM-dd")
 }
 
-// Tax treatment groupings
-const TAX_DEFERRED: AccountType[] = ["retirement_401k", "retirement_403b", "retirement_ira"]
+// Tax treatment groupings. `inherited_ira` (a beneficiary traditional IRA, demo
+// migration 0007) is tax-deferred — distributions are ordinary income and it's
+// on the SECURE 10-year RMD clock — so it groups with the other tax-deferred
+// accounts here and on the backend net-worth "retirement" bucket.
+const TAX_DEFERRED: AccountType[] = [
+  "retirement_401k",
+  "retirement_403b",
+  "retirement_ira",
+  "inherited_ira",
+]
 const TAX_FREE: AccountType[] = ["retirement_roth_ira", "hsa"]
 const GUARANTEED: AccountType[] = ["pension"]
 
@@ -350,7 +358,8 @@ export default function Retirement() {
             fontSize: "13px",
           }}
         >
-          No retirement accounts yet. Add a 401k, IRA, Roth IRA, HSA, or pension to get started.
+          No retirement accounts yet. Add a 401k, IRA, inherited IRA, Roth IRA, HSA, or pension to
+          get started.
         </div>
       )}
     </div>
