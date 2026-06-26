@@ -21,6 +21,7 @@ import { accountsApi } from "@/api/accounts"
 import { propertiesApi } from "@/api/properties"
 import { advisoryNotesApi } from "@/api/advisoryNotes"
 import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
+import { assetCategoryRank, type AssetCategoryKey } from "@/lib/accountLabels"
 import { ADVISORY_CATEGORY_ORDER, advisoryCategoryMeta } from "@/lib/advisoryCategories"
 import { toIso } from "@/lib/dateRange"
 import { startOfYear, subYears, subDays } from "date-fns"
@@ -225,15 +226,19 @@ export default function Dashboard() {
   const donutData = useMemo(() => {
     const b = nwReport?.current?.breakdown
     if (!b) return []
-    const raw = [
-      { name: "Banking", value: Number(b.checking_savings) },
-      { name: "Investments", value: Number(b.investment) },
-      { name: "Retirement", value: Number(b.retirement) },
-      { name: "Real Estate", value: Number(b.real_estate) },
-      { name: "HSA", value: Number(b.hsa) },
-      { name: "Other", value: Number(b.other_assets) },
+    // Order by the canonical asset-category rank so the donut/legend match the
+    // sidebar, Accounts page, and Net Worth breakdown.
+    const raw: { name: string; value: number; cat: AssetCategoryKey }[] = [
+      { name: "Banking", value: Number(b.checking_savings), cat: "banking" },
+      { name: "Investments", value: Number(b.investment), cat: "investments" },
+      { name: "Retirement", value: Number(b.retirement), cat: "retirement" },
+      { name: "Real Estate", value: Number(b.real_estate), cat: "real_estate" },
+      { name: "HSA", value: Number(b.hsa), cat: "hsa" },
+      { name: "Other", value: Number(b.other_assets), cat: "other_assets" },
     ]
-    return raw.filter((d) => d.value > 0)
+    return raw
+      .sort((a, c) => assetCategoryRank(a.cat) - assetCategoryRank(c.cat))
+      .filter((d) => d.value > 0)
   }, [nwReport])
 
   // Cash flow bar chart (income vs expenses per period)
