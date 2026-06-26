@@ -1,4 +1,4 @@
-"""Household 2 — Okonkwo-Rivera (Naperville, IL). ~$3.4M net worth."""
+"""Household 2 — Okonkwo-Rivera (Naperville, IL). ~$3.6M net worth."""
 
 from __future__ import annotations
 
@@ -766,7 +766,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             "Illinois estate tax: $4M exemption, non-portable, with a cliff",
             "Illinois imposes its own estate tax at a $4,000,000 per-person exemption that is not "
             "indexed for inflation and not portable between spouses, with graduated rates up to 16% "
-            "and a cliff that taxes the whole estate once the threshold is crossed. At ~$3.4M the "
+            "and a cliff that taxes the whole estate once the threshold is crossed. At ~$3.6M the "
             "household is just under the line, but appreciation and life-insurance death benefits "
             "could push it over. The standard mitigation is a bypass/credit-shelter trust funded at "
             "the first death to preserve both spouses' exemptions.",

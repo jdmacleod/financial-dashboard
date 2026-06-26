@@ -7,7 +7,7 @@ each generator's printed summary.
 
 ```
 H7  Brooks           Atlanta GA      Members: 1   NW: ~$12,200
-H4  Park-Cole        Nashville TN    Members: 2   NW: ~$279,500
+H4  Park-Cole        Nashville TN    Members: 2   NW: ~$300,100
 H1  Chen-Nakamura    Round Rock TX   Members: 2   NW: ~$1,003,300
 H2  Okonkwo-Rivera   Naperville IL   Members: 4   NW: ~$3,620,400
 H3  Whitfield-Torres Brentwood CA    Members: 4   NW: ~$9,902,500
@@ -102,7 +102,7 @@ household, so the upper tiers are intentionally wealthier — not "unrealistical
 | H   | Household        | Age(s) | NW      | %-for-age           | Life stage             | Driver                 |
 | --- | ---------------- | ------ | ------- | ------------------- | ---------------------- | ---------------------- |
 | H7  | Brooks           | 27     | ~$12.2k | top ~10-15% income  | Early accumulation     | LIFECYCLE              |
-| H4  | Park-Cole        | 28/29  | $279.5k | top ~10% NW-for-age | Early-career affluent  | LIFECYCLE              |
+| H4  | Park-Cole        | 28/29  | $300.1k | top ~10% NW-for-age | Early-career affluent  | LIFECYCLE              |
 | H1  | Chen-Nakamura    | 42/44  | $1.0M   | top ~10-15%         | Mid-career peak-saving | LIFECYCLE              |
 | H2  | Okonkwo-Rivera   | 45/47  | $3.6M   | top ~5%             | Established family     | FEATURE (IL estate)    |
 | H3  | Whitfield-Torres | 51/54  | $9.9M   | top ~1-2%           | Peak-earning exec      | FEATURE (equity/SBLOC) |
@@ -111,8 +111,8 @@ household, so the upper tiers are intentionally wealthier — not "unrealistical
 
 Axis note: H1–H6's "%-for-age" is a **net-worth** percentile. H7's is an **income**-
 for-age percentile (top ~10-15%); its net-worth percentile for age is deliberately
-low — that is the point of the rung. **H4 is early-career _affluent_** ($279.5k reads
-65th-percentile against _all_ US households but is ~top-decile for under-30); it is not
+low — that is the point of the rung. **H4 is early-career _affluent_** ($300.1k reads
+~70th-percentile against _all_ US households but is ~top-decile for under-30); it is not
 a "modest" household. H7 is the rung below it: building from a low base.
 
 Negative-net-worth rendering was validated (2026-06-25): H7 was temporarily driven to

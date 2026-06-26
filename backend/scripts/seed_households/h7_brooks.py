@@ -1,4 +1,4 @@
-"""Household 7 — Brooks (Atlanta, GA). ~$11,000 net worth.
+"""Household 7 — Brooks (Atlanta, GA). ~$12,200 net worth.
 
 Member: Aaliyah Brooks (primary, b. 1999-03-14). Single, 27, software engineer
 ~2-3 years into her career. The dataset's early-accumulation opener: a high
