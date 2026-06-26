@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.11.0] - 2026-06-26
+
+### Changed
+
+- **Inherited IRAs now appear on the Retirement page, and the Investments page covers more than brokerage accounts.** Following the previous release (which made these demo-extension accounts visible on the Accounts ledger), the dedicated pages now show them too. An inherited IRA is grouped under Tax-deferred on the Retirement page alongside 401(k)s and traditional IRAs (it is taxed the same way). The Investments page, previously labelled "brokerage" throughout, is now labelled "investments" and also lists a snapshot-valued treasury / T-bill ladder. This affects the Park-Cole (inherited IRA), Langford (treasury), and Castellano (both) example households. A private-equity fund's value continues to surface in the Investments page's Capital Commitments panel rather than as a standalone card, since it is tracked by commitment/NAV, not account snapshots.
+
+### For contributors
+
+- `Retirement.tsx` adds `inherited_ira` to `TAX_DEFERRED` (and so to the derived `RETIREMENT_TYPES`), matching the backend net-worth "retirement" bucket. `Investments.tsx` introduces `INVESTMENT_PAGE_TYPES` (`BROKERAGE_ACCOUNT_TYPES` + `treasury`) for its account filter and relabels the page KPI/count/empty-state from "brokerage" to "investments"; `treasury` stays display-only (the add flow still creates only brokerage accounts, which the `AccountCreate` schema accepts). New tests assert the inherited IRA renders in Tax-deferred and the treasury renders among the investment accounts. `private_fund` is deliberately not added as a card (no account snapshots; already covered by the Capital Commitments panel).
+
 ## [0.23.10.0] - 2026-06-26
 
 ### Fixed
