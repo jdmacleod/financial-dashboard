@@ -50,6 +50,34 @@ def test_snowball_pays_lowest_balance_first() -> None:
     )
 
 
+def test_avalanche_order_by_rate_at_zero_extra() -> None:
+    """Regression: with $0 extra, avalanche still orders by interest rate, not by the
+    incidental order debts retire under minimum payments.
+
+    Mirrors the Brooks household: the highest-rate debt (Sapphire, 21%) carries a
+    larger balance than a lower-rate debt (Personal Loan, 11%), so under minimums
+    alone the smaller debt retires first. Avalanche must still list the highest-rate
+    debt first.
+    """
+    sapphire = _debt("9000", "0.21", "270", nickname="Sapphire Card")
+    personal = _debt("4000", "0.11", "130", nickname="Personal Loan")
+    student = _debt("40000", "0.06", "420", nickname="Federal Student Loan")
+
+    avalanche = project_payoff([sapphire, personal, student], Decimal("0"), "avalanche")
+    snowball = project_payoff([sapphire, personal, student], Decimal("0"), "snowball")
+
+    assert avalanche.payoff_order == [
+        "Sapphire Card",
+        "Personal Loan",
+        "Federal Student Loan",
+    ], "Avalanche orders by interest rate descending, even with no extra payment"
+    assert snowball.payoff_order == [
+        "Personal Loan",
+        "Sapphire Card",
+        "Federal Student Loan",
+    ], "Snowball orders by balance ascending, even with no extra payment"
+
+
 def test_avalanche_less_interest_than_snowball() -> None:
     """When rates differ, avalanche total interest should be less than snowball."""
     # Two debts with different rates — avalanche saves more on interest
