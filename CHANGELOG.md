@@ -13,6 +13,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `Investments.tsx` (key `hl.investments.sort`) and `Assets.tsx` (key `hl.realestate.sort`) now load and save their sort state through the shared `lib/sortStorage.ts` helper (`loadSort`/`persistSort`), matching the Accounts and Budgets pages. All four list views now persist sort identically. New tests assert the restore-from-localStorage path in `Investments.test.tsx` and `Assets.test.tsx`; `localStorage.clear()` was added to both `beforeEach` blocks since the persisting control now writes to storage.
 
+## [0.23.8.1] - 2026-06-26
+
+### For contributors
+
+- `.gitignore` now excludes the machine-local `.claude/` directory (Claude Code settings and agent worktrees) and the root `test-results/` directory (Playwright run artifacts). The existing `frontend/test-results/` rule did not cover the root-level path.
+
 ## [0.23.8.0] - 2026-06-26
 
 ### Fixed
