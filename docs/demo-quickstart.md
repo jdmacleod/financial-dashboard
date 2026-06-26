@@ -244,13 +244,13 @@ Output:
 
   #    Name                      Members  Accounts  Transactions  Status
   -------------------------------------------------------------------
-  1    Chen-Nakamura                   2        12         3,124  SEEDED
-  2    Okonkwo-Rivera                  4        19         4,871  SEEDED
-  3    Whitfield-Torres                4        29         6,390  SEEDED
-  4    Park-Cole                       2        14         2,241  SEEDED
-  5    Langford                        2        17         2,188  SEEDED
-  6    Castellano                      1        17        ~2,000  SEEDED
-  7    Brooks                          1         9        ~2,000  SEEDED
+  1    Chen-Nakamura                   2        12         2,009  SEEDED
+  2    Okonkwo-Rivera                  4        19         2,552  SEEDED
+  3    Whitfield-Torres                4        29         3,327  SEEDED
+  4    Park-Cole                       2        14         1,892  SEEDED
+  5    Langford                        2        17         1,948  SEEDED
+  6    Castellano                      1        17         1,431  SEEDED
+  7    Brooks                          1         9         1,341  SEEDED
 ```
 
 ### Reset a single household (targeted)

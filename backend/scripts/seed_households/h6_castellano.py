@@ -27,6 +27,7 @@ from seed_households._util import (
     DATE_END,
     all_months,
     clamp_day,
+    gen_variable,
     make_account,
     make_advisory_note,
     make_budget,
@@ -500,6 +501,90 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
                     cat["sbloc_interest"],
                 )
             )
+
+        # ── Everyday discretionary spending (routed through checking) ─────────
+        # A widowed UHNW principal still runs a full household: gourmet groceries,
+        # fine dining, car service, concierge healthcare, salon/spa, luxury retail,
+        # and the arts. Without this, H6 carried only its large scheduled flows and
+        # had ~7x fewer transactions than any other demo household. Every entry
+        # debits checking, which the opening-balance plug below reconciles to its
+        # $120K target — so the added spend is net-worth-neutral and the household
+        # stays at exactly $18,290,000. (H6 consumes ``rng`` nowhere else, so no
+        # snapshot or balance shifts when these draws advance the stream.)
+        def spend(
+            slug: str, merchants: list[str], min_t: int, max_t: int, lo: int, hi: int
+        ) -> None:
+            add(
+                *gen_variable(
+                    checking.id,
+                    y,
+                    m,
+                    cat[slug],
+                    merchants,
+                    D(str(min_t)),
+                    D(str(max_t)),
+                    lo,
+                    hi,
+                    rng,
+                )
+            )
+
+        spend(
+            "groceries",
+            ["Citarella", "Whole Foods", "Eli's Manhattan", "Balducci's"],
+            2400,
+            3600,
+            6,
+            10,
+        )
+        spend(
+            "restaurants",
+            ["Le Bernardin", "Daniel", "Eleven Madison Park", "Scarsdale Metro"],
+            1800,
+            3600,
+            5,
+            9,
+        )
+        spend(
+            "personal_care",
+            ["Frédéric Fekkai", "Bergdorf Salon", "Cornelia Day Spa"],
+            600,
+            1500,
+            2,
+            4,
+        )
+        spend(
+            "healthcare",
+            ["Concierge Internist", "Westmed Specialists", "Sloan Kettering"],
+            400,
+            1400,
+            1,
+            3,
+        )
+        spend("pharmacy", ["Zitomer Pharmacy", "CVS Scarsdale"], 120, 380, 1, 3)
+        spend(
+            "transportation",
+            ["Carey Car Service", "Metro-North", "EZ-Pass NY", "Shell"],
+            700,
+            1900,
+            4,
+            7,
+        )
+        spend(
+            "clothing", ["Bergdorf Goodman", "Saks Fifth Avenue", "Neiman Marcus"], 800, 3200, 1, 4
+        )
+        spend(
+            "entertainment",
+            ["The Met Opera", "Lincoln Center", "MoMA", "Scarsdale Cinema"],
+            350,
+            1400,
+            2,
+            4,
+        )
+        spend("utilities", ["Con Edison", "Verizon Fios", "Scarsdale Water"], 350, 850, 1, 3)
+        spend("subscriptions", ["The New York Times", "WSJ", "MoMA Membership"], 80, 360, 1, 3)
+        if m in (1, 2, 7, 8):  # winter Caribbean / summer Europe travel
+            spend("travel", ["Four Seasons", "Delta One", "Belmond"], 9000, 22000, 1, 3)
 
     # ── Discrete events ───────────────────────────────────────────────────────
     # PE capital calls against the outstanding commitment, and one distribution.
