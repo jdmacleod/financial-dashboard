@@ -49,7 +49,8 @@ def _salary_stream(
 
 
 def test_basic_projection() -> None:
-    """With a high savings rate and pre-retirement salary, FIRE year should be found."""
+    """With a high savings rate the portfolio reaches FIRE, and the projection keeps
+    running past it (run-to-horizon) instead of stopping at the first FIRE year."""
     stream = _salary_stream(amount="120000", start_year=2026)
     scenario = _scenario(
         target_spend="60000",
@@ -58,10 +59,15 @@ def test_basic_projection() -> None:
     )
     projections = project(scenario, from_year=2026, member_dob=None)
 
-    assert len(projections) > 0
+    # No DOB -> can't apply the age horizon, so the full 75-year cap is used.
+    assert len(projections) == 75
     fire_years = [p for p in projections if p.is_fire_year]
-    assert len(fire_years) == 1, "Exactly one FIRE year should be found"
-    assert fire_years[0].portfolio >= fire_years[0].fire_number
+    assert len(fire_years) >= 1, "FIRE should be reached"
+    first_fire = fire_years[0]
+    assert first_fire.portfolio >= first_fire.fire_number
+    # Once FIRE is reached, a still-saving portfolio stays above the FIRE number.
+    after = [p for p in projections if p.year >= first_fire.year]
+    assert all(p.is_fire_year for p in after)
 
 
 def test_age_is_sourced_from_age_service() -> None:
@@ -147,6 +153,64 @@ def test_no_fire_within_75_years() -> None:
 
     assert len(projections) == 75
     assert not any(p.is_fire_year for p in projections)
+
+
+def test_runs_to_life_expectancy_not_to_absurd_age() -> None:
+    """Regression: an already-retired member's projection stops at the life-expectancy
+    horizon, not a blind 75 years that ran a 74-year-old out to age 148."""
+    # Born 1952 -> age 74 in 2026.
+    scenario = _scenario(target_spend="280000", portfolio="7500000", streams=[])
+    projections = project(scenario, from_year=2026, member_dob=date(1952, 1, 1), horizon_age=100)
+
+    ages = [p.age for p in projections if p.age is not None]
+    assert max(ages) <= 100, "projection must not run past the life-expectancy horizon"
+    assert ages[-1] == 100, "projection should reach the horizon age"
+    assert len(projections) < 75, "horizon should cap the projection well under the 75-year limit"
+
+
+def test_decumulation_income_offsets_drawdown_and_portfolio_sustains() -> None:
+    """Regression (H5/H6 shape): a retiree with guaranteed post-retirement income and a
+    large portfolio sustains the plan. The income offsets the drawdown (it is counted in
+    annual_income and the portfolio), so the balance never craters into the negatives."""
+    # All streams are post-retirement (is_pre_retirement=False), like the seeded
+    # decumulation households. Income ~ spend, on a large portfolio at 5.5% return.
+    ss = IncomeStream(
+        id=str(uuid4()),
+        label="Social Security",
+        type=IncomeStreamType.social_security,
+        amount_annual=Decimal("65000"),
+        growth_rate_annual=Decimal("0.025"),
+        start_year=2026,
+        end_year=None,
+        is_pre_retirement=False,
+    )
+    pension = IncomeStream(
+        id=str(uuid4()),
+        label="Pension",
+        type=IncomeStreamType.pension,
+        amount_annual=Decimal("180000"),
+        growth_rate_annual=Decimal("0"),
+        start_year=2026,
+        end_year=None,
+        is_pre_retirement=False,
+    )
+    scenario = _scenario(
+        target_spend="280000",
+        swr="0.04",
+        ret="0.055",
+        inf="0.03",
+        portfolio="7500000",
+        streams=[ss, pension],
+    )
+    projections = project(scenario, from_year=2026, member_dob=date(1952, 1, 1), horizon_age=100)
+
+    # Post-retirement income now feeds annual_income (fixes the "$0 income" display)
+    # and the portfolio drawdown.
+    assert projections[0].annual_income > Decimal(0)
+    # The portfolio sustains the whole horizon — never crashes into the negatives.
+    assert all(p.portfolio > Decimal(0) for p in projections)
+    # And it stays at/above the FIRE number throughout (this household is FIRE).
+    assert all(p.is_fire_year for p in projections)
 
 
 def test_decimal_arithmetic_no_float() -> None:

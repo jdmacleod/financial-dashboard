@@ -415,6 +415,15 @@ class FireScenarioService:
             ]
             income_streams.append(ss_stream)
 
+        # Starting portfolio for the projection. `detected_portfolio_value` is only
+        # populated once the user runs /detect; until then it is None, which would
+        # otherwise start the projection at $0 and run the portfolio deeply negative.
+        # Fall back to the current investable portfolio (the same snapshot-based base
+        # the detector uses) so a never-detected scenario still projects from reality.
+        starting_portfolio = row.detected_portfolio_value
+        if starting_portfolio is None:
+            starting_portfolio = await FireInputDetector(self.session)._current_portfolio(ctx)
+
         scenario = FireScenarioDataclass(
             id=row.id,
             target_annual_spend=row.target_annual_spend,
@@ -422,7 +431,7 @@ class FireScenarioService:
             expected_annual_return=row.expected_annual_return,
             expected_inflation_rate=row.expected_inflation_rate,
             income_streams=income_streams,
-            detected_portfolio_value=row.detected_portfolio_value,
+            detected_portfolio_value=starting_portfolio,
         )
 
         year_projections = project(scenario, from_year, dob)
@@ -453,7 +462,7 @@ class FireScenarioService:
         elif fire_year is not None:
             headline = f"FIRE in {years_to_fire} years (year {fire_year})"
         else:
-            headline = "FIRE number not reached within 75 years"
+            headline = "FIRE number not reached within the projection horizon"
 
         summary = FireProjectionSummary(
             fire_year=fire_year,
