@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { setAccessToken } from "@/api/client"
 import { authApi } from "@/api/auth"
+import { queryClient } from "@/lib/queryClient"
 
 type Role = "primary" | "partner" | "dependent"
 
@@ -86,6 +87,10 @@ export const useAuth = create<AuthState>((set) => ({
     setAccessToken(null)
     sessionStorage.removeItem("access_token")
     sessionStorage.removeItem(MCP_KEY)
+    // Wipe the React Query cache. Query keys aren't user-scoped, so without this
+    // the next login renders the previous user's cached data (e.g. the wrong
+    // household) until each query's staleTime elapses.
+    queryClient.clear()
     set({
       token: null,
       isAuthenticated: false,
@@ -99,6 +104,7 @@ export const useAuth = create<AuthState>((set) => ({
     setAccessToken(null)
     sessionStorage.removeItem("access_token")
     sessionStorage.removeItem(MCP_KEY)
+    queryClient.clear()
     set({
       token: null,
       isAuthenticated: false,

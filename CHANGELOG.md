@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.6.0] - 2026-06-26
+
+### Fixed
+
+- **Signing out and back in as a different member no longer shows the previous member's household.** `logout` cleared the auth token and session storage but never cleared the TanStack Query cache. Query keys aren't user-scoped and queries have a 30-second `staleTime`, so the next login rendered the previous session's cached data (e.g. the wrong household name and figures) until each query went stale. `logout` and the forced-teardown `clearAuth` now call `queryClient.clear()`. This was a frontend-only cache issue; the backend has always scoped every response to the authenticated member's household via the JWT.
+
+### For contributors
+
+- The app-wide `QueryClient` moved from an inline `const` in `main.tsx` to an exported singleton at `src/lib/queryClient.ts`, so the auth layer can clear it on logout. New regression test `src/hooks/__tests__/useAuth.test.ts` seeds the cache, calls `logout`/`clearAuth`, and asserts it is emptied.
+
 ## [0.23.5.0] - 2026-06-26
 
 ### Fixed
