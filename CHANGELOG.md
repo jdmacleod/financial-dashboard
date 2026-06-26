@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.8.0] - 2026-06-26
+
+### Fixed
+
+- **The Net Worth report's Liabilities line now falls month over month as a mortgage is paid down.** For the Langford example household it sat flat at ~$349,800 every month, as if no payments were ever made. The monthly trend valued mortgages from the static present-day payoff figure instead of the running balance at each date, so the line never moved — even though the mortgage's transactions already track the paydown, and the Accounts page already showed the declining balance. Mortgages are now valued from their transaction history at each point in time, matching the Accounts page. A mortgage with no transactions (only a payoff figure on record) still shows that figure.
+
+### For contributors
+
+- `mortgage` joins `TXN_TRACKED_LIABILITY_TYPES` in `app/services/report.py`, so `_liability_value_at` values it from the per-date running transaction sum (which amortizes) rather than short-circuiting to `Debt.current_balance`. This aligns the report with `AccountService._TRANSACTION_BASED_TYPES`. The fallback chain (transactions → Debt record → snapshot) preserves the old behavior for a mortgage with no transactions. New regression tests `test_mortgage_amortizes_over_time_despite_debt_record` and `test_mortgage_without_transactions_falls_back_to_debt`; the net-worth agreement test still passes for all seven demo households (the txn sum at the summary date equals the Debt/snapshot figure).
+
 ## [0.23.7.0] - 2026-06-26
 
 ### Added
