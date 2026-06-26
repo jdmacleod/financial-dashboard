@@ -20,7 +20,7 @@ import { CapitalCommitmentsPanel } from "@/components/app/CapitalCommitmentsPane
 import { BROKERAGE_ACCOUNT_TYPES } from "@/lib/accountTypes"
 import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
 import { loadSort, persistSort } from "@/lib/sortStorage"
-import type { AccountResponse } from "@/api/types"
+import type { AccountResponse, AccountType } from "@/api/types"
 
 type Range = "ytd" | "1y" | "all"
 
@@ -211,6 +211,13 @@ type InvestmentSort = "value_desc" | "name_asc"
 const INVESTMENT_SORTS: readonly InvestmentSort[] = ["value_desc", "name_asc"]
 const INVESTMENT_SORT_KEY = "hl.investments.sort"
 
+// Account types listed on this page. Brokerage accounts plus snapshot-valued
+// taxable investments like a treasury / T-bill ladder (demo migration 0007),
+// which the backend buckets as "investment" too. `treasury` is display-only
+// (the AccountCreate schema rejects it), so the add flow still creates only
+// brokerage accounts.
+const INVESTMENT_PAGE_TYPES: AccountType[] = [...BROKERAGE_ACCOUNT_TYPES, "treasury"]
+
 export default function Investments() {
   const range = useRange()
   const from = rangeFrom(range)
@@ -228,7 +235,7 @@ export default function Investments() {
   // Prefetch snapshots for all investment accounts so InvestmentCard hits cache, not the network
   useQueries({
     queries: (accounts ?? [])
-      .filter((a) => BROKERAGE_ACCOUNT_TYPES.includes(a.account_type))
+      .filter((a) => INVESTMENT_PAGE_TYPES.includes(a.account_type))
       .map((account) => ({
         queryKey: ["snapshots", account.id],
         queryFn: () => snapshotsApi.list(account.id),
@@ -237,7 +244,7 @@ export default function Investments() {
   })
 
   const investmentAccounts = useMemo(
-    () => (accounts ?? []).filter((a) => BROKERAGE_ACCOUNT_TYPES.includes(a.account_type)),
+    () => (accounts ?? []).filter((a) => INVESTMENT_PAGE_TYPES.includes(a.account_type)),
     [accounts],
   )
 
@@ -314,7 +321,7 @@ export default function Investments() {
                 marginBottom: "4px",
               }}
             >
-              Total brokerage
+              Total investments
             </div>
             <div style={{ fontSize: "28px", fontWeight: 700, color: "var(--text)", lineHeight: 1 }}>
               {formatCurrency(String(totalBalance))}
@@ -330,7 +337,7 @@ export default function Investments() {
             }}
           />
           <div style={{ fontSize: "12px", color: "var(--label)" }}>
-            {investmentAccounts.length} brokerage account
+            {investmentAccounts.length} investment account
             {investmentAccounts.length !== 1 ? "s" : ""}
           </div>
         </div>
@@ -349,7 +356,7 @@ export default function Investments() {
             fontSize: "13px",
           }}
         >
-          No brokerage accounts yet. Add an investment brokerage account to get started.
+          No investment accounts yet. Add an investment brokerage account to get started.
         </div>
       ) : (
         <>
