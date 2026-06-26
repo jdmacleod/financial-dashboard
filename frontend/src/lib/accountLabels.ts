@@ -19,6 +19,14 @@ export const ACCOUNT_LABELS: Record<AccountType, string> = {
   student_loan: "Student Loan",
   other_asset: "Other Asset",
   other_liability: "Other Liability",
+  // Demo-data extension types (backend migration 0007). Display-only — seeded
+  // for higher-complexity households, not creatable via the Add-account modal.
+  sbloc: "Securities-Backed Line",
+  margin: "Margin Loan",
+  inherited_ira: "Inherited IRA",
+  treasury: "Treasury",
+  private_fund: "Private Fund",
+  life_insurance_cash_value: "Life Insurance (Cash Value)",
 }
 
 // Canonical order of asset/liability categories across the whole app. The
