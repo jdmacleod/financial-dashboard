@@ -7,6 +7,7 @@ import { propertiesApi } from "@/api/properties"
 import { insurancePoliciesApi } from "@/api/insurancePolicies"
 import { PROPERTY_TYPE_LABELS } from "@/lib/accountLabels"
 import { formatCurrency } from "@/lib/formatters"
+import { loadSort, persistSort } from "@/lib/sortStorage"
 import { useAuth } from "@/hooks/useAuth"
 import AddAccountModal from "@/components/app/AddAccountModal"
 import ArchiveAccountModal from "@/components/app/ArchiveAccountModal"
@@ -273,6 +274,8 @@ function PropertyCard({
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 type PropertySort = "value_desc" | "name_asc" | "type_asc"
+const PROPERTY_SORTS: readonly PropertySort[] = ["value_desc", "name_asc", "type_asc"]
+const PROPERTY_SORT_KEY = "hl.realestate.sort"
 
 export default function Assets() {
   const isPrimary = useAuth((s) => s.role === "primary")
@@ -288,7 +291,13 @@ export default function Assets() {
     staleTime: 60_000,
   })
   const [showAdd, setShowAdd] = useState(false)
-  const [sort, setSort] = useState<PropertySort>("value_desc")
+  const [sort, setSort] = useState<PropertySort>(() =>
+    loadSort(PROPERTY_SORT_KEY, PROPERTY_SORTS, "value_desc"),
+  )
+  const changeSort = (next: PropertySort) => {
+    setSort(next)
+    persistSort(PROPERTY_SORT_KEY, next)
+  }
 
   // Stage 1: prefetch property records for all real-estate accounts
   const prefetchedPropertyQueries = useQueries({
@@ -503,7 +512,7 @@ export default function Assets() {
               id="property-sort"
               aria-label="Sort properties"
               value={sort}
-              onChange={(e) => setSort(e.target.value as PropertySort)}
+              onChange={(e) => changeSort(e.target.value as PropertySort)}
               style={{
                 fontSize: "12px",
                 color: "var(--text2)",
