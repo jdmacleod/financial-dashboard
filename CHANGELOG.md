@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.12.0] - 2026-06-26
+
+### Fixed
+
+- **FIRE projection graphs now show a realistic retirement trajectory instead of an impossible crash.** For the Langford and Castellano example households the projected portfolio plunged from $0 to roughly negative half a billion dollars, ran a 74-year-old out to age 148, and reported $0 of income every year. Three things were wrong: the projection started from $0 whenever the scenario's inputs had never been "detected" (the seeded scenarios never were); guaranteed retirement income (Social Security, pensions, trust income) was shown but never counted against the portfolio drawdown; and the chart ran a blind 75 years with no life-expectancy limit. The projection now starts from your current investable portfolio, counts all active income against spending each year, and runs to age 100. Both example households now show a portfolio that comfortably sustains the plan (Langford ~$9.5M growing through retirement, Castellano ~$15.6M), with the income column populated.
+
+### For contributors
+
+- `fire_service.project()` now falls back to the live investable portfolio (`FireInputDetector._current_portfolio`) when `detected_portfolio_value` is `None`, instead of passing `None` through to a `$0` start. `fire_projector.project()` was reworked from an accumulation-only model (break at the first FIRE year, pre-retirement income only) into a unified accumulation+decumulation model: every active income stream is netted against spend in the portfolio equation, and the loop runs to a life-expectancy `horizon_age` (default 100) rather than breaking at FIRE. `is_pre_retirement` is now only a display split for `supplemental_income`/`effective_withdrawal`; stream start/end years carry the accumulation→decumulation timing. This deliberately reverses the old AC-6 behavior (post-retirement income reduced only the displayed withdrawal, not the drawdown). New regression tests cover the life-expectancy horizon and the decumulation-sustains case; `test_basic_projection` was updated for run-to-horizon. A natural follow-up: persist `/detect` results so the "Detected inputs" panel matches the projection's starting portfolio.
+
 ## [0.23.11.0] - 2026-06-26
 
 ### Changed
