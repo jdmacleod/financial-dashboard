@@ -9,6 +9,7 @@ import { budgetsApi } from "@/api/budgets"
 import { reportsApi } from "@/api/reports"
 import { categoriesApi } from "@/api/categories"
 import { formatCurrency } from "@/lib/formatters"
+import { loadSort, persistSort } from "@/lib/sortStorage"
 import type { BudgetPeriod, BudgetResponse, BudgetVsActualsItem } from "@/api/types"
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -31,24 +32,6 @@ const ACTUALS_SORTS: readonly ActualsSort[] = [
 const BUDGETS_SORTS: readonly BudgetsSort[] = ["name_asc", "budget_desc", "period"]
 const ACTUALS_SORT_KEY = "hl.budgets.actualsSort"
 const BUDGETS_SORT_KEY = "hl.budgets.budgetsSort"
-
-function loadSort<T extends string>(key: string, allowed: readonly T[], fallback: T): T {
-  try {
-    const stored = localStorage.getItem(key)
-    if (stored && (allowed as readonly string[]).includes(stored)) return stored as T
-  } catch {
-    // localStorage unavailable (private mode / SSR) — use the default.
-  }
-  return fallback
-}
-
-function persistSort(key: string, value: string): void {
-  try {
-    localStorage.setItem(key, value)
-  } catch {
-    // Persistence is a progressive enhancement; ignore write failures.
-  }
-}
 
 // ── Utilities ────────────────────────────────────────────────────────────────
 

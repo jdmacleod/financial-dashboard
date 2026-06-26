@@ -14,19 +14,25 @@ import {
 } from "recharts"
 import { reportsApi } from "@/api/reports"
 import { formatCurrency } from "@/lib/formatters"
+import { assetCategoryRank, type AssetCategoryKey } from "@/lib/accountLabels"
 import { lastNMonthsRange, lastNYearsRange } from "@/lib/dateRange"
 
 type Interval = "monthly" | "quarterly" | "annual"
 type Preset = "1y" | "2y" | "5y"
 
-const ASSET_BUCKETS: { key: keyof NetWorthBreakdown; label: string }[] = [
-  { key: "checking_savings", label: "Cash & Savings" },
-  { key: "investment", label: "Investments" },
-  { key: "retirement", label: "Retirement" },
-  { key: "real_estate", label: "Real Estate" },
-  { key: "hsa", label: "HSA" },
-  { key: "other_assets", label: "Other Assets" },
-]
+// Ordered by the canonical asset-category rank so the breakdown matches the
+// sidebar, Accounts page, and Dashboard allocation.
+type AssetBucket = { key: keyof NetWorthBreakdown; label: string; cat: AssetCategoryKey }
+const ASSET_BUCKETS: AssetBucket[] = (
+  [
+    { key: "checking_savings", label: "Cash & Savings", cat: "banking" },
+    { key: "investment", label: "Investments", cat: "investments" },
+    { key: "retirement", label: "Retirement", cat: "retirement" },
+    { key: "real_estate", label: "Real Estate", cat: "real_estate" },
+    { key: "hsa", label: "HSA", cat: "hsa" },
+    { key: "other_assets", label: "Other Assets", cat: "other_assets" },
+  ] as AssetBucket[]
+).sort((a, b) => assetCategoryRank(a.cat) - assetCategoryRank(b.cat))
 
 const LIABILITY_BUCKETS: { key: keyof NetWorthBreakdown; label: string }[] = [
   { key: "mortgage", label: "Mortgage" },
