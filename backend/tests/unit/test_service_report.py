@@ -425,6 +425,79 @@ async def test_sbloc_amortizes_via_transactions_even_with_a_debt_record(
     assert Decimal("99999") not in liabilities
 
 
+async def test_mortgage_amortizes_over_time_despite_debt_record(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    # A mortgage tracked by transactions must value from the running transaction
+    # sum at each date so the liability falls as principal is paid — not a flat
+    # line from the static Debt.current_balance. Regression for the H5 Langford
+    # bug where the Net Worth report showed a constant ~$349,800 every month
+    # because the mortgage's Debt record short-circuited the valuation. The
+    # mortgage's current_balance is already transaction-derived on the Accounts
+    # page (AccountService._TRANSACTION_BASED_TYPES); this keeps the report in
+    # agreement with it.
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "mortgage", "Highlands NC Mortgage")
+    # Opening balance of $350,000 owed, then two $2,000 principal paydowns.
+    await _add_transaction(db_session, account.id, date(2024, 12, 31), Decimal("-350000"))
+    await _add_transaction(db_session, account.id, date(2025, 1, 15), Decimal("2000"))
+    await _add_transaction(db_session, account.id, date(2025, 2, 15), Decimal("2000"))
+    # The Debt record carries the present-day payoff; it must NOT pin every
+    # historical month to this single value.
+    debt = Debt(
+        account_id=account.id,
+        original_balance=Decimal("375000"),
+        current_balance=Decimal("346000"),
+        interest_rate=Decimal("3.25"),
+        minimum_payment=Decimal("1632"),
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    db_session.add(debt)
+    await db_session.flush()
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 3, 31))
+
+    liabilities = [p.total_liabilities for p in report.series]
+    # Jan: 350000 - 2000 = 348000; Feb: 346000; Mar: 346000 (no March payment).
+    assert liabilities == [Decimal("348000"), Decimal("346000"), Decimal("346000")]
+    # The line must move over time — not a flat Debt.current_balance for all months.
+    assert liabilities[0] != liabilities[1]
+
+
+async def test_mortgage_without_transactions_falls_back_to_debt(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    # A mortgage with only a Debt record and no transactions to anchor the
+    # balance still reports the Debt.current_balance (the demo always seeds
+    # paydown transactions, but a user-entered mortgage may not).
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "mortgage", "Bare Mortgage")
+    debt = Debt(
+        account_id=account.id,
+        original_balance=Decimal("300000"),
+        current_balance=Decimal("280000"),
+        interest_rate=Decimal("4.5"),
+        minimum_payment=Decimal("1500"),
+        created_at=_now(),
+        updated_at=_now(),
+    )
+    db_session.add(debt)
+    await db_session.flush()
+
+    svc = ReportService(db_session)
+    report = await svc.net_worth(ctx, date(2025, 1, 1), date(2025, 1, 31))
+
+    assert report.series[0].total_liabilities == Decimal("280000")
+
+
 async def test_txn_tracked_liability_falls_back_to_snapshot(
     db_session: AsyncSession,
     household: Household,
