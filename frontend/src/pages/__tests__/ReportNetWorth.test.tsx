@@ -122,4 +122,34 @@ describe("ReportNetWorth — breakdown panel", () => {
     const widthBars = Array.from(bars).filter((el) => el.style.width === "0%")
     expect(widthBars.length).toBe(8)
   })
+
+  it("renders a negative net worth without crashing or NaN", async () => {
+    // Liabilities exceed assets (e.g. the H7 early-accumulation household when
+    // student loans outweigh savings). The chart Y-axis auto-scales below zero
+    // and the figures format with a leading minus — verified live in-browser.
+    const current = {
+      date: "2026-06-30",
+      total_assets: "65184.3700",
+      total_liabilities: "113000.0000",
+      net_worth: "-47815.6300",
+      breakdown: makeBreakdown({
+        checking_savings: "13300.0000",
+        investment: "4784.0000",
+        retirement: "38992.0000",
+        real_estate: "0.0000",
+        hsa: "8108.0000",
+        other_assets: "0.0000",
+        mortgage: "0.0000",
+        other_liabilities: "-113000.0000",
+      }),
+    }
+    vi.mocked(reportsApi.netWorth).mockResolvedValue(makeReport(current))
+    renderPage()
+    await screen.findByText("Breakdown")
+    // The negative net worth is displayed (formatted with a leading minus) — it
+    // appears in both the summary KPI and the period table.
+    expect(screen.getAllByText("-$47,815.63").length).toBeGreaterThan(0)
+    // No NaN/Infinity leaks into the rendered output.
+    expect(document.body.textContent).not.toMatch(/NaN|Infinity/)
+  })
 })

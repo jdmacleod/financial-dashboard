@@ -115,10 +115,14 @@ low — that is the point of the rung. **H4 is early-career _affluent_** ($279.5
 65th-percentile against _all_ US households but is ~top-decile for under-30); it is not
 a "modest" household. H7 is the rung below it: building from a low base.
 
-Negative-net-worth rendering is a documented manual test, not a shipped variant: set
-H7's student loan to ~$66k (liabilities ~$79k > assets ~$65k) to drive net worth
-negative and eyeball the Net Worth chart/KPIs and the FIRE base. H7 ships positive
-(~$12.2k); the negative-NW frontend rendering path is not yet validated.
+Negative-net-worth rendering was validated (2026-06-25): H7 was temporarily driven to
+~-$48k (a +$60k liability on the student loan) and the Net Worth report and Dashboard
+both render correctly — the chart Y-axis auto-scales below zero with a $0 gridline, the
+net-worth line sits in the negative region, KPI cards / period table / breakdown bars
+format negatives, the change-% math uses `Math.abs`, and no NaN/console errors appear.
+FIRE is unaffected (it draws on the investable portfolio, not net worth). The app
+needed no code change. H7 ships positive (~$12.2k); to re-check, add a large liability
+to drive net worth negative.
 
 ---
 
