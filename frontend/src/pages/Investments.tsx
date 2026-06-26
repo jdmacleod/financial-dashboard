@@ -19,6 +19,7 @@ import { InvestmentLotsPanel } from "@/components/app/InvestmentLotsPanel"
 import { CapitalCommitmentsPanel } from "@/components/app/CapitalCommitmentsPanel"
 import { BROKERAGE_ACCOUNT_TYPES } from "@/lib/accountTypes"
 import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
+import { loadSort, persistSort } from "@/lib/sortStorage"
 import type { AccountResponse } from "@/api/types"
 
 type Range = "ytd" | "1y" | "all"
@@ -207,6 +208,8 @@ function InvestmentCard({ account, from }: { account: AccountResponse; from: str
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 type InvestmentSort = "value_desc" | "name_asc"
+const INVESTMENT_SORTS: readonly InvestmentSort[] = ["value_desc", "name_asc"]
+const INVESTMENT_SORT_KEY = "hl.investments.sort"
 
 export default function Investments() {
   const range = useRange()
@@ -243,7 +246,13 @@ export default function Investments() {
     [investmentAccounts],
   )
 
-  const [sort, setSort] = useState<InvestmentSort>("value_desc")
+  const [sort, setSort] = useState<InvestmentSort>(() =>
+    loadSort(INVESTMENT_SORT_KEY, INVESTMENT_SORTS, "value_desc"),
+  )
+  const changeSort = (next: InvestmentSort) => {
+    setSort(next)
+    persistSort(INVESTMENT_SORT_KEY, next)
+  }
   const sortedAccounts = useMemo(() => {
     return [...investmentAccounts].sort((a, b) => {
       if (sort === "value_desc")
@@ -362,7 +371,7 @@ export default function Investments() {
               id="investment-sort"
               aria-label="Sort accounts"
               value={sort}
-              onChange={(e) => setSort(e.target.value as InvestmentSort)}
+              onChange={(e) => changeSort(e.target.value as InvestmentSort)}
               style={{
                 fontSize: "12px",
                 color: "var(--text2)",

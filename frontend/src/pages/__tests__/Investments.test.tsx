@@ -67,6 +67,7 @@ function renderPage() {
 describe("Investments page", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear() // sort preference persists; isolate it between tests
   })
 
   it("renders page heading", async () => {
@@ -165,5 +166,19 @@ describe("Investments page", () => {
       const v = screen.getByText("Vanguard 401k")
       expect(a.compareDocumentPosition(v) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     })
+  })
+
+  it("restores the persisted sort choice from localStorage", async () => {
+    localStorage.setItem("hl.investments.sort", "name_asc")
+    const { accountsApi: mock } = await import("@/api/accounts")
+    ;(mock.list as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { ...brokerageAccount, id: "low", nickname: "Acorns", current_balance: "5000.00" },
+      { ...brokerageAccount, id: "high", nickname: "Vanguard 401k", current_balance: "750000.00" },
+    ])
+    renderPage()
+    // name_asc from storage: Acorns leads despite the far smaller balance.
+    const acorns = await screen.findByText("Acorns")
+    const vanguard = screen.getByText("Vanguard 401k")
+    expect(acorns.compareDocumentPosition(vanguard) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })

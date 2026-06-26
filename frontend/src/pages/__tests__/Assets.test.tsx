@@ -125,6 +125,7 @@ function renderPage() {
 describe("Assets — Real estate tab (Phase 6)", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.clear() // sort preference persists; isolate it between tests
   })
 
   it("renders page heading", async () => {
@@ -326,5 +327,30 @@ describe("Assets — Real estate tab (Phase 6)", () => {
       const z = screen.getByText("Zeta Ranch")
       expect(a.compareDocumentPosition(z) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     })
+  })
+
+  it("restores the persisted sort choice from localStorage", async () => {
+    localStorage.setItem("hl.realestate.sort", "name_asc")
+    const reAccount = {
+      account_type: "real_estate",
+      owner_member_id: "m1",
+      institution_name: null,
+      account_number_last4: null,
+      include_in_net_worth: true,
+      is_active: true,
+      balance_as_of: "2026-06-01",
+      created_at: "2020-06-01T00:00:00Z",
+      updated_at: "2026-06-01T00:00:00Z",
+    }
+    const { accountsApi: accounts } = await import("@/api/accounts")
+    ;(accounts.list as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { ...reAccount, id: "re-low", nickname: "Alpha Condo", current_balance: "100000.00" },
+      { ...reAccount, id: "re-high", nickname: "Zeta Ranch", current_balance: "900000.00" },
+    ])
+    renderPage()
+    // name_asc from storage: Alpha Condo leads despite the far smaller value.
+    const alpha = await screen.findByText("Alpha Condo")
+    const zeta = screen.getByText("Zeta Ranch")
+    expect(alpha.compareDocumentPosition(zeta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 })
