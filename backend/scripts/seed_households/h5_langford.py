@@ -467,6 +467,17 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
                     cat["rmd_distribution"],
                 )
             )
+        elif y == 2026 and m == 6:
+            # Q2 mid-month so it lands inside the data window (DATE_END = Jun 21).
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, 15),
+                    D("36530.00"),
+                    "Schwab IRA Distribution — RMD",
+                    cat["rmd_distribution"],
+                )
+            )
 
         # ── Income: Quarterly dividends ───────────────────────────────────────
         if m in _joint_div_by_q:
