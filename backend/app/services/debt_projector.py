@@ -65,9 +65,21 @@ def project_payoff(
     debt_map: dict[uuid.UUID, DebtRecord] = {d.id: d for d in debts}
     active_ids: list[uuid.UUID] = [d.id for d in debts if d.current_balance > Decimal(0)]
 
+    # "Payoff order" is the strategy's attack priority, not the incidental order
+    # debts happen to hit $0 under minimum payments. Avalanche targets the highest
+    # interest rate first; snowball the smallest balance first. Deriving it from the
+    # strategy (rather than from when debts retire in the simulation) keeps it correct
+    # even at $0 extra payment — where the simulation can't express the strategy at
+    # all, so both strategies would otherwise show the same minimum-driven order.
+    ordered_active = [debt_map[did] for did in active_ids]
+    if strategy == "avalanche":
+        ordered_active.sort(key=lambda d: (-d.interest_rate, d.current_balance))
+    else:
+        ordered_active.sort(key=lambda d: (d.current_balance, -d.interest_rate))
+    payoff_order: list[str] = [d.nickname for d in ordered_active]
+
     total_interest = Decimal(0)
     monthly_series: list[DebtPayoffMonth] = []
-    payoff_order: list[str] = []
     available_extra = extra_monthly_payment
     start_date = date.today()
 
@@ -116,11 +128,10 @@ def project_payoff(
             )
         )
 
-        # Step 4: retire paid-off debts and roll minimums
+        # Step 4: retire paid-off debts and roll their freed minimums into extra
         newly_paid_off = [did for did in active_ids if balances[did] <= Decimal("0.01")]
         for debt_id in newly_paid_off:
             active_ids.remove(debt_id)
-            payoff_order.append(debt_map[debt_id].nickname)
             available_extra += debt_map[debt_id].minimum_payment
 
     last_month = monthly_series[-1] if monthly_series else None
