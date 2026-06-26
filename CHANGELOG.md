@@ -3,6 +3,20 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.7.0] - 2026-06-26
+
+### Added
+
+- **Sort control on the Accounts page.** Accounts within each group now have a meaningful order. A "Sort by" control (Value ↓ / Name A–Z) sorts the accounts inside every group; the default is value-descending so the largest balances lead, and the Liabilities group sorts by debt magnitude so the biggest debt is first. The choice persists across visits (localStorage, validated on read). Previously accounts appeared in raw API order, which looked random.
+
+### Changed
+
+- **Account categories now appear in the same order everywhere.** The Accounts page groups, the Dashboard allocation donut, and the Net Worth breakdown panel now follow one canonical order — Banking/Cash, Investments, Real Estate, Retirement, then HSA/other, with liabilities last — matching the sidebar navigation. The three surfaces previously disagreed three different ways on where Retirement sat relative to Investments and Real Estate.
+
+### For contributors
+
+- New `ASSET_CATEGORY_ORDER` + `assetCategoryRank` in `lib/accountLabels.ts` is the single source of truth for category ordering; the Accounts page, Dashboard donut, and Net Worth breakdown all sort by it. The localStorage sort-persistence helper moved to a shared `lib/sortStorage.ts` (now used by both Budgets and Accounts). New `Accounts.ordering.test.tsx` covers canonical group order, value-desc default, liability-by-magnitude, the Name A–Z toggle, and persistence (restore + invalid-value fallback).
+
 ## [0.23.6.0] - 2026-06-26
 
 ### Fixed
