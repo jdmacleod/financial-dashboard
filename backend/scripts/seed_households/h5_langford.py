@@ -1,4 +1,4 @@
-"""Household 5 — Langford (Sarasota, FL). ~$12,856,700 net worth.
+"""Household 5 — Langford (Sarasota, FL). ~$13,327,100 net worth.
 
 Members: Robert ("Bob") Langford (primary, b. 1952-02-18) and
 Margaret ("Maggie") Langford (partner, b. 1962-09-14).

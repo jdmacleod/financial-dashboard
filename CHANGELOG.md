@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.4.0] - 2026-06-25
+
+### Changed
+
+- **Demo documentation now covers all seven sample households.** The README showcase table and the [Demo Quickstart](docs/demo-quickstart.md) gained the seventh household — **Brooks (Atlanta, GA)**, a single early-career saver digging out of consumer debt — with its login, feature highlights, and place in the seeded summary and inspect tables. Every household's advertised net worth was refreshed to the value the app actually computes (the prior figures predated the net-worth liability-amortization change in 0.19.0.0), and the per-household account counts were corrected. The Whitfield-Torres location now reads **Brentwood, CA** (it was ambiguously shown as "LA", which reads as Louisiana in a state-code column; the household models California tax).
+
+### For contributors
+
+- The `seed_households/h*.py` module docstrings, the H2 Illinois-estate advisory-note figure, and the `hearthledger-demo-data-coverage-matrix.md` figures were brought back into agreement with each generator's `ReportService`-computed net worth (`test_seed_net_worth_agreement` is the guard). The H3 generator `location` field is now `"Brentwood CA"`, matching the other "City STATE" entries. No seeded numeric data changed — these are display/label corrections.
+
 ## [0.23.3.0] - 2026-06-25
 
 ### Changed

@@ -1,4 +1,4 @@
-"""Household 1 — Chen-Nakamura (Round Rock, TX). ~$899K net worth."""
+"""Household 1 — Chen-Nakamura (Round Rock, TX). ~$1.0M net worth."""
 
 from __future__ import annotations
 

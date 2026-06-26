@@ -1,4 +1,4 @@
-"""Household 3 — Whitfield-Torres (Brentwood, LA). ~$9.9M net worth."""
+"""Household 3 — Whitfield-Torres (Brentwood, CA). ~$9.9M net worth."""
 
 from __future__ import annotations
 
@@ -1415,7 +1415,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
     return {
         "num": 3,
         "name": "Whitfield-Torres",
-        "location": "Brentwood LA",
+        "location": "Brentwood CA",
         "members": 4,
         "accounts": 29,  # +4: DAF (held away), SBLOC, margin loan, wine collection
         "transactions": len(all_txns),

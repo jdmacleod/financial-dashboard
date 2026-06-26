@@ -1,4 +1,4 @@
-"""Household 4 — Park-Cole (East Nashville, TN). ~$279,500 net worth.
+"""Household 4 — Park-Cole (East Nashville, TN). ~$300,100 net worth.
 
 Members: Zoe Park (primary, b. 1998-05-12) and Marcus Cole (partner, b. 1997-09-03).
 Late-20s dual-income renters. Aggressive debt payoff (avalanche) with 3 simultaneous

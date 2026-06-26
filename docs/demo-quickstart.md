@@ -1,12 +1,13 @@
 # Demo Quickstart
 
-HearthLedger ships with a seed script that populates the system with six
-fictitious US households, ranging from late-20s Nashville renters paying down
-debt to a widowed Westchester County retiree with a full estate-planning stack.
-Use it to explore every feature without entering your own data.
+HearthLedger ships with a seed script that populates the system with seven
+fictitious US households, ranging from a single early-career Atlanta saver
+digging out of consumer debt to a widowed Westchester County retiree with a
+full estate-planning stack. Use it to explore every feature without entering
+your own data.
 
 > **Demo environments only.** The production architecture is one household per
-> installation. Seeding all six households is valid for demos and testing;
+> installation. Seeding all seven households is valid for demos and testing;
 > each user's JWT token scopes them to their own household automatically.
 
 ---
@@ -35,27 +36,31 @@ The script generates roughly 30 months of transactions (January 2024 – June 20
 
 Household 1: Chen-Nakamura (Round Rock TX)
   Members: 2 | Accounts: 12 | Transactions: ~XXXX | Properties: 1
-  Computed Net Worth: ~$898,900
+  Computed Net Worth: ~$1,003,300
 
 Household 2: Okonkwo-Rivera (Naperville IL)
   Members: 4 | Accounts: 19 | Transactions: ~XXXX | Properties: 2
-  Computed Net Worth: ~$3,407,800
+  Computed Net Worth: ~$3,620,400
 
-Household 3: Whitfield-Torres (Brentwood LA)
-  Members: 4 | Accounts: 25 | Transactions: ~XXXX | Properties: 3
-  Computed Net Worth: ~$9,463,400
+Household 3: Whitfield-Torres (Brentwood CA)
+  Members: 4 | Accounts: 29 | Transactions: ~XXXX | Properties: 3
+  Computed Net Worth: ~$9,902,500
 
-Household 4: Park-Cole (East Nashville TN)
-  Members: 2 | Accounts: 13 | Transactions: ~XXXX | Properties: 0
-  Computed Net Worth: ~$154,500
+Household 4: Park-Cole (Nashville TN)
+  Members: 2 | Accounts: 14 | Transactions: ~XXXX | Properties: 0
+  Computed Net Worth: ~$300,100
 
 Household 5: Langford (Sarasota FL)
-  Members: 2 | Accounts: 15 | Transactions: ~XXXX | Properties: 2
-  Computed Net Worth: ~$12,856,700
+  Members: 2 | Accounts: 17 | Transactions: ~XXXX | Properties: 2
+  Computed Net Worth: ~$13,327,100
 
 Household 6: Castellano (Scarsdale NY)
   Members: 1 | Accounts: 17 | Transactions: ~XXXX | Properties: 2
   Computed Net Worth: ~$18,290,000
+
+Household 7: Brooks (Atlanta GA)
+  Members: 1 | Accounts: 9 | Transactions: ~XXXX | Properties: 0
+  Computed Net Worth: ~$12,200
 ```
 
 To seed a single household instead:
@@ -73,7 +78,7 @@ All accounts share the same password: **`HearthDemo1!`**
 
 ### Household 1: Chen-Nakamura (Round Rock, TX)
 
-_Dual-income couple, no dependents. Net worth ~$899K._
+_Dual-income couple, no dependents. Net worth ~$1.0M._
 
 | Role    | Email                     | Password     |
 | ------- | ------------------------- | ------------ |
@@ -91,7 +96,7 @@ What this household demonstrates:
 
 ### Household 2: Okonkwo-Rivera (Naperville, IL)
 
-_Senior law partner + school district administrator, two teenage dependents. Net worth ~$3.4M._
+_Senior law partner + school district administrator, two teenage dependents. Net worth ~$3.6M._
 
 | Role    | Email                       | Password     |
 | ------- | --------------------------- | ------------ |
@@ -113,9 +118,9 @@ What this household demonstrates:
 - Illinois income and property tax patterns
 - Budget history: `restaurants` budget increases from $550 → $650 in March 2025
 
-### Household 3: Whitfield-Torres (Brentwood, LA)
+### Household 3: Whitfield-Torres (Brentwood, CA)
 
-_Entertainment law firm founder + real estate development consultant, two dependents. Net worth ~$9.5M._
+_Entertainment law firm founder + real estate development consultant, two dependents. Net worth ~$9.9M._
 
 | Role    | Email                           | Password     |
 | ------- | ------------------------------- | ------------ |
@@ -141,7 +146,7 @@ What this household demonstrates:
 
 ### Household 4: Park-Cole (East Nashville, TN)
 
-_Late-20s dual-income renters. Net worth ~$155K._
+_Late-20s dual-income renters. Net worth ~$300K._
 
 | Role    | Email                  | Password     |
 | ------- | ---------------------- | ------------ |
@@ -159,7 +164,7 @@ What this household demonstrates:
 
 ### Household 5: Langford (Sarasota, FL)
 
-_Retired couple; SS + pension + RMDs + LLC income. Net worth ~$12.9M._
+_Retired couple; SS + pension + RMDs + LLC income. Net worth ~$13.3M._
 
 | Role    | Email                 | Password     |
 | ------- | --------------------- | ------------ |
@@ -201,6 +206,27 @@ What this household demonstrates:
 
 ---
 
+### Household 7: Brooks (Atlanta, GA)
+
+_Single early-career saver, top income-for-age but low net worth, digging out of consumer debt. Net worth ~$12K._
+
+| Role    | Email                | Password     |
+| ------- | -------------------- | ------------ |
+| Primary | aaliyah@brooks.local | HearthDemo1! |
+
+What this household demonstrates:
+
+- Single-member household: one primary principal, full visibility, no access grants
+- Early-accumulation lifecycle opener: high income-for-age, deliberately low (and near-breakeven) net worth — the rung below Park-Cole
+- Debt elimination as the hero: three simultaneous balances — Chase credit card (21%, ~$9K), SoFi personal loan (11%, ~$4K), MOHELA federal student loan (6%, ~$40K)
+- Avalanche vs. snowball payoff orders that actually diverge: avalanche-by-rate targets the card first, snowball-by-balance targets the personal loan first, so the "Avalanche saves $X" callout renders
+- Roth-heavy retirement (Roth 401k + Roth IRA) — contributing in a low bracket now
+- HSA invested for the triple-tax benefit (young HDHP saver, payroll-funded)
+- FIRE scenario: "Financial Independence by 50"
+- Debit-funded variable spending (debt-payoff mode — not adding to the card)
+
+---
+
 ## Re-seeding
 
 ### Check current state
@@ -220,10 +246,11 @@ Output:
   -------------------------------------------------------------------
   1    Chen-Nakamura                   2        12         3,124  SEEDED
   2    Okonkwo-Rivera                  4        19         4,871  SEEDED
-  3    Whitfield-Torres                4        25         6,390  SEEDED
-  4    Park-Cole                       2        13         2,241  SEEDED
-  5    Langford                        2        15         2,188  SEEDED
+  3    Whitfield-Torres                4        29         6,390  SEEDED
+  4    Park-Cole                       2        14         2,241  SEEDED
+  5    Langford                        2        17         2,188  SEEDED
   6    Castellano                      1        17        ~2,000  SEEDED
+  7    Brooks                          1         9        ~2,000  SEEDED
 ```
 
 ### Reset a single household (targeted)
