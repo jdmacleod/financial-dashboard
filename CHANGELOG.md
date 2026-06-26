@@ -3,6 +3,20 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.5.0] - 2026-06-26
+
+### Fixed
+
+- **The Required Distributions report now works on demo data.** The seed script built accounts directly and never set `tax_treatment`, so every seeded retirement account was `NULL`. The RMD report and the FIRE RMD projection both filter on `tax_treatment == 'pretax'`, so they treated every demo household as having no pretax accounts — the Langford household's Bob (age 74, with a Rollover IRA taking quarterly RMDs) produced no Required Distribution entry at all. Seeded accounts now derive `tax_treatment` from `account_type`, mirroring `AccountService.create`.
+
+### Changed
+
+- **The Castellano (H6) demo household now has realistic everyday spending.** It previously modeled only large scheduled flows (Social Security, RMD/CRT distributions, Medicare, premiums, gifts, capital calls) and carried ~282 transactions — roughly a seventh of any other demo household. Added a discretionary-spend layer (groceries, fine dining, car service, concierge healthcare, salon/spa, luxury retail, the arts, seasonal travel), bringing it to ~1,430 transactions, in line with the others. The spend routes through checking and is absorbed by the opening-balance reconciliation, so net worth stays exactly $18,290,000. Refreshed the demo-quickstart inspect-table transaction counts, which had drifted from the real values.
+
+### For contributors
+
+- New regression guards: `test_seed_rmd_eligibility.py` (seeded pretax IRAs are tagged `pretax`; the Langford RMD report includes Bob with a computed amount) and `test_seed_h6_transaction_density.py` (H6 has ≥1,200 transactions and real everyday-category spending). Both are net-worth-neutral — `test_seed_net_worth_agreement` still passes for all seven households.
+
 ## [0.23.4.0] - 2026-06-25
 
 ### Changed

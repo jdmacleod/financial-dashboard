@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from app.core.encryption import encrypt
 from app.core.security import hash_password
 from app.db.models.access_grant import AccountAccessGrant
-from app.db.models.account import Account
+from app.db.models.account import DEFAULT_TAX_TREATMENT, Account
 from app.db.models.advisory_note import AdvisoryNote
 from app.db.models.budget import Budget
 from app.db.models.capital_commitment import CapitalCommitment
@@ -178,6 +178,13 @@ def make_account(
         household_id=household_id,
         owner_member_id=owner_member_id,
         account_type=account_type,
+        # Seed tax_treatment from account_type, mirroring AccountService.create
+        # (app/services/account.py). Without it seeded accounts are NULL, which the
+        # RMD report and FIRE RMD projection (both filter tax_treatment == 'pretax')
+        # silently treat as "no pretax accounts" — so demo households never produce
+        # Required Distribution entries. Types absent from the map (e.g.
+        # inherited_ira) stay None on purpose; they follow separate rules.
+        tax_treatment=DEFAULT_TAX_TREATMENT.get(account_type),
         nickname=nickname,
         institution_name_enc=encrypt(institution) if institution else None,
         account_number_enc=encrypt(last4) if last4 else None,
