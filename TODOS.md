@@ -64,6 +64,18 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
+### User-scoped query keys — harden against cross-account cache bleed (P3, defensive)
+
+**What:** Make the frontend resilient to cross-account data bleed by either (a) scoping TanStack Query keys by household/member id (e.g. `["household", householdId]`), or (b) centralizing a single "clear cache on any identity transition" hook. Today the keys are global (`["household"]`, `["accounts"]`, …).
+
+**Why:** v0.23.6.0 (PR #86) fixed the reported bug by calling `queryClient.clear()` in `useAuth.logout`/`clearAuth`. That fully resolves Sign Out → re-login, but the cache-clear is now the _only_ thing preventing one member's cached data from rendering for another, because the keys carry no identity. A future "switch account without full logout" flow (or any code path that swaps the token without routing through `logout`) would reintroduce the bleed. This is defensive hardening, not a current bug — present behavior is correct.
+
+**Cons:** Threading an id into every query key touches many call sites; the centralized-clear approach is lighter but less explicit. Neither is urgent while `logout` is the only identity-transition path.
+
+**Depends on:** Nothing. Builds on the `lib/queryClient.ts` singleton added in v0.23.6.0.
+
+---
+
 ## Completed
 
 ### Custom date mode for the Spending Report (cash-flow drill-down range)
