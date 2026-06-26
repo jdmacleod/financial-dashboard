@@ -6,9 +6,15 @@ import { LineChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "rec
 import { accountsApi } from "@/api/accounts"
 import { snapshotsApi } from "@/api/snapshots"
 import { useAuth } from "@/hooks/useAuth"
-import { ACCOUNT_LABELS, ACCOUNT_CATEGORY_COLORS } from "@/lib/accountLabels"
+import {
+  ACCOUNT_LABELS,
+  ACCOUNT_CATEGORY_COLORS,
+  assetCategoryRank,
+  type AssetCategoryKey,
+} from "@/lib/accountLabels"
 import { RETIREMENT_ACCOUNT_TYPES, BROKERAGE_ACCOUNT_TYPES } from "@/lib/accountTypes"
 import { formatCurrency, formatMaskedAccountNumber } from "@/lib/formatters"
+import { loadSort, persistSort } from "@/lib/sortStorage"
 import AddAccountModal from "@/components/app/AddAccountModal"
 import ArchiveAccountModal from "@/components/app/ArchiveAccountModal"
 import EditAccountModal from "@/components/app/EditAccountModal"
@@ -70,6 +76,38 @@ function categorise(accounts: AccountResponse[]): Record<CategoryName, AccountRe
 
 function groupSubtotal(accounts: AccountResponse[]): number {
   return accounts.reduce((s, a) => s + Number(a.current_balance ?? 0), 0)
+}
+
+// ── Within-group sort ─────────────────────────────────────────────────────────
+type AccountSort = "value_desc" | "name_asc"
+const ACCOUNT_SORTS: readonly AccountSort[] = ["value_desc", "name_asc"]
+const ACCOUNT_SORT_KEY = "hl.accounts.sort"
+
+// Each category maps to a canonical key so the group order matches the sidebar,
+// Dashboard, and Net Worth breakdown (driven by ASSET_CATEGORY_ORDER).
+const CATEGORY_TO_KEY: Record<CategoryName, AssetCategoryKey> = {
+  "Banking & Cash": "banking",
+  Investments: "investments",
+  "Real Estate": "real_estate",
+  Retirement: "retirement",
+  Liabilities: "liabilities",
+}
+
+// Canonical group order, derived from the shared ASSET_CATEGORY_ORDER rank.
+const CATEGORY_ORDER: CategoryName[] = (Object.keys(CATEGORY_TO_KEY) as CategoryName[]).sort(
+  (a, b) => assetCategoryRank(CATEGORY_TO_KEY[a]) - assetCategoryRank(CATEGORY_TO_KEY[b]),
+)
+
+function sortAccounts(accounts: AccountResponse[], sort: AccountSort): AccountResponse[] {
+  const byName = (a: AccountResponse, b: AccountResponse) => a.nickname.localeCompare(b.nickname)
+  if (sort === "name_asc") return [...accounts].sort(byName)
+  // value_desc: largest balance first. Use magnitude so the biggest debt leads
+  // the Liabilities group (balances there are negative); tie-break by name so
+  // equal/zero/null balances render in a stable order.
+  return [...accounts].sort((a, b) => {
+    const diff = Math.abs(Number(b.current_balance ?? 0)) - Math.abs(Number(a.current_balance ?? 0))
+    return diff !== 0 ? diff : byName(a, b)
+  })
 }
 
 type Range = "ytd" | "1y" | "all"
@@ -566,6 +604,9 @@ export default function Accounts() {
   })
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [sort, setSort] = useState<AccountSort>(() =>
+    loadSort(ACCOUNT_SORT_KEY, ACCOUNT_SORTS, "value_desc"),
+  )
   const [showAdd, setShowAdd] = useState(false)
   const [addFilter, setAddFilter] = useState<AddFilter>(null)
   const [archivingAccount, setArchivingAccount] = useState<AccountResponse | null>(null)
@@ -581,6 +622,20 @@ export default function Accounts() {
   })
 
   const groups = useMemo(() => categorise(accounts ?? []), [accounts])
+
+  // Sort accounts within each group; the group order itself stays canonical.
+  const sortedGroups = useMemo(() => {
+    const out = {} as Record<CategoryName, AccountResponse[]>
+    for (const [name, list] of Object.entries(groups) as [CategoryName, AccountResponse[]][]) {
+      out[name] = sortAccounts(list, sort)
+    }
+    return out
+  }, [groups, sort])
+
+  function changeSort(next: AccountSort) {
+    setSort(next)
+    persistSort(ACCOUNT_SORT_KEY, next)
+  }
 
   const selectedAccount = useMemo(
     () => accounts?.find((a) => a.id === selectedId) ?? null,
@@ -627,14 +682,6 @@ export default function Accounts() {
       setShowAdd(true)
     },
   }
-
-  const categoryOrder: CategoryName[] = [
-    "Banking & Cash",
-    "Retirement",
-    "Investments",
-    "Real Estate",
-    "Liabilities",
-  ]
 
   return (
     <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
@@ -700,17 +747,45 @@ export default function Accounts() {
               No accounts yet. Add your first account to get started.
             </div>
           ) : (
-            categoryOrder.map((name) => (
-              <CategoryGroup
-                key={name}
-                name={name}
-                accounts={groups[name]}
-                selectedId={selectedId}
-                onSelect={(a) => setSelectedId(a.id === selectedId ? null : a.id)}
-                onAdd={categoryAddHandlers[name]}
-                from={from}
-              />
-            ))
+            <>
+              <div style={{ display: "flex", alignItems: "center", padding: "4px 6px 12px" }}>
+                <label
+                  htmlFor="accounts-sort"
+                  style={{ fontSize: "12px", color: "var(--label)", marginRight: "8px" }}
+                >
+                  Sort by
+                </label>
+                <select
+                  id="accounts-sort"
+                  aria-label="Sort accounts"
+                  value={sort}
+                  onChange={(e) => changeSort(e.target.value as AccountSort)}
+                  style={{
+                    fontSize: "12px",
+                    color: "var(--text2)",
+                    background: "var(--card)",
+                    border: "1px solid var(--bd)",
+                    borderRadius: "8px",
+                    padding: "5px 8px",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value="value_desc">Value ↓</option>
+                  <option value="name_asc">Name A–Z</option>
+                </select>
+              </div>
+              {CATEGORY_ORDER.map((name) => (
+                <CategoryGroup
+                  key={name}
+                  name={name}
+                  accounts={sortedGroups[name]}
+                  selectedId={selectedId}
+                  onSelect={(a) => setSelectedId(a.id === selectedId ? null : a.id)}
+                  onAdd={categoryAddHandlers[name]}
+                  from={from}
+                />
+              ))}
+            </>
           )}
         </div>
 
