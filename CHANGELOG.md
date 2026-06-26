@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.10.0] - 2026-06-26
+
+### Fixed
+
+- **Accounts seeded with the higher-complexity types now appear on the Accounts page instead of vanishing.** The Castellano demo household holds a $520,000 securities-backed line of credit (SBLOC) plus a treasury ladder, an inherited IRA, a private-equity fund, and whole-life cash value. These counted in the net-worth totals on the Overview, but the Accounts page silently dropped them, so the $520K liability showed in the summary with no account behind it. They are now grouped correctly: the SBLOC and margin lines under Liabilities, the treasury and private fund under Investments, the inherited IRA under Retirement, and life-insurance cash value under Banking. The Debt tab (a payoff planner for fixed-schedule loans) now explains that revolving and secured lines like a credit card, HELOC, margin, or SBLOC live under Accounts → Liabilities, not there.
+
+### For contributors
+
+- The frontend `AccountType` union (and `ACCOUNT_LABELS`) had drifted behind backend migration 0007, which added `sbloc`, `margin`, `inherited_ira`, `treasury`, `private_fund`, and `life_insurance_cash_value`. `Accounts.tsx` `categorise()` had no `else` for unmatched types, so accounts of these types were dropped from every per-account view while still counting in backend-computed net-worth totals. The six types are now in the union with labels; `categorise()` maps them to groups mirroring the backend net-worth buckets (`report.py` ASSET*BUCKET / LIABILITY_BUCKET). They are display-only — the `AccountCreate` schema rejects them, so they are kept out of the creatable add-modal lists (`BANKING_TYPES` / `LIABILITY_TYPES` / `ACCOUNTS_PAGE_TYPES`) via separate `DISPLAY*\*`constants. New regression test in`Accounts.ordering.test.tsx` asserts each extension type lands in the right group.
+
 ## [0.23.9.0] - 2026-06-26
 
 ### Added

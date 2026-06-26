@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { Link } from "@tanstack/react-router"
 import { useQuery } from "@tanstack/react-query"
 import {
   AreaChart,
@@ -147,9 +148,18 @@ export default function Debt() {
           {/* Debt list */}
           {data.debts.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-              <p className="text-gray-500">No debts found.</p>
+              <p className="text-gray-500">No amortizing debts found.</p>
               <p className="text-sm text-gray-400 mt-1">
-                Add debt accounts and their details to see payoff projections.
+                This planner covers fixed-schedule loans (mortgage, auto, student) with a rate and
+                minimum payment.
+              </p>
+              <p className="text-sm text-gray-400 mt-1">
+                Revolving or secured lines like a credit card, HELOC, margin, or securities-backed
+                line (SBLOC) appear under{" "}
+                <Link to="/accounts" className="text-indigo-600 hover:underline">
+                  Accounts → Liabilities
+                </Link>
+                , not here.
               </p>
             </div>
           ) : (

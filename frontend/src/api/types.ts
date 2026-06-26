@@ -88,6 +88,17 @@ export type AccountType =
   | "student_loan"
   | "other_asset"
   | "other_liability"
+  // Demo-data extension types (backend migration 0007). Seeded for the
+  // higher-complexity households (e.g. H6 Castellano) but NOT accepted by the
+  // AccountCreate schema, so they are display-only — they never appear in the
+  // Add-account modal. The frontend must still know them so accounts of these
+  // types render on the Accounts ledger instead of being silently dropped.
+  | "sbloc"
+  | "margin"
+  | "inherited_ira"
+  | "treasury"
+  | "private_fund"
+  | "life_insurance_cash_value"
 
 export type TaxTreatment = "pretax" | "roth" | "taxable"
 

@@ -49,6 +49,21 @@ const ACCOUNTS_PAGE_TYPES: AccountType[] = [
   "other_liability",
 ]
 
+// Display-only categorization for the migration-0007 demo-extension types.
+// These are seeded (e.g. H6 Castellano's SBLOC, treasury ladder, inherited IRA)
+// but the AccountCreate schema rejects them, so they stay OUT of the creatable
+// lists above (BANKING_TYPES / LIABILITY_TYPES / ACCOUNTS_PAGE_TYPES, which feed
+// the Add-account modal) and are grouped here only for the ledger. Mapped to
+// match the backend net-worth buckets (report.py ASSET_BUCKET / LIABILITY_BUCKET):
+// sbloc/margin -> liabilities, inherited_ira -> retirement, treasury/private_fund
+// -> investments, life_insurance_cash_value -> other/banking. Without this the
+// Accounts page silently dropped these accounts while they still counted in the
+// net-worth totals — a $520k SBLOC visible in Overview but on no per-account view.
+const DISPLAY_LIABILITY_TYPES: AccountType[] = [...LIABILITY_TYPES, "sbloc", "margin"]
+const RETIREMENT_DISPLAY_EXTRA: AccountType[] = ["inherited_ira"]
+const INVESTMENT_DISPLAY_EXTRA: AccountType[] = ["treasury", "private_fund"]
+const BANKING_DISPLAY_EXTRA: AccountType[] = ["life_insurance_cash_value"]
+
 type CategoryName = "Banking & Cash" | "Retirement" | "Investments" | "Real Estate" | "Liabilities"
 
 function categorise(accounts: AccountResponse[]): Record<CategoryName, AccountResponse[]> {
@@ -60,16 +75,22 @@ function categorise(accounts: AccountResponse[]): Record<CategoryName, AccountRe
     Liabilities: [],
   }
   for (const a of accounts) {
-    if (BANKING_TYPES.includes(a.account_type)) result["Banking & Cash"].push(a)
+    if (BANKING_TYPES.includes(a.account_type) || BANKING_DISPLAY_EXTRA.includes(a.account_type))
+      result["Banking & Cash"].push(a)
     else if (
       RETIREMENT_ACCOUNT_TYPES.includes(a.account_type) ||
       a.account_type === "hsa" ||
-      a.account_type === "pension"
+      a.account_type === "pension" ||
+      RETIREMENT_DISPLAY_EXTRA.includes(a.account_type)
     )
       result.Retirement.push(a)
-    else if (BROKERAGE_ACCOUNT_TYPES.includes(a.account_type)) result.Investments.push(a)
+    else if (
+      BROKERAGE_ACCOUNT_TYPES.includes(a.account_type) ||
+      INVESTMENT_DISPLAY_EXTRA.includes(a.account_type)
+    )
+      result.Investments.push(a)
     else if (REAL_ESTATE_TYPES.includes(a.account_type)) result["Real Estate"].push(a)
-    else if (LIABILITY_TYPES.includes(a.account_type)) result.Liabilities.push(a)
+    else if (DISPLAY_LIABILITY_TYPES.includes(a.account_type)) result.Liabilities.push(a)
   }
   return result
 }
@@ -162,7 +183,7 @@ function AccountRow({
 }) {
   const change = useBalanceChange(account.id, from)
   const dot = ACCOUNT_CATEGORY_COLORS[category] ?? "var(--muted)"
-  const isLiability = LIABILITY_TYPES.includes(account.account_type)
+  const isLiability = DISPLAY_LIABILITY_TYPES.includes(account.account_type)
   const entity = useOwnershipEntity(account.ownership_entity_id)
 
   return (
@@ -361,7 +382,7 @@ function DetailPanel({
   from: string
 }) {
   const isPrimary = useAuth((s) => s.role === "primary")
-  const isLiability = LIABILITY_TYPES.includes(account.account_type)
+  const isLiability = DISPLAY_LIABILITY_TYPES.includes(account.account_type)
   const grad = isLiability ? "var(--pgrad)" : "var(--grad)"
   const accentBd = isLiability ? "var(--pbd)" : "var(--accent-bd)"
   const dot = ACCOUNT_CATEGORY_COLORS[category] ?? "var(--muted)"

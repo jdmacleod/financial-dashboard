@@ -138,4 +138,40 @@ describe("Accounts — group order + within-group sort", () => {
     const [zulu, alpha] = order(container.textContent ?? "", "Zulu Savings", "Alpha Checking")
     expect(zulu).toBeLessThan(alpha) // value_desc default
   })
+
+  // Migration-0007 demo-extension account types (e.g. H6 Castellano's SBLOC)
+  // used to be silently dropped from the ledger because the frontend's
+  // categorise() only knew the AccountCreate-creatable types — so a $520k SBLOC
+  // counted in the net-worth totals but appeared on no per-account screen.
+  it("places demo-extension account types into the correct groups", async () => {
+    listMock.mockReset()
+    listMock.mockResolvedValue([
+      acct("e1", "Pledged-Asset Line", "sbloc", "-520000.00"),
+      acct("e2", "Treasury Ladder", "treasury", "700000.00"),
+      acct("e3", "Inherited IRA", "inherited_ira", "240000.00"),
+      acct("e4", "Whole Life Cash Value", "life_insurance_cash_value", "410000.00"),
+      acct("e5", "PE Fund NAV", "private_fund", "1100000.00"),
+    ])
+    const { container } = renderAccounts()
+    await screen.findByText("Liabilities")
+    const text = container.textContent ?? ""
+
+    // The SBLOC lands under Liabilities (the headline fix), not dropped.
+    const [liabilities, sbloc] = order(text, "Liabilities", "Pledged-Asset Line")
+    expect(sbloc).toBeGreaterThan(liabilities)
+    // Each asset extension type lands in a sensible group, none dropped.
+    const [investments, treasury, peFund] = order(
+      text,
+      "Investments",
+      "Treasury Ladder",
+      "PE Fund NAV",
+    )
+    expect(treasury).toBeGreaterThan(investments)
+    expect(peFund).toBeGreaterThan(investments)
+    const [retirement, inheritedIra] = order(text, "Retirement", "Inherited IRA")
+    expect(inheritedIra).toBeGreaterThan(retirement)
+    expect(text).toContain("Whole Life Cash Value")
+    // The SBLOC renders its type label, not a blank/undefined.
+    expect(text).toContain("Securities-Backed Line")
+  })
 })
