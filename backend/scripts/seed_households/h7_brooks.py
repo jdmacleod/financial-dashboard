@@ -278,6 +278,40 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         cv("pharmacy", ["CVS Pharmacy", "Walgreens"], 18, 45, 0, 2)
         cv("clothing", ["Target", "ASOS", "Nike Atlanta"], 50, 120, 0, 2)
         cv("hobbies", ["Steam", "REI", "Ponce City Market"], 30, 80, 0, 2)
+        cv("food_delivery", ["DoorDash", "Uber Eats", "Grubhub"], 50, 110, 1, 3)
+        cv("rideshare", ["Uber", "Lyft", "MARTA"], 35, 90, 1, 3)
+
+        # ── Auto insurance (young single driver, GA) ──────────────────────────
+        add(
+            tx(
+                checking.id,
+                clamp_day(y, m, 6),
+                -D("165.00"),
+                "GEICO Auto Insurance",
+                cat["auto_insurance"],
+            )
+        )
+        # ── Car maintenance (GA tag renewal + occasional service) ─────────────
+        if m == 3:
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, 14),
+                    -D("96.00"),
+                    "GA MVD — Tag Renewal & Ad Valorem",
+                    cat["car_maintenance"],
+                )
+            )
+        if rng.random() < 0.4:
+            cv("car_maintenance", ["Jiffy Lube", "Mavis Tires", "Pep Boys"], 50, 220, 0, 1)
+
+        # ── Out-of-pocket healthcare (copays, cleanings, exam) ────────────────
+        cv("doctor_medical", ["Piedmont Urgent Care", "One Medical Atlanta"], 30, 150, 0, 1)
+        if m in (4, 10):  # semiannual dental cleanings (insured copay)
+            cv("dental", ["Midtown Dental Atlanta"], 80, 150, 1, 1)
+        if m == 9:  # annual eye exam + contacts
+            cv("vision", ["Warby Parker", "Atlanta Eye Care"], 160, 280, 1, 1)
+
         add(tx(checking.id, clamp_day(y, m, 10), -D("11.00"), "Spotify", cat["streaming"]))
         add(
             tx(
@@ -382,7 +416,12 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("groceries", D("300.00"), date(2024, 1, 1)),
         ("restaurants", D("180.00"), date(2024, 1, 1)),
         ("coffee", D("55.00"), date(2024, 1, 1)),
+        ("food_delivery", D("80.00"), date(2024, 1, 1)),
         ("gas_fuel", D("90.00"), date(2024, 1, 1)),
+        ("rideshare", D("60.00"), date(2024, 1, 1)),
+        ("auto_insurance", D("165.00"), date(2024, 1, 1)),
+        # car_maintenance: $96 tag + ~40% of months x ~$135 ≈ $60/mo avg
+        ("car_maintenance", D("60.00"), date(2024, 1, 1)),
         ("internet", D("70.00"), date(2024, 1, 1)),
         ("cell_phone", D("80.00"), date(2024, 1, 1)),
         ("streaming", D("11.00"), date(2024, 1, 1)),
@@ -390,6 +429,12 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("fitness", D("39.00"), date(2024, 1, 1)),
         ("personal_care", D("55.00"), date(2024, 1, 1)),
         ("pharmacy", D("30.00"), date(2024, 1, 1)),
+        # Healthcare out-of-pocket
+        ("doctor_medical", D("45.00"), date(2024, 1, 1)),
+        # dental: 2 x ~$115 (Apr/Oct) ≈ $230/yr / 12 ≈ $19/mo avg
+        ("dental", D("20.00"), date(2024, 1, 1)),
+        # vision: ~$220/yr (Sep) / 12 ≈ $18/mo avg
+        ("vision", D("18.00"), date(2024, 1, 1)),
         ("clothing", D("85.00"), date(2024, 1, 1)),
         ("hobbies", D("55.00"), date(2024, 1, 1)),
         ("travel", D("130.00"), date(2024, 1, 1)),

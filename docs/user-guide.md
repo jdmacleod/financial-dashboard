@@ -218,7 +218,7 @@ Figures are cost basis, not market value; HearthLedger tracks no live prices. Se
 
 ### Spending by Category
 
-Shows spending totals per category for a date range. Optionally filter to a single parent category to drill into subcategories.
+Shows spending totals per category for a date range. Optionally filter to a single parent category to drill into subcategories; when you drill in, the report names that category in the heading and on the total card ("Total spending: <Category>").
 
 ### Savings Rate
 

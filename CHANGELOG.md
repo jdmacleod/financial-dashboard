@@ -3,6 +3,18 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.13.0] - 2026-06-29
+
+### Fixed
+
+- **The Spending report now tells you which category you drilled into.** Clicking "drill down" on a category like Transportation switched the chart to its subcategories, but the heading still read "Spending by Category" and the total card still read a generic "Total spending", so you lost track of where you were. The drilled category is now named both in the heading (a breadcrumb beside the title) and on the total card ("Total spending: Transportation"). The name comes from your existing category list, so there is no extra request. Changing the time window (this month, 3/6/12 months, Custom) while drilled in now stays in the drill-down and reloads that category's subcategories for the new range, instead of bouncing you back to all categories; use "← All categories" to exit.
+- **The example households now spend like real households.** Several demo households had obvious gaps in everyday spending. The clearest was Langford, whose 12-month Transportation total was $1,818 because it tracked only fuel, with no auto insurance or maintenance for two cars. Realistic, in-character cash expenses now fill those gaps across six of the seven households, each with matching budget lines: auto insurance, car maintenance and registration, out-of-pocket doctor/dental/vision/pharmacy, and rideshare plus food delivery for the youngest saver. Langford's Transportation now lands near $7,500/year for two paid-off cars. Depreciation and financing are deliberately excluded, because they are not cash transactions for a car you already own, so the totals reflect what a real bank ledger would show. Net worth is unchanged. (Castellano is left as-is; it models spending at the category-group level.)
+- **Two example households were hiding their travel and gift spending.** In the Okonkwo-Rivera and Whitfield-Torres households, seasonal credit-card charges (vacation travel, December gifts) were counted in the monthly statement payment but never recorded as transactions, so they were invisible on the Spending report while still draining the budget. Those charges now appear on the ledger. Net worth is unchanged.
+
+### For contributors
+
+- `ReportSpending.tsx` adds a `categoryNameMap` (id to name) and a `drillName` resolver that mirror the existing `categoryColorMap`; the `<h1>` text is unchanged so the heading/accessibility tests still pass. In the demo seed (`backend/scripts/seed_households/h{1,2,3,4,5,7}.py`), every new everyday-spend transaction debits a reconciled account, so the opening-balance plug keeps each household pinned to its `targets`: `test_seed_net_worth_agreement` and the H6 density test stay green untouched, and no migration is needed (all categories already live in `shared_categories.py`). The Okonkwo-Rivera / Whitfield-Torres fix moves `add(*card_txns)` to after the seasonal `*_var` calls so the seasonal charges reach `all_txns` before the statement-payment sum is computed (previously the add ran first, orphaning the seasonal extension). All new categories carry matching `budget_rows`.
+
 ## [0.23.12.0] - 2026-06-26
 
 ### Fixed

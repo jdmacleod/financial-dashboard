@@ -88,7 +88,7 @@ _Dual-income couple, no dependents. Net worth ~$1.0M._
 What this household demonstrates:
 
 - Basic two-member RBAC (primary + partner)
-- Budget vs. actuals across 19 categories
+- Budget vs. actuals across 23 categories
 - FIRE scenario: "Target 55 FIRE" (Wei, age 55 retirement target)
 - Debt payoff: RAV4 auto loan (avalanche, +$200/mo extra)
 - Single primary residence with 10 quarterly valuations

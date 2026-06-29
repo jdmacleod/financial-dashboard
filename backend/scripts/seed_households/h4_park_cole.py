@@ -513,6 +513,20 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             )
         av("fitness", ["ClassPass", "Planet Fitness"], 58, 58, 1, 1)
 
+        # ── Out-of-pocket healthcare (young couple: copays, cleanings, exam) ────
+        av(
+            "doctor_medical",
+            ["Vanderbilt Health", "One Medical Nashville", "Fast Pace Urgent Care"],
+            35,
+            160,
+            0,
+            1,
+        )
+        if m in (5, 11):  # semiannual dental cleanings (insured copay)
+            av("dental", ["East Nashville Family Dental"], 110, 180, 1, 1)
+        if m == 8:  # annual eye exam + glasses/contacts
+            av("vision", ["Warby Parker", "Nashville Eye Care"], 180, 320, 1, 1)
+
         add(*chase_txns)
         add(*apple_txns)
 
@@ -815,6 +829,8 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         # Transportation
         ("gas_fuel", D("120.00"), date(2024, 1, 1)),
         ("auto_insurance", D("124.00"), date(2024, 1, 1)),
+        # car_maintenance: ~60% of months x ~$140 ≈ $84/mo avg (already in spend)
+        ("car_maintenance", D("85.00"), date(2024, 1, 1)),
         # Utilities
         ("internet", D("68.00"), date(2024, 1, 1)),
         ("cell_phone", D("95.00"), date(2024, 1, 1)),
@@ -826,6 +842,12 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("subscriptions", D("32.00"), date(2024, 1, 1)),
         ("events_tickets", D("100.00"), date(2024, 1, 1)),
         ("pharmacy", D("40.00"), date(2024, 1, 1)),
+        # Healthcare out-of-pocket
+        ("doctor_medical", D("75.00"), date(2024, 1, 1)),
+        # dental: 2 x ~$145 (May/Nov) ≈ $290/yr / 12 ≈ $24/mo avg
+        ("dental", D("25.00"), date(2024, 1, 1)),
+        # vision: ~$250/yr (Aug) / 12 ≈ $21/mo avg
+        ("vision", D("20.00"), date(2024, 1, 1)),
         ("travel", D("150.00"), date(2024, 1, 1)),
         ("gifts_given", D("60.00"), date(2024, 1, 1)),
     ]

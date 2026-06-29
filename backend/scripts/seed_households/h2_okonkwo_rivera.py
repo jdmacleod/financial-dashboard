@@ -457,6 +457,59 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
                 )
             )
 
+        # ── Car maintenance (IL registration + routine service, both cars) ─────
+        if m == 6:
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, 12),
+                    -D("310.00"),
+                    "IL Secretary of State — Registration (2 vehicles)",
+                    cat["car_maintenance"],
+                )
+            )
+        if m in (2, 5, 8, 11):
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, rng.randint(8, 24)),
+                    -jitter(D("240.00"), rng, 0.30),
+                    "Naperville Auto Service",
+                    cat["car_maintenance"],
+                )
+            )
+
+        # ── Out-of-pocket healthcare (copays, family vision, pharmacy) ─────────
+        if rng.random() < 0.65:
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, rng.randint(6, 24)),
+                    -jitter(D("160.00"), rng, 0.40),
+                    "Edward-Elmhurst Health",
+                    cat["doctor_medical"],
+                )
+            )
+        add(
+            tx(
+                checking1.id,
+                clamp_day(y, m, 9),
+                -jitter(D("70.00"), rng, 0.35),
+                "Walgreens Naperville",
+                cat["pharmacy"],
+            )
+        )
+        if m == 9:  # annual exams + lenses, family of four
+            add(
+                tx(
+                    checking1.id,
+                    clamp_day(y, m, 18),
+                    -D("520.00"),
+                    "Naperville Eye Associates — Family Exams",
+                    cat["vision"],
+                )
+            )
+
         # ── Chase Sapphire Reserve spending ───────────────────────────────────
         res_txns: list = []
 
@@ -550,8 +603,6 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
                 tx(cc_amazon.id, clamp_day(y, m, 8), -sub[1], sub[0], cat["subscriptions"])
             )
 
-        add(*res_txns, *amz_txns)
-
         # Seasonal on Sapphire Reserve or Checking
         if m == 3:
             res_var("travel", ["American Airlines", "VRBO", "Marriott Hotels"], 3800, 5200, 2, 4)
@@ -581,6 +632,10 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
                     cat["advisory_fees"],
                 )
             )
+
+        # Record all card charges (incl. seasonal travel/gifts added above) before
+        # computing statement payments, so each payment matches actual spend.
+        add(*res_txns, *amz_txns)
 
         # ── CC payments ───────────────────────────────────────────────────────
         reserve_total = sum(abs(t.amount) for t in res_txns)
@@ -999,6 +1054,13 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("travel", D("846.00"), date(2024, 1, 1)),
         ("gifts_given", D("200.00"), date(2024, 1, 1)),
         ("subscriptions", D("48.00"), date(2024, 1, 1)),
+        # car_maintenance: $310 reg + 4 x ~$240 service ≈ $1,270/yr / 12 ≈ $106/mo avg
+        ("car_maintenance", D("105.00"), date(2024, 1, 1)),
+        # doctor_medical: ~65% of months x ~$160 ≈ $104/mo avg
+        ("doctor_medical", D("105.00"), date(2024, 1, 1)),
+        ("pharmacy", D("70.00"), date(2024, 1, 1)),
+        # vision: $520/yr (Sep) / 12 ≈ $43/mo avg
+        ("vision", D("45.00"), date(2024, 1, 1)),
     ]:
         session.add(make_budget(hid, cat[slug], amount, eff_from))
 

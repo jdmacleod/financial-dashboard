@@ -34,6 +34,30 @@ const mockSpending = {
   ],
 }
 
+// Drilling into cat1 ("Housing") returns its children, not Housing itself —
+// mirrors the real API, where parent_category_id filters to sub-categories.
+const mockSpendingDrill = {
+  total: "2000.00",
+  categories: [
+    {
+      category_id: "cat1a",
+      name: "Rent",
+      amount: "1500.00",
+      percentage: 75.0,
+      transaction_count: 2,
+      has_children: false,
+    },
+    {
+      category_id: "cat1b",
+      name: "Utilities",
+      amount: "500.00",
+      percentage: 25.0,
+      transaction_count: 1,
+      has_children: false,
+    },
+  ],
+}
+
 const mockCategories = [
   {
     id: "cat1",
@@ -69,7 +93,9 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@/api/reports", () => ({
   reportsApi: {
-    spendingByCategory: vi.fn(() => Promise.resolve(mockSpending)),
+    spendingByCategory: vi.fn((_from: string, _to: string, parentCategoryId?: string) =>
+      Promise.resolve(parentCategoryId ? mockSpendingDrill : mockSpending),
+    ),
   },
 }))
 
@@ -175,6 +201,19 @@ describe("ReportSpending", () => {
     })
   })
 
+  it("shows the drilled category name in the header and total label", async () => {
+    mockSearch = { category: "cat1" }
+    renderPage()
+    await waitFor(() => screen.getByRole("button", { name: "← All categories" }))
+    // The drilled category's name (cat1 → "Housing") resolves from the
+    // categories list and appears as a breadcrumb beside the heading...
+    await waitFor(() => {
+      expect(screen.getByText("Housing")).toBeInTheDocument()
+    })
+    // ...and the total card is labelled with that category.
+    expect(screen.getByText("Total spending: Housing")).toBeInTheDocument()
+  })
+
   it("shows drill down button for has_children=true", async () => {
     renderPage()
     await waitFor(() => {
@@ -189,12 +228,30 @@ describe("ReportSpending", () => {
     expect(drillButtons.length).toBe(1)
   })
 
-  it("clears drill category when preset button is clicked", async () => {
+  it("keeps the drill-down when the time window changes, refetching for the new range", async () => {
+    const user = userEvent.setup()
+    const { reportsApi: mock } = await import("@/api/reports")
+    mockSearch = { category: "cat1" }
+    renderPage()
+    await waitFor(() => screen.getByRole("button", { name: "← All categories" }))
+    await user.click(screen.getByRole("button", { name: "12 months" }))
+    // Drill-down stays put: the back button and the drilled breakdown remain...
+    await waitFor(() => screen.getByText("Rent"))
+    expect(screen.getByRole("button", { name: "← All categories" })).toBeInTheDocument()
+    // ...and the report refetched for the new window with the same drill category.
+    expect(mock.spendingByCategory).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.any(String),
+      "cat1",
+    )
+  })
+
+  it("exits the drill-down only via the All categories button", async () => {
     const user = userEvent.setup()
     mockSearch = { category: "cat1" }
     renderPage()
     await waitFor(() => screen.getByRole("button", { name: "← All categories" }))
-    await user.click(screen.getByRole("button", { name: "3 months" }))
+    await user.click(screen.getByRole("button", { name: "← All categories" }))
     await waitFor(() => {
       expect(screen.queryByRole("button", { name: "← All categories" })).not.toBeInTheDocument()
     })

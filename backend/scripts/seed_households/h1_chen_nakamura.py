@@ -390,6 +390,57 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         if rng.random() < 0.25:
             cc_var("electronics", ["Best Buy", "Apple Store", "Amazon"], 80, 400, 0, 1)
 
+        # ── Car maintenance (TX annual reg/inspection + routine service) ─────────
+        if m == 3:
+            cc_this_month.append(
+                tx(
+                    cc_sapphire.id,
+                    clamp_day(y, m, 14),
+                    -D("88.00"),
+                    "TX DMV — Registration & Inspection",
+                    cat["car_maintenance"],
+                )
+            )
+        if m in (2, 5, 8, 11):
+            cc_var(
+                "car_maintenance",
+                ["Discount Tire", "Christian Brothers Automotive", "Jiffy Lube"],
+                90,
+                260,
+                1,
+                1,
+            )
+
+        # ── Out-of-pocket healthcare (copays, dental cleanings, vision) ──────────
+        cc_var(
+            "doctor_medical",
+            ["Baylor Scott & White", "Austin Regional Clinic", "ARC Family Medicine"],
+            40,
+            180,
+            0,
+            2,
+        )
+        if m in (4, 10):  # semiannual cleanings, both adults
+            cc_this_month.append(
+                tx(
+                    cc_sapphire.id,
+                    clamp_day(y, m, 9),
+                    -D("320.00"),
+                    "Round Rock Family Dental",
+                    cat["dental"],
+                )
+            )
+        if m == 9:  # annual exams + lenses
+            cc_this_month.append(
+                tx(
+                    cc_sapphire.id,
+                    clamp_day(y, m, 16),
+                    -D("420.00"),
+                    "Texas State Optical",
+                    cat["vision"],
+                )
+            )
+
         # ── Seasonal CC charges ────────────────────────────────────────────────
         if m == 3:
             cc_var("travel", ["Southwest Airlines", "VRBO", "Airbnb"], 1800, 2400, 2, 4)
@@ -696,6 +747,14 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("gifts_given", D("100.00"), date(2024, 1, 1)),
         ("subscriptions", D("47.00"), date(2024, 1, 1)),
         ("pharmacy", D("50.00"), date(2024, 1, 1)),
+        # car_maintenance: $88 reg + 4 x ~$175 service ≈ $788/yr / 12 ≈ $66/mo avg
+        ("car_maintenance", D("70.00"), date(2024, 1, 1)),
+        # doctor_medical: ~1 copay/visit per month at ~$40-180
+        ("doctor_medical", D("110.00"), date(2024, 1, 1)),
+        # dental: 2 x $320 (Apr/Oct) = $640/yr / 12 ≈ $53/mo avg
+        ("dental", D("55.00"), date(2024, 1, 1)),
+        # vision: $420/yr (Sep) / 12 ≈ $35/mo avg
+        ("vision", D("35.00"), date(2024, 1, 1)),
     ]
     for slug, amount, eff_from in budget_rows:
         session.add(make_budget(hid, cat[slug], amount, eff_from))
