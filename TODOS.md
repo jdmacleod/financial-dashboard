@@ -38,15 +38,15 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Tax-estimate engine — remaining scope (state tax, AMT/NIIT)
+### Tax-estimate engine — remaining scope (AMT, broader state coverage)
 
-**What:** Extend the federal tax-estimate engine with: (1) state income tax keyed off `households.state`; (2) optionally AMT and NIIT (net investment income tax). The full-household-income basis and preferential long-term capital-gains / qualified-dividend rates shipped 2026-06-25 (see Completed).
+**What:** Two follow-ons now that state income tax + NIIT have shipped (see Completed, 2026-06-29): (1) the federal Alternative Minimum Tax (AMT) — exemption, phase-out, and the 26%/28% rate schedule; (2) expand state coverage beyond the four modeled states (CA/NY/GA/IL) toward all taxing states, and add the state-specific retirement-income exclusions currently documented as out of scope (Illinois's full exclusion, Georgia's age-based exclusion, New York's $20k pension exclusion).
 
-**Why:** The federal engine now taxes the full household income (ordinary + qualified preferential + taxable SS), but ignores state tax, so it still understates total liability for households in taxing states.
+**Why:** The cash-flow estimate now covers federal income tax (full-income basis + preferential rates + NIIT) and state income tax for the demo-relevant states, but AMT can bind for high-deduction households, and a retiree in IL/GA/NY is currently overstated because the state engine ignores their retirement-income exclusions.
 
-**Cons:** State brackets for 50 states are a large annual-maintenance surface — best as its own PR with the same isolate-and-cite discipline as `tax_tables.py`. NIIT/AMT are narrower add-ons.
+**Cons:** State brackets for the remaining ~37 taxing states are a large annual-maintenance surface — keep the isolate-and-cite discipline in `state_tax_tables.py` (one cited source per year). AMT is a narrower, self-contained add-on. Retirement-income exclusions need the cash-flow basis to separate retirement-ordinary income from wage-ordinary income at the state level.
 
-**Depends on:** Federal tax engine + full-income basis + `households.state` (all shipped 2026-06-25).
+**Depends on:** State tax engine + NIIT (shipped 2026-06-29); the existing `state_tax.py` / `state_tax_tables.py` modules extend directly.
 
 ---
 
@@ -63,6 +63,27 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### State income tax estimate + federal NIIT (Tax-estimate engine)
+
+**Completed:** v0.23.14.0 (2026-06-29, branch `feat/state-tax-estimate`) — The Cash
+Flow report now estimates state income tax and the §1411 net investment income tax
+alongside the federal income tax. New `app/services/state_tax.py` +
+`state_tax_tables.py` mirror the federal `tax.py` / `tax_tables.py` split: data-only,
+year-keyed, cited (Tax Foundation 2025 via `/browse`), pure functions returning a
+`StateTaxEstimate`. `estimate_state_tax()` is keyed off `households.state` and always
+returns an estimate — a modeled taxing state (CA/NY/GA/IL, full brackets + standard
+deduction), a real $0 for the eight no-income-tax states, or `modeled=False` + note
+for any other state. NIIT (3.8% on the lesser of net investment income and MAGI over
+a statutory threshold) is added to the federal engine as `net_investment_income_tax()`
+and a new field on `FederalTaxEstimate`, netted from after-tax income but kept out of
+the income-tax effective rate. `report.py` derives both estimates from one household
+fetch and surfaces them on `CashFlowReport`; the Cash Flow page renders a state-tax
+line and a NIIT line. No migration (`state` / `filing_status` exist since 0018).
+Documented simplifications: states tax qualified income as ordinary, SS excluded,
+HoH/MFS → single schedule, QSS → MFJ, retirement-income exclusions not applied.
+Remaining (see open item): AMT + broader state coverage + retirement-income exclusions.
+Tests: 13 state-engine unit + 5 NIIT engine unit + 1 report integration + 2 frontend.
 
 ### DESIGN.md — HearthLedger design system document
 
