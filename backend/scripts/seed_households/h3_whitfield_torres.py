@@ -777,7 +777,67 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             tx(chase_sap.id, clamp_day(y, m, 15), -D("95.00"), "Chevron", cat["gas_fuel"])
         )
 
-        add(*plat_txns, *gold_txns, *chase_txns)
+        # ── Car maintenance (CA registration + service, two cars incl. Tesla) ──
+        if m == 11:
+            add(
+                tx(
+                    jpm_chk.id,
+                    clamp_day(y, m, 12),
+                    -D("920.00"),
+                    "CA DMV — Registration Renewal (2 vehicles)",
+                    cat["car_maintenance"],
+                )
+            )
+        if m in (3, 9):
+            add(
+                tx(
+                    jpm_chk.id,
+                    clamp_day(y, m, rng.randint(8, 22)),
+                    -jitter(D("650.00"), rng, 0.30),
+                    "Tesla Service Center / Hansel Auto",
+                    cat["car_maintenance"],
+                )
+            )
+
+        # ── Out-of-pocket healthcare (concierge MD, copays, dental, vision, Rx) ─
+        add(
+            tx(
+                jpm_chk.id,
+                clamp_day(y, m, 6),
+                -D("400.00"),
+                "Concierge MD — Brentwood",
+                cat["doctor_medical"],
+            )
+        )
+        add(
+            tx(
+                jpm_chk.id,
+                clamp_day(y, m, 9),
+                -jitter(D("120.00"), rng, 0.35),
+                "CVS Pharmacy — Brentwood",
+                cat["pharmacy"],
+            )
+        )
+        if m in (4, 10):  # semiannual family cleanings
+            add(
+                tx(
+                    jpm_chk.id,
+                    clamp_day(y, m, 11),
+                    -D("680.00"),
+                    "Brentwood Dental Studio — Family",
+                    cat["dental"],
+                )
+            )
+        if m == 9:  # annual family exams + lenses
+            add(
+                tx(
+                    jpm_chk.id,
+                    clamp_day(y, m, 17),
+                    -D("780.00"),
+                    "LA Vision — Family Exams & Lenses",
+                    cat["vision"],
+                )
+            )
 
         # Seasonal
         if m == 1:
@@ -829,6 +889,10 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
                     cat["home_maintenance"],
                 )
             )
+
+        # Record all card charges (incl. seasonal travel/gifts added above) before
+        # computing statement payments, so each payment matches actual spend.
+        add(*plat_txns, *gold_txns, *chase_txns)
 
         # ── CC payments ───────────────────────────────────────────────────────
         plat_total = sum(abs(t.amount) for t in plat_txns)
@@ -1409,6 +1473,15 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("home_maintenance", D("375.00"), date(2024, 1, 1)),
         ("pet_care", D("300.00"), date(2024, 1, 1)),
         ("tuition", D("1200.00"), date(2024, 1, 1)),
+        # car_maintenance: $920 reg + 2 x ~$650 service ≈ $2,220/yr / 12 ≈ $185/mo avg
+        ("car_maintenance", D("185.00"), date(2024, 1, 1)),
+        # doctor_medical: $400/mo concierge retainer
+        ("doctor_medical", D("400.00"), date(2024, 1, 1)),
+        ("pharmacy", D("120.00"), date(2024, 1, 1)),
+        # dental: 2 x $680 (Apr/Oct) = $1,360/yr / 12 ≈ $113/mo avg
+        ("dental", D("115.00"), date(2024, 1, 1)),
+        # vision: $780/yr (Sep) / 12 ≈ $65/mo avg
+        ("vision", D("65.00"), date(2024, 1, 1)),
     ]:
         session.add(make_budget(hid, cat[slug], amount, eff_from))
 

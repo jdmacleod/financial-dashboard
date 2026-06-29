@@ -358,6 +358,82 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             )
         )
 
+        # ── Auto insurance (two paid-off cars — cash cost only, no financing) ─
+        add(
+            tx(
+                checking.id,
+                clamp_day(y, m, 4),
+                -D("265.00"),
+                "Chubb Masterpiece Auto — Bob & Maggie",
+                cat["auto_insurance"],
+            )
+        )
+
+        # ── Car maintenance & FL registration (lumpy) ────────────────────────
+        # Annual two-vehicle registration (February); routine service quarterly.
+        if m == 2:
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, 18),
+                    -D("452.00"),
+                    "FL DMV — Registration Renewal (2 vehicles)",
+                    cat["car_maintenance"],
+                )
+            )
+        if m in (1, 4, 7, 10):
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, 22),
+                    -jitter_d(D("450.00"), rng, pct=0.30),
+                    "Sarasota Lexus Service",
+                    cat["car_maintenance"],
+                )
+            )
+
+        # ── Out-of-pocket healthcare (Medicare gaps: Rx, copays, dental, vision) ─
+        add(
+            tx(
+                checking.id,
+                clamp_day(y, m, 9),
+                -jitter_d(D("85.00"), rng, pct=0.35),
+                "CVS Pharmacy — Sarasota",
+                cat["pharmacy"],
+            )
+        )
+        if rng.random() < 0.6:
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, rng.randint(6, 24)),
+                    -jitter_d(D("170.00"), rng, pct=0.40),
+                    "Sarasota Memorial Physicians",
+                    cat["doctor_medical"],
+                )
+            )
+        # Dental cleanings semiannual (Mar/Sep) for both; vision exam + lenses annually (May).
+        if m in (3, 9):
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, 12),
+                    -D("560.00"),
+                    "Sarasota Bay Dental — Cleanings (2)",
+                    cat["dental"],
+                )
+            )
+        if m == 5:
+            add(
+                tx(
+                    checking.id,
+                    clamp_day(y, m, 16),
+                    -D("640.00"),
+                    "Sarasota Eye Associates — Exams & Lenses",
+                    cat["vision"],
+                )
+            )
+
         # ── Investment advisory fee (quarterly, end of Q) ─────────────────────
         if m in (3, 6, 9, 12):
             advisory_q = D("6500.00") if m in (3, 9) else D("7000.00")
@@ -826,7 +902,7 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
             0,
             2,
         )
-        sv("gas_fuel", ["Shell Sarasota", "Costco Gas", "BP"], 120, 180, 3, 5)
+        sv("gas_fuel", ["Shell Sarasota", "Costco Gas", "BP"], 140, 220, 3, 5)
         sv(
             "fitness",
             ["Gold's Gym Sarasota", "Life Time Fitness", "Paddle Sarasota"],
@@ -1264,7 +1340,18 @@ async def seed(session: AsyncSession, rng: random.Random) -> dict:
         ("groceries", D("550.00"), date(2024, 1, 1)),
         ("restaurants", D("2500.00"), date(2024, 1, 1)),
         # Transportation
-        ("gas_fuel", D("150.00"), date(2024, 1, 1)),
+        ("gas_fuel", D("180.00"), date(2024, 1, 1)),
+        ("auto_insurance", D("265.00"), date(2024, 1, 1)),
+        # car_maintenance: $452 reg + ~$450/qtr service ≈ $2,252/yr / 12 ≈ $188/mo avg
+        ("car_maintenance", D("190.00"), date(2024, 1, 1)),
+        # Healthcare out-of-pocket (Medicare gaps)
+        ("pharmacy", D("85.00"), date(2024, 1, 1)),
+        # doctor_medical: ~60% of months x ~$170 ≈ $100/mo avg
+        ("doctor_medical", D("100.00"), date(2024, 1, 1)),
+        # dental: 2 x $560 (Mar/Sep) = $1,120/yr / 12 ≈ $93/mo avg
+        ("dental", D("95.00"), date(2024, 1, 1)),
+        # vision: $640/yr (May) / 12 ≈ $53/mo avg
+        ("vision", D("55.00"), date(2024, 1, 1)),
         # Lifestyle
         ("travel", D("2000.00"), date(2024, 1, 1)),
         ("hobbies", D("600.00"), date(2024, 1, 1)),
