@@ -49,6 +49,19 @@ export default function ReportSpending() {
     return map
   }, [categories])
 
+  const categoryNameMap = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const c of categories ?? []) {
+      map.set(c.id, c.name)
+    }
+    return map
+  }, [categories])
+
+  // When drilled in, the report's `categories` are the children of the parent,
+  // so the parent's own name isn't in the response — resolve it from the
+  // categories list. Fall back to a neutral label until that query resolves.
+  const drillName = drillCategory ? (categoryNameMap.get(drillCategory) ?? "Subcategory") : null
+
   const pieData = (data?.categories ?? [])
     .filter((c) => Number(c.amount) !== 0)
     .map((c) => ({
@@ -63,12 +76,18 @@ export default function ReportSpending() {
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-semibold">Spending by Category</h1>
         {drillCategory && (
-          <button
-            onClick={() => setDrillCategory(null)}
-            className="text-sm text-indigo-600 hover:underline"
-          >
-            ← All categories
-          </button>
+          <>
+            <span className="text-gray-300" aria-hidden="true">
+              ›
+            </span>
+            <span className="text-2xl font-semibold text-indigo-700">{drillName}</span>
+            <button
+              onClick={() => setDrillCategory(null)}
+              className="text-sm text-indigo-600 hover:underline"
+            >
+              ← All categories
+            </button>
+          </>
         )}
       </div>
 
@@ -84,10 +103,10 @@ export default function ReportSpending() {
         ).map((p) => (
           <button
             key={p.key}
-            onClick={() => {
-              setPreset(p.key)
-              setDrillCategory(null)
-            }}
+            // Keep any active drill-down when the time window changes; the query
+            // is keyed on [range, drillCategory] so it refetches the drilled
+            // subcategories for the new window. "← All categories" exits the drill.
+            onClick={() => setPreset(p.key)}
             className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
               preset === p.key
                 ? "bg-indigo-600 border-indigo-600 text-white"
@@ -134,7 +153,7 @@ export default function ReportSpending() {
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
-              Total spending
+              {drillCategory ? `Total spending: ${drillName}` : "Total spending"}
             </p>
             {pieData.length > 0 ? (
               // The Breakdown panel on the right is the legend (color dot + name +
