@@ -393,11 +393,24 @@ export interface FederalTaxEstimate {
   taxable_income: string
   federal_tax: string
   qualified_tax: string
+  net_investment_income_tax: string
   after_tax_income: string
   effective_rate: number
   marginal_rate: number
   roth_conversion_room: string | null
   next_bracket_rate: number | null
+}
+
+export interface StateTaxEstimate {
+  state: string
+  tax_year: number
+  filing_status: FilingStatus
+  modeled: boolean
+  taxable_income: string
+  state_tax: string
+  effective_rate: number
+  marginal_rate: number
+  note: string | null
 }
 
 export interface SocialSecurityClaimingOption {
@@ -427,6 +440,7 @@ export interface CashFlowReport {
   totals: CashFlowPeriod
   retirement_income: RetirementIncomeBreakdown
   federal_tax_estimate: FederalTaxEstimate | null
+  state_tax_estimate: StateTaxEstimate | null
 }
 
 export interface SpendingCategoryItem {
