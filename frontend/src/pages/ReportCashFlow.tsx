@@ -511,6 +511,15 @@ export default function ReportCashFlow() {
                   (3.8% on investment income above the threshold).
                 </div>
               )}
+              {Number(data.federal_tax_estimate.alternative_minimum_tax) > 0 && (
+                <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--text2)" }}>
+                  Incl. alternative minimum tax (AMT){" "}
+                  <strong style={{ color: "var(--liab)" }}>
+                    {formatCurrency(data.federal_tax_estimate.alternative_minimum_tax)}
+                  </strong>{" "}
+                  (the amount the parallel AMT exceeds the regular tax).
+                </div>
+              )}
               {data.state_tax_estimate &&
                 (data.state_tax_estimate.modeled &&
                 Number(data.state_tax_estimate.state_tax) > 0 ? (

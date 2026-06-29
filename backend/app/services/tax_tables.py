@@ -13,10 +13,11 @@ Sources (verified 2026-06-25):
   - Social Security provisional-income base amounts: 26 U.S.C. §86 (statutory,
     NOT inflation-indexed; unchanged since 1993).
 
-Scope (v1): ordinary-income brackets, the standard deduction, and the preferential
-long-term capital-gains / qualified-dividend rate schedule (0/15/20%). AMT, NIIT,
-additional Medicare tax, itemized deductions, credits, the senior add-on deduction,
-and state income tax are out of scope and tracked separately.
+Scope (v1): ordinary-income brackets, the standard deduction, the preferential
+long-term capital-gains / qualified-dividend rate schedule (0/15/20%), the §1411
+net investment income tax, and the §55 alternative minimum tax. Additional
+Medicare tax, itemized deductions, credits, and the senior add-on deduction are
+out of scope; state income tax lives in state_tax_tables.
 
 Capital-gains rate breakpoints (2025 = IRS Rev. Proc. 2024-40, 2026 = Rev. Proc.
 2025-32) verified 2026-06-25 via published IRS / Tax Foundation figures.
@@ -188,6 +189,72 @@ NIIT_THRESHOLD: dict[str, Decimal] = {
     QSS: Decimal("250000"),
     MFJ: Decimal("250000"),
     MFS: Decimal("125000"),
+}
+
+# §55 Alternative Minimum Tax. A parallel tax: tax is computed twice (regular and
+# AMT) and the taxpayer pays the higher. The 26%/28% rates are statutory; the
+# exemption, its phaseout threshold, and the 28% rate threshold are inflation-
+# indexed and year-keyed. The OBBBA cut the 2026 phaseout thresholds back to 2018
+# levels and accelerated the phaseout rate from 25% to 50%.
+# Sources (verified 2026-06-29): 2025 = IRS Rev. Proc. 2024-40; 2026 = IRS Rev.
+# Proc. 2025-32 (both via Tax Foundation's annual federal-brackets page). MFS
+# uses half the MFJ exemption/phaseout threshold and half the 28% threshold.
+AMT_RATES = (Decimal("0.26"), Decimal("0.28"))
+
+AMT_EXEMPTION: dict[int, dict[str, Decimal]] = {
+    2025: {
+        SINGLE: Decimal("88100"),
+        HOH: Decimal("88100"),
+        QSS: Decimal("137000"),
+        MFJ: Decimal("137000"),
+        MFS: Decimal("68500"),
+    },
+    2026: {
+        SINGLE: Decimal("90100"),
+        HOH: Decimal("90100"),
+        QSS: Decimal("140200"),
+        MFJ: Decimal("140200"),
+        MFS: Decimal("70100"),
+    },
+}
+
+# AMTI level at which the exemption begins to phase out (lost at AMT_PHASEOUT_RATE
+# per dollar above it).
+AMT_PHASEOUT_THRESHOLD: dict[int, dict[str, Decimal]] = {
+    2025: {
+        SINGLE: Decimal("626350"),
+        HOH: Decimal("626350"),
+        QSS: Decimal("1252700"),
+        MFJ: Decimal("1252700"),
+        MFS: Decimal("626350"),
+    },
+    2026: {
+        SINGLE: Decimal("500000"),
+        HOH: Decimal("500000"),
+        QSS: Decimal("1000000"),
+        MFJ: Decimal("1000000"),
+        MFS: Decimal("500000"),
+    },
+}
+
+AMT_PHASEOUT_RATE: dict[int, Decimal] = {2025: Decimal("0.25"), 2026: Decimal("0.50")}
+
+# AMT base (AMTI minus exemption) above which the 28% rate replaces 26%.
+AMT_28_THRESHOLD: dict[int, dict[str, Decimal]] = {
+    2025: {
+        SINGLE: Decimal("239100"),
+        HOH: Decimal("239100"),
+        QSS: Decimal("239100"),
+        MFJ: Decimal("239100"),
+        MFS: Decimal("119550"),
+    },
+    2026: {
+        SINGLE: Decimal("244500"),
+        HOH: Decimal("244500"),
+        QSS: Decimal("244500"),
+        MFJ: Decimal("244500"),
+        MFS: Decimal("122250"),
+    },
 }
 
 # §86 base amounts (base1 -> up to 50% taxable, base2 -> up to 85% taxable).

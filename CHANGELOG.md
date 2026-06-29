@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.15.0] - 2026-06-29
+
+### Added
+
+- **The tax estimate now includes the federal Alternative Minimum Tax (AMT).** The Cash Flow report's federal estimate gained an AMT calculation: it computes the parallel tentative minimum tax (26%/28% rates over an income-based exemption that phases out for high earners) and adds the amount, if any, by which it exceeds your regular tax. Long-term capital gains and qualified dividends keep their preferential rates under the AMT. The 2025 and 2026 figures are the published IRS amounts, including the One Big Beautiful Bill Act change that cut the 2026 exemption phaseout thresholds and doubled the phaseout rate to 50%. In practice this line stays hidden for most households: the report only adjusts income by adding the standard deduction back, and against today's high exemptions that alone never triggers the AMT. The AMT applies in real life through preference items HearthLedger does not track (state-tax add-backs, incentive-stock-option exercises, private-activity-bond interest), so the estimate is honest about showing $0 until such an item is present.
+
+### For contributors
+
+- New pure `tax.alternative_minimum_tax()` (§55): tentative minimum tax at the 26%/28% rates over the year-keyed exemption with its phaseout, owing `max(0, TMT - regular_tax)`; qualified income keeps the preferential schedule on the ordinary AMT base. Cited 2025/2026 constants (`AMT_EXEMPTION`, `AMT_PHASEOUT_THRESHOLD`, `AMT_PHASEOUT_RATE`, `AMT_28_THRESHOLD`) added to `tax_tables.py` from IRS Rev. Proc. 2024-40 / 2025-32 via Tax Foundation, including the OBBBA 2026 phaseout change (25% to 50%). `estimate_federal_tax()` gained an optional `amt_preference_income` input (default 0, so the report path is unchanged) and a new `alternative_minimum_tax` field on `FederalTaxEstimate`, netted out of after-tax income. The cash-flow panel renders an AMT line gated on `> 0` (like NIIT). No migration. Tests: 4 engine unit (binding, 2025 phaseout, 2026 OBBBA 50% phaseout, no-bind) + 2 integration (with/without preference) + AMT-line assertions on the cash-flow panel test.
+
 ## [0.23.14.0] - 2026-06-29
 
 ### Added

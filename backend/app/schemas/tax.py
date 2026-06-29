@@ -11,7 +11,8 @@ class FederalTaxEstimate(BaseModel):
     An estimate, not a return: ordinary-income brackets + standard deduction +
     Social Security provisional-income taxation + the preferential long-term
     capital-gains / qualified-dividend schedule, plus the §1411 net investment
-    income tax (NIIT). No AMT, credits, itemized deductions, or state income tax.
+    income tax (NIIT) and the §55 alternative minimum tax (AMT). No credits,
+    itemized deductions, or state income tax.
     """
 
     tax_year: int
@@ -29,6 +30,10 @@ class FederalTaxEstimate(BaseModel):
     # §1411 net investment income tax: 3.8% on the lesser of net investment income
     # (here, qualified income) and the excess of MAGI over the statutory threshold.
     net_investment_income_tax: Decimal = Decimal("0")
+    # §55 alternative minimum tax: the amount by which the tentative minimum tax
+    # exceeds the regular tax. Effectively $0 unless AMT preference income is
+    # supplied (the report does not track preference items), so it is usually 0.
+    alternative_minimum_tax: Decimal = Decimal("0")
     after_tax_income: Decimal
     effective_rate: float
     marginal_rate: float

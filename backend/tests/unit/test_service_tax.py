@@ -12,6 +12,7 @@ import pytest
 
 from app.services import tax_tables
 from app.services.tax import (
+    alternative_minimum_tax,
     bracket_headroom,
     estimate_federal_tax,
     federal_tax_for,
@@ -268,6 +269,81 @@ def test_estimate_no_niit_without_investment_income() -> None:
     assert est.net_investment_income_tax == Decimal("0.00")
     assert est.federal_tax == Decimal("7023.00")
     assert est.after_tax_income == Decimal("92977.00")
+
+
+def test_amt_binds_when_tmt_exceeds_regular_tax() -> None:
+    # Single 2025, AMTI 450,000 (income + preference add-backs), regular tax 52,023.
+    #   exemption 88,100 (no phaseout below 626,350); AMT base = 361,900.
+    #   TMT = 26%*239,100 + 28%*(361,900-239,100) = 62,166 + 34,384 = 96,550.
+    #   AMT owed = 96,550 - 52,023 = 44,527.
+    assert alternative_minimum_tax(
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        amti=Decimal("450000"),
+        regular_tax=Decimal("52023"),
+    ) == Decimal("44527.00")
+
+
+def test_amt_exemption_phases_out_2025() -> None:
+    # Single 2025, AMTI 800,000 (over the 626,350 phaseout start).
+    #   exemption = 88,100 - 25%*(800,000-626,350) = 44,687.50; base = 755,312.50.
+    #   TMT = 26%*239,100 + 28%*(755,312.50-239,100) = 62,166 + 144,539.50 = 206,705.50.
+    assert alternative_minimum_tax(
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        amti=Decimal("800000"),
+        regular_tax=Decimal("0"),
+    ) == Decimal("206705.50")
+
+
+def test_amt_2026_obbba_50pct_phaseout() -> None:
+    # Single 2026: phaseout starts at 500,000 and runs at 50% (the OBBBA change).
+    #   AMTI 700,000 -> exemption = max(90,100 - 50%*200,000, 0) = 0; base = 700,000.
+    #   TMT = 26%*244,500 + 28%*(700,000-244,500) = 63,570 + 127,540 = 191,110.
+    assert alternative_minimum_tax(
+        tax_year=2026,
+        filing_status=tax_tables.SINGLE,
+        amti=Decimal("700000"),
+        regular_tax=Decimal("0"),
+    ) == Decimal("191110.00")
+
+
+def test_amt_zero_when_regular_tax_higher() -> None:
+    # No preference items: AMTI below/near the exemption -> TMT under regular tax.
+    assert alternative_minimum_tax(
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        amti=Decimal("250000"),
+        regular_tax=Decimal("52023"),
+    ) == Decimal("0")
+
+
+def test_estimate_includes_amt_with_preference_income() -> None:
+    # Single 2025: 250,000 ordinary + 200,000 AMT preference add-backs.
+    #   regular tax on 234,250 taxable = 52,023; AMTI = 450,000 -> AMT = 44,527.
+    est = estimate_federal_tax(
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        ordinary_income=Decimal("250000"),
+        social_security=Decimal("0"),
+        amt_preference_income=Decimal("200000"),
+    )
+    assert est.federal_tax == Decimal("52023.00")
+    assert est.alternative_minimum_tax == Decimal("44527.00")
+    # After-tax nets the regular tax and the AMT surtax (no NIIT here).
+    assert est.after_tax_income == Decimal("153450.00")
+
+
+def test_estimate_no_amt_without_preference_income() -> None:
+    # Same income, no preference add-backs: the standard-deduction add-back alone
+    # never lifts TMT above the regular tax, so AMT is 0.
+    est = estimate_federal_tax(
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        ordinary_income=Decimal("250000"),
+        social_security=Decimal("0"),
+    )
+    assert est.alternative_minimum_tax == Decimal("0.00")
 
 
 def test_qss_uses_mfj_schedule_but_single_ss_base() -> None:
