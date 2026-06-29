@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:wght@300;400;500;600;700&family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;}
+  :root{
+    --bg:#0a1712; --sidebar:#07120d; --card:#0f211a;
+    --bd:rgba(255,255,255,.06); --bd2:rgba(255,255,255,.1); --track:rgba(255,255,255,.07); --grid:rgba(255,255,255,.06);
+    --text:#f1f5f1; --text2:#e7ece7; --text3:#dfe7e1; --text-soft:#cdd4cb; --strong:#f3eede;
+    --muted:#9fb3a8; --label:#7fa392; --faint:#6f897c; --axis:#5d7068;
+    --up:#46d39a; --liab:#e0b48a;
+    --grad:linear-gradient(150deg,#123227,#0d2018); --grad160:linear-gradient(160deg,#123227,#0d2018); --accent-bd:rgba(70,184,136,.28);
+    --pgrad:linear-gradient(160deg,#15324a,#0e2333); --ptext:#f3f6fb; --pmuted:#9fb3c9; --plabel:#8bb0d6; --pbd:rgba(108,151,196,.28);
+    --photo:repeating-linear-gradient(135deg,#16332760,#16332760 10px,#10271d60 10px,#10271d60 20px);
+    --nav-text:#7b958a; --nav-active-text:#eafff5; --nav-active-bg:rgba(70,184,136,.14);
+    --toggle-on-bg:#46b888; --toggle-on-text:#07120d; --toggle-off-bg:rgba(255,255,255,.06); --toggle-off-text:#9fb3a8;
+    --row-active:rgba(70,184,136,.12);
+  }
+  :root[data-theme="light"]{
+    --bg:#eceee7; --sidebar:#e6eae1; --card:#ffffff;
+    --bd:rgba(20,40,30,.10); --bd2:rgba(20,40,30,.16); --track:rgba(20,40,30,.08); --grid:rgba(20,40,30,.09);
+    --text:#16271e; --text2:#23362c; --text3:#2b3f34; --text-soft:#3a4d42; --strong:#10201a;
+    --muted:#5f7268; --label:#5c7567; --faint:#7d8c83; --axis:#94a39a;
+    --up:#1c8a54; --liab:#b06a32;
+    --grad:linear-gradient(150deg,#e8f1ec,#f7faf5); --grad160:linear-gradient(160deg,#e8f1ec,#f7faf5); --accent-bd:rgba(47,143,99,.32);
+    --pgrad:linear-gradient(160deg,#e9eef6,#f4f7fb); --ptext:#18324a; --pmuted:#51698a; --plabel:#3f6695; --pbd:rgba(79,110,158,.30);
+    --photo:repeating-linear-gradient(135deg,#e2e8df,#e2e8df 10px,#eef1ea 10px,#eef1ea 20px);
+    --nav-text:#5f7268; --nav-active-text:#10271d; --nav-active-bg:rgba(47,143,99,.15);
+    --toggle-on-bg:#2f9266; --toggle-on-text:#ffffff; --toggle-off-bg:rgba(20,40,30,.07); --toggle-off-text:#5f7268;
+    --row-active:rgba(47,143,99,.13);
+  }
+  html,body{margin:0;padding:0;background:var(--bg);}
+</style>
+</helmet>
+
+<div style="font-family:'Archivo',sans-serif;background:var(--bg);color:var(--text3);min-height:100vh;display:flex;font-variant-numeric:tabular-nums;">
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <div style="flex:none;width:214px;background:var(--sidebar);border-right:1px solid var(--bd);display:flex;flex-direction:column;padding:22px 16px;">
+    <div style="display:flex;align-items:center;gap:11px;padding:0 6px 22px;border-bottom:1px solid var(--bd);">
+      <div style="width:32px;height:32px;border:1.5px solid #46b888;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Spectral',serif;color:#46b888;font-size:16px;">W</div>
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text);line-height:1.1;">Whitfield</div>
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);">Wealth ledger</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:4px;margin-top:18px;">
+      <div onClick="{{ setOverview }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;background:{{ ovBg }};color:{{ ovCol }};font-size:13.5px;font-weight:500;">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="2" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="2" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="2" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/><rect x="11" y="11" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>
+        Overview
+      </div>
+      <div onClick="{{ setAccounts }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;background:{{ acBg }};color:{{ acCol }};font-size:13.5px;font-weight:500;">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><line x1="3" y1="5" x2="17" y2="5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="3" y1="10" x2="17" y2="10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="3" y1="15" x2="12" y2="15" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Accounts
+      </div>
+      <div onClick="{{ setInvest }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;background:{{ inBg }};color:{{ inCol }};font-size:13.5px;font-weight:500;">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><polyline points="3,14 8,9 11,12 17,5" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/><polyline points="13,5 17,5 17,9" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Investments
+      </div>
+      <div onClick="{{ setRetire }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;background:{{ rtBg }};color:{{ rtCol }};font-size:13.5px;font-weight:500;">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.4" stroke="currentColor" stroke-width="1.6"/><line x1="10" y1="10" x2="10" y2="5.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="10" y1="10" x2="13.4" y2="11.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Retirement
+      </div>
+      <div onClick="{{ setProperty }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;background:{{ prBg }};color:{{ prCol }};font-size:13.5px;font-weight:500;">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M3 9 L10 3 L17 9 L17 17 L3 17 Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>
+        Real estate
+      </div>
+      <div onClick="{{ setCash }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;cursor:pointer;background:{{ caBg }};color:{{ caCol }};font-size:13.5px;font-weight:500;">
+        <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7.2" stroke="currentColor" stroke-width="1.6"/><line x1="10" y1="6" x2="10" y2="14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><line x1="7.5" y1="11.5" x2="12.5" y2="11.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        Cash flow
+      </div>
+    </div>
+
+    <div style="margin-top:auto;padding:14px 12px 4px;border-top:1px solid var(--bd);">
+      <div style="font-size:11px;color:var(--faint);letter-spacing:.04em;">Net worth</div>
+      <div style="font-size:20px;font-weight:600;color:var(--text);margin-top:3px;">{{ kpiNetWorth }}</div>
+      <div style="font-size:11px;color:var(--up);margin-top:2px;">▲ +14.6% YoY</div>
+    </div>
+  </div>
+
+  <!-- ===================== MAIN ===================== -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+
+    <!-- header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:20px 30px;border-bottom:1px solid var(--bd);">
+      <div>
+        <div style="font-size:19px;font-weight:600;color:var(--text);">{{ household }}</div>
+        <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-top:2px;">{{ asOf }} · 22 accounts linked</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        <div style="display:flex;gap:7px;">
+          <span onClick="{{ setYTD }}" style="cursor:pointer;font-size:12px;padding:7px 16px;border-radius:6px;background:{{ ytdBg }};color:{{ ytdCol }};font-weight:600;">YTD</span>
+          <span onClick="{{ set1Y }}" style="cursor:pointer;font-size:12px;padding:7px 16px;border-radius:6px;background:{{ y1Bg }};color:{{ y1Col }};font-weight:600;">1Y</span>
+          <span onClick="{{ setAll }}" style="cursor:pointer;font-size:12px;padding:7px 16px;border-radius:6px;background:{{ allBg }};color:{{ allCol }};font-weight:600;">All</span>
+        </div>
+        <div style="width:1px;height:28px;background:var(--bd2);"></div>
+        <div style="position:relative;">
+          <div onClick="{{ toggleMenu }}" style="display:flex;align-items:center;gap:11px;cursor:pointer;padding:5px 12px 5px 5px;border-radius:30px;border:1px solid var(--bd2);">
+            <div style="width:34px;height:34px;border-radius:50%;background:{{ me.roleSoft }};border:1.5px solid {{ me.accent }};display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:{{ me.accent }};flex:none;">{{ me.initials }}</div>
+            <div style="line-height:1.25;">
+              <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;">{{ me.name }}</div>
+              <div style="font-size:11px;color:{{ me.roleColor }};">{{ me.role }} · {{ me.roleDesc }}</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style="margin-left:2px;flex:none;"><path d="M6 8 L10 12 L14 8" style="stroke:var(--faint)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+
+          <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ closeMenu }}" style="position:fixed;inset:0;z-index:40;"></div>
+            <div style="position:absolute;right:0;top:calc(100% + 10px);width:316px;background:var(--card);border:1px solid var(--bd2);border-radius:14px;box-shadow:0 24px 60px rgba(0,0,0,.55);z-index:41;overflow:hidden;">
+              <div style="padding:18px;border-bottom:1px solid var(--bd);display:flex;gap:13px;align-items:flex-start;">
+                <div style="width:44px;height:44px;border-radius:50%;background:{{ me.roleSoft }};border:1.5px solid {{ me.accent }};display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;color:{{ me.accent }};flex:none;">{{ me.initials }}</div>
+                <div style="min-width:0;">
+                  <div style="font-size:14px;font-weight:600;color:var(--text);">{{ me.name }}</div>
+                  <div style="font-size:11.5px;color:var(--label);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ me.email }}</div>
+                  <div style="display:inline-block;margin-top:7px;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:{{ me.roleColor }};background:{{ me.roleSoft }};padding:3px 9px;border-radius:5px;">{{ me.role }} · {{ me.roleDesc }}</div>
+                </div>
+              </div>
+              <div style="padding:10px 12px 4px;">
+                <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:4px 6px 8px;">Switch member</div>
+                <sc-for list="{{ members }}" as="m" hint-placeholder-count="4">
+                  <div onClick="{{ m.onSelect }}" style="display:flex;align-items:center;gap:11px;padding:8px;border-radius:9px;cursor:pointer;border:1px solid {{ m.activeRing }};" style-hover="background:var(--bd);">
+                    <div style="width:30px;height:30px;border-radius:50%;background:{{ m.roleSoft }};border:1px solid {{ m.accent }};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:{{ m.accent }};flex:none;">{{ m.initials }}</div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:12.5px;color:var(--text2);white-space:nowrap;">{{ m.name }}</div>
+                      <div style="font-size:10.5px;color:{{ m.roleColor }};">{{ m.role }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="padding:8px 12px;border-top:1px solid var(--bd);margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
+                <span style="font-size:12.5px;color:var(--text3);padding-left:8px;">Appearance</span>
+                <div style="display:flex;gap:3px;background:var(--toggle-off-bg);padding:3px;border-radius:9px;">
+                  <span onClick="{{ setDark }}" style="cursor:pointer;font-size:11.5px;font-weight:600;padding:5px 13px;border-radius:6px;background:{{ darkBg }};color:{{ darkCol }};">Dark</span>
+                  <span onClick="{{ setLight }}" style="cursor:pointer;font-size:11.5px;font-weight:600;padding:5px 13px;border-radius:6px;background:{{ lightBg }};color:{{ lightCol }};">Light</span>
+                </div>
+              </div>
+              <div style="padding:6px 12px 12px;border-top:1px solid var(--bd);">
+                <div onClick="{{ openSettings }}" style="display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text3);" style-hover="background:var(--bd);">
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><line x1="3" y1="6.5" x2="17" y2="6.5" stroke="currentColor" stroke-width="1.5"/><circle cx="13" cy="6.5" r="2.4" style="fill:var(--card)" stroke="currentColor" stroke-width="1.5"/><line x1="3" y1="13.5" x2="17" y2="13.5" stroke="currentColor" stroke-width="1.5"/><circle cx="7" cy="13.5" r="2.4" style="fill:var(--card)" stroke="currentColor" stroke-width="1.5"/></svg>
+                  Profile &amp; settings
+                </div>
+                <div onClick="{{ openSettings }}" style="display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:8px;cursor:pointer;font-size:13px;color:var(--text3);" style-hover="background:var(--bd);">
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="7.5" cy="8" r="3" stroke="currentColor" stroke-width="1.5"/><circle cx="13.6" cy="9" r="2.3" stroke="currentColor" stroke-width="1.5"/><path d="M2.5 16 C3 13.2 5 12.2 7.5 12.2 C10 12.2 12 13.2 12.5 16" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+                  Members &amp; roles
+                </div>
+                <div style="display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:8px;cursor:pointer;font-size:13px;color:#e0a07a;" style-hover="background:rgba(224,160,122,.08);">
+                  <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><path d="M8 5 L5.2 5 C4.3 5 3.8 5.6 3.8 6.5 L3.8 13.5 C3.8 14.4 4.3 15 5.2 15 L8 15" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M11.5 7 L14.8 10 L11.5 13" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/><line x1="14.4" y1="10" x2="8" y2="10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                  Sign out
+                </div>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1;padding:24px 30px 40px;">
+
+      <!-- ============ OVERVIEW ============ -->
+      <sc-if value="{{ isOverview }}" hint-placeholder-val="{{ true }}">
+      <div>
+        <!-- KPI row -->
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+          <div style="background:var(--grad);border:1px solid var(--accent-bd);border-radius:10px;padding:17px;">
+            <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Net worth</div>
+            <div style="font-size:26px;font-weight:600;color:var(--text);margin-top:8px;">{{ kpiNetWorth }}</div>
+            <div style="font-size:12px;color:var(--up);margin-top:4px;">▲ 14.6%</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:17px;">
+            <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Assets</div>
+            <div style="font-size:26px;font-weight:600;color:var(--text);margin-top:8px;">{{ kpiAssets }}</div>
+            <div style="font-size:12px;color:var(--label);margin-top:4px;">5 categories</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:17px;">
+            <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Liabilities</div>
+            <div style="font-size:26px;font-weight:600;color:var(--liab);margin-top:8px;">{{ kpiLiab }}</div>
+            <div style="font-size:12px;color:var(--label);margin-top:4px;">4 loans</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:17px;">
+            <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Liquid</div>
+            <div style="font-size:26px;font-weight:600;color:var(--text);margin-top:8px;">{{ kpiLiquid }}</div>
+            <div style="font-size:12px;color:var(--label);margin-top:4px;">cash + bonds</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:17px;">
+            <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Saved / mo</div>
+            <div style="font-size:26px;font-weight:600;color:#d9b96a;margin-top:8px;">$10.9k</div>
+            <div style="font-size:12px;color:var(--up);margin-top:4px;">34% rate</div>
+          </div>
+        </div>
+
+        <!-- trend + donut -->
+        <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:12px;margin-top:12px;">
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:20px 22px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px;">
+              <div style="font-size:14px;font-weight:600;color:var(--text);">Net worth trend</div>
+              <div style="font-size:12px;color:var(--up);">{{ rangeCaption }}</div>
+            </div>
+            <svg viewBox="0 0 1180 240" width="100%" height="210" preserveAspectRatio="none" style="display:block;">
+              <defs><linearGradient id="ov" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(70,184,136,.35)"/><stop offset="1" stop-color="rgba(70,184,136,0)"/></linearGradient></defs>
+              <line x1="20" y1="55" x2="1160" y2="55" style="stroke:var(--grid)" stroke-width="1"/>
+              <line x1="20" y1="125" x2="1160" y2="125" style="stroke:var(--grid)" stroke-width="1"/>
+              <line x1="20" y1="195" x2="1160" y2="195" style="stroke:var(--grid)" stroke-width="1"/>
+              <path d="M20,193.1 L123.6,179.6 L227.3,172.8 L330.9,150.8 L434.5,159.3 L538.2,128.8 L641.8,117 L745.5,105.2 L849.1,90 L952.7,74.7 L1056.4,61.2 L1160,40.9 L1160,210 L20,210 Z" fill="url(#ov)"/>
+              <path d="M20,193.1 L123.6,179.6 L227.3,172.8 L330.9,150.8 L434.5,159.3 L538.2,128.8 L641.8,117 L745.5,105.2 L849.1,90 L952.7,74.7 L1056.4,61.2 L1160,40.9" fill="none" stroke="#46b888" stroke-width="2.5"/>
+              <circle cx="1160" cy="40.9" r="5" fill="#d9f0e4" stroke="#46b888" stroke-width="2"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--axis);margin-top:6px;letter-spacing:.05em;">
+              <span>JUL</span><span>SEP</span><span>NOV</span><span>JAN</span><span>MAR</span><span>MAY</span><span>JUN</span>
+            </div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:20px 22px;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px;">Asset allocation</div>
+            <div style="display:flex;align-items:center;gap:18px;">
+              <div style="position:relative;flex:none;width:138px;height:138px;">
+                <svg viewBox="0 0 180 180" width="138" height="138">
+                  <circle cx="90" cy="90" r="74" fill="none" style="stroke:var(--grid)" stroke-width="15"/>
+                  <sc-for list="{{ allocSegs }}" as="seg" hint-placeholder-count="4">
+                  <circle cx="90" cy="90" r="74" fill="none" stroke="{{ seg.color }}" stroke-width="15" stroke-dasharray="{{ seg.dash }}" stroke-dashoffset="{{ seg.offset }}" transform="rotate(-90 90 90)"></circle>
+                  </sc-for>
+                </svg>
+                <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                  <div style="font-size:17px;font-weight:600;color:var(--text);">{{ allocCenter }}</div>
+                  <div style="font-size:10px;color:var(--label);">assets</div>
+                </div>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:10px;font-size:12.5px;">
+                <sc-for list="{{ allocLegend }}" as="L" hint-placeholder-count="4">
+                <div style="display:flex;align-items:center;gap:8px;"><span style="width:8px;height:8px;border-radius:2px;background:{{ L.color }};"></span><span style="flex:1;">{{ L.label }}</span><span style="color:var(--muted);">{{ L.pct }}</span></div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- bottom: cashflow / liabilities / holdings -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1.1fr;gap:12px;margin-top:12px;">
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 20px;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:14px;">Cash flow · 6mo</div>
+            <svg viewBox="0 0 300 150" width="100%" height="120" style="display:block;">
+              <line x1="8" y1="132" x2="292" y2="132" style="stroke:var(--grid)" stroke-width="1"/>
+              <rect x="20" y="42" width="14" height="90" fill="#46b888" rx="1"/><rect x="36" y="72" width="14" height="60" fill="#3a5d50" rx="1"/>
+              <rect x="68" y="36" width="14" height="96" fill="#46b888" rx="1"/><rect x="84" y="70" width="14" height="62" fill="#3a5d50" rx="1"/>
+              <rect x="116" y="45" width="14" height="87" fill="#46b888" rx="1"/><rect x="132" y="75" width="14" height="57" fill="#3a5d50" rx="1"/>
+              <rect x="164" y="32" width="14" height="100" fill="#46b888" rx="1"/><rect x="180" y="68" width="14" height="64" fill="#3a5d50" rx="1"/>
+              <rect x="212" y="40" width="14" height="92" fill="#46b888" rx="1"/><rect x="228" y="72" width="14" height="60" fill="#3a5d50" rx="1"/>
+              <rect x="260" y="26" width="14" height="106" fill="#46b888" rx="1"/><rect x="276" y="70" width="14" height="62" fill="#3a5d50" rx="1"/>
+            </svg>
+            <div style="display:flex;gap:14px;margin-top:10px;font-size:11px;color:var(--muted);">
+              <span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;background:#46b888;border-radius:2px;"></span>Income $32.4k</span>
+              <span style="display:flex;align-items:center;gap:6px;"><span style="width:8px;height:8px;background:#3a5d50;border-radius:2px;"></span>Spend $21.5k</span>
+            </div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 20px;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:14px;">Liabilities</div>
+            <div style="display:flex;flex-direction:column;gap:11px;">
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;"><span>Primary mortgage</span><span style="color:#e0b48a;">$620k</span></div><div style="height:7px;background:var(--track);border-radius:4px;overflow:hidden;"><div style="width:100%;height:100%;background:#a9743f;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;"><span>Rental mortgage</span><span style="color:#e0b48a;">$210k</span></div><div style="height:7px;background:var(--track);border-radius:4px;overflow:hidden;"><div style="width:34%;height:100%;background:#a9743f;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;"><span>Auto loan</span><span style="color:#e0b48a;">$31k</span></div><div style="height:7px;background:var(--track);border-radius:4px;overflow:hidden;"><div style="width:6%;height:100%;background:#a9743f;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;"><span>Credit cards</span><span style="color:#e0b48a;">$15k</span></div><div style="height:7px;background:var(--track);border-radius:4px;overflow:hidden;"><div style="width:3%;height:100%;background:#a9743f;"></div></div></div>
+            </div>
+            <div style="margin-top:15px;padding-top:12px;border-top:1px solid var(--track);display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Total owed</span><span style="color:#e0b48a;font-weight:600;">$876,300</span></div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 20px;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:12px;">Largest holdings</div>
+            <sc-for list="{{ largest }}" as="h" hint-placeholder-count="6">
+            <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd);font-size:13px;"><span style="color:var(--text-soft);">{{ h.name }}</span><span>{{ h.fm }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ ACCOUNTS ============ -->
+      <sc-if value="{{ isAccounts }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;align-items:start;">
+        <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:8px 0;">
+          <sc-for list="{{ groups }}" as="g" hint-placeholder-count="5">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 22px 8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">
+              <span>{{ g.name }}</span>
+              <span style="display:flex;align-items:center;gap:12px;">{{ g.sub }}<sc-if value="{{ canEdit }}" hint-placeholder-val="{{ false }}"><span onClick="{{ g.onAdd }}" title="Add account" style="cursor:pointer;font-size:16px;line-height:1;color:var(--label);" style-hover="color:#46b888;">+</span></sc-if></span>
+            </div>
+            <sc-for list="{{ g.items }}" as="a" hint-placeholder-count="4">
+              <div onClick="{{ a.onSelect }}" style="display:flex;align-items:center;gap:12px;padding:11px 22px;cursor:pointer;background:{{ a.rowBg }};border-bottom:1px solid var(--bd);">
+                <span style="width:9px;height:9px;border-radius:2px;background:{{ a.dot }};flex:none;"></span>
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:13.5px;color:var(--text2);">{{ a.name }}</div>
+                  <div style="font-size:11px;color:var(--faint);margin-top:1px;">{{ a.inst }} · {{ a.type }}</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:13.5px;color:var(--text);">{{ a.fmt }}</div>
+                  <div style="font-size:11px;color:{{ a.chgCol }};margin-top:1px;">{{ a.chg }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </sc-for>
+        </div>
+
+        <!-- detail panel -->
+        <div style="background:var(--grad160);border:1px solid var(--accent-bd);border-radius:10px;padding:24px;position:sticky;top:24px;">
+          <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">{{ sel.group }}</div>
+          <div style="font-size:21px;font-weight:600;color:var(--text);margin-top:8px;">{{ sel.name }}</div>
+          <div style="font-size:12.5px;color:var(--muted);margin-top:3px;">{{ sel.inst }} · {{ sel.type }}</div>
+
+          <div style="font-size:38px;font-weight:600;color:var(--strong);margin-top:20px;line-height:1;">{{ sel.fmt }}</div>
+          <div style="font-size:13px;color:var(--up);margin-top:8px;">{{ sel.chg }}</div>
+
+          <svg viewBox="0 0 320 90" width="100%" height="72" preserveAspectRatio="none" style="display:block;margin-top:20px;">
+            <sc-if value="{{ sel.isLiab }}" hint-placeholder-val="{{ false }}">
+              <path d="M0,20 L60,30 L120,38 L180,52 L240,64 L320,78" fill="none" stroke="#a9743f" stroke-width="2.5"/>
+            </sc-if>
+            <sc-if value="{{ sel.isAsset }}" hint-placeholder-val="{{ true }}">
+              <path d="M0,72 L60,64 L120,58 L180,42 L240,30 L320,14" fill="none" stroke="#46b888" stroke-width="2.5"/>
+            </sc-if>
+          </svg>
+
+          <div style="margin-top:22px;padding-top:18px;border-top:1px solid var(--bd2);">
+            <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);margin-bottom:8px;">Notes</div>
+            <div style="font-size:13px;color:var(--text-soft);line-height:1.6;">{{ sel.note }}</div>
+          </div>
+          <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;gap:8px;margin-top:20px;">
+              <div onClick="{{ sel.onEdit }}" style="flex:1;text-align:center;cursor:pointer;font-size:13px;font-weight:600;padding:10px;border-radius:8px;background:#46b888;color:#07120d;">Edit</div>
+              <sc-if value="{{ canDelete }}" hint-placeholder-val="{{ false }}">
+                <div onClick="{{ sel.onDelete }}" style="cursor:pointer;font-size:13px;font-weight:600;padding:10px 16px;border-radius:8px;background:var(--bd);color:var(--liab);" style-hover="background:rgba(176,106,50,.16);">Delete</div>
+              </sc-if>
+            </div>
+          </sc-if>
+          <div style="margin-top:18px;display:flex;justify-content:space-between;font-size:12px;color:var(--muted);">
+            <span>Last synced</span><span style="color:var(--text2);">Today, 6:04 AM</span>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ INVESTMENTS ============ -->
+      <sc-if value="{{ isInvest }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:600;color:var(--text);">Taxable portfolio</div>
+          <div style="font-size:13px;color:var(--label);">{{ invM }} · liquid & unrestricted · ▲ +13.8% YTD</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:12px;">
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:20px 22px;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:6px;">Portfolio performance · 12 months</div>
+            <svg viewBox="0 0 1180 240" width="100%" height="210" preserveAspectRatio="none" style="display:block;">
+              <defs><linearGradient id="iv" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(70,184,136,.32)"/><stop offset="1" stop-color="rgba(70,184,136,0)"/></linearGradient></defs>
+              <line x1="20" y1="55" x2="1160" y2="55" style="stroke:var(--grid)" stroke-width="1"/>
+              <line x1="20" y1="125" x2="1160" y2="125" style="stroke:var(--grid)" stroke-width="1"/>
+              <line x1="20" y1="195" x2="1160" y2="195" style="stroke:var(--grid)" stroke-width="1"/>
+              <path d="M20,200 L123.6,188 L227.3,196 L330.9,168 L434.5,176 L538.2,142 L641.8,150 L745.5,118 L849.1,104 L952.7,112 L1056.4,72 L1160,48 L1160,210 L20,210 Z" fill="url(#iv)"/>
+              <path d="M20,200 L123.6,188 L227.3,196 L330.9,168 L434.5,176 L538.2,142 L641.8,150 L745.5,118 L849.1,104 L952.7,112 L1056.4,72 L1160,48" fill="none" stroke="#46b888" stroke-width="2.5"/>
+              <circle cx="1160" cy="48" r="5" fill="#d9f0e4" stroke="#46b888" stroke-width="2"/>
+            </svg>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:20px 22px;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px;">Holdings mix</div>
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>Equities</span><span style="color:var(--muted);">68%</span></div><div style="height:10px;background:var(--track);border-radius:5px;overflow:hidden;"><div style="width:68%;height:100%;background:#46b888;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>Single-stock & RSU</span><span style="color:var(--muted);">14%</span></div><div style="height:10px;background:var(--track);border-radius:5px;overflow:hidden;"><div style="width:14%;height:100%;background:#6c97c4;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>Crypto & alternatives</span><span style="color:var(--muted);">10%</span></div><div style="height:10px;background:var(--track);border-radius:5px;overflow:hidden;"><div style="width:10%;height:100%;background:#d9b96a;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>Cash & money market</span><span style="color:var(--muted);">8%</span></div><div style="height:10px;background:var(--track);border-radius:5px;overflow:hidden;"><div style="width:8%;height:100%;background:var(--muted);"></div></div></div>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:12px;margin-top:12px;">
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 22px;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:8px;">Top positions</div>
+            <div style="display:flex;justify-content:space-between;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:6px 0;border-bottom:1px solid var(--bd);"><span>Holding</span><span style="display:flex;gap:40px;"><span>Value</span><span>YTD</span></span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd);font-size:13.5px;"><span style="color:var(--text2);">VTI · Total Market ETF</span><span style="display:flex;gap:30px;"><span style="width:60px;text-align:right;">$360k</span><span style="width:54px;text-align:right;color:var(--up);">+12.8%</span></span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd);font-size:13.5px;"><span style="color:var(--text2);">Wealthfront · diversified</span><span style="display:flex;gap:30px;"><span style="width:60px;text-align:right;">$238k</span><span style="width:54px;text-align:right;color:var(--up);">+9.8%</span></span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd);font-size:13.5px;"><span style="color:var(--text2);">VXUS · Intl ex-US</span><span style="display:flex;gap:30px;"><span style="width:60px;text-align:right;">$110k</span><span style="width:54px;text-align:right;color:var(--up);">+9.1%</span></span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd);font-size:13.5px;"><span style="color:var(--text2);">NVDA · NVIDIA Corp.</span><span style="display:flex;gap:30px;"><span style="width:60px;text-align:right;">$86k</span><span style="width:54px;text-align:right;color:var(--up);">+41.6%</span></span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd);font-size:13.5px;"><span style="color:var(--text2);">Bitcoin · BTC</span><span style="display:flex;gap:30px;"><span style="width:60px;text-align:right;">$84k</span><span style="width:54px;text-align:right;color:var(--up);">+22.4%</span></span></div>
+            <div style="display:flex;justify-content:space-between;padding:10px 0;font-size:13.5px;"><span style="color:var(--text2);">Vested RSUs · NDAQ</span><span style="display:flex;gap:30px;"><span style="width:60px;text-align:right;">$66k</span><span style="width:54px;text-align:right;color:var(--up);">+18.0%</span></span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 20px;">
+              <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Unrealized gains</div>
+              <div style="font-size:28px;font-weight:600;color:var(--text);margin-top:8px;">$312,000</div>
+              <div style="font-size:12.5px;color:var(--muted);margin-top:4px;">Embedded long-term capital gains</div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 20px;">
+              <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Tax-loss harvested YTD</div>
+              <div style="font-size:28px;font-weight:600;color:#d9b96a;margin-top:8px;">$8,400</div>
+              <div style="font-size:12.5px;color:var(--muted);margin-top:4px;">Banked via Wealthfront · offsets gains</div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 20px;">
+              <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Blended fee</div>
+              <div style="font-size:28px;font-weight:600;color:var(--text);margin-top:8px;">0.11%</div>
+              <div style="font-size:12.5px;color:var(--muted);margin-top:4px;">Mostly index funds</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ RETIREMENT ============ -->
+      <sc-if value="{{ isRetire }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:600;color:var(--text);">Retirement &amp; pension</div>
+          <div style="font-size:13px;color:var(--label);">{{ retM }} tax-advantaged · {{ retPctNW }} of net worth · plus guaranteed pension income</div>
+        </div>
+
+        <!-- KPI row -->
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+          <div style="background:var(--grad);border:1px solid var(--accent-bd);border-radius:10px;padding:17px 20px;">
+            <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Tax-advantaged assets</div>
+            <div style="font-size:26px;font-weight:600;color:var(--text);margin-top:8px;">{{ retM }}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">401(k) · IRA · pension</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:17px 20px;">
+            <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Contributions YTD</div>
+            <div style="font-size:26px;font-weight:600;color:var(--text);margin-top:8px;">$48,200</div>
+            <div style="font-size:12px;color:var(--up);margin-top:4px;">+ $14,600 employer match</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:17px 20px;">
+            <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Pension income</div>
+            <div style="font-size:26px;font-weight:600;color:#d9b96a;margin-top:8px;">$38,400<span style="font-size:14px;color:var(--muted);font-weight:500;">/yr</span></div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">Guaranteed · begins 2042</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:17px 20px;">
+            <div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Projected at 65</div>
+            <div style="font-size:26px;font-weight:600;color:var(--text);margin-top:8px;">~$8.4M</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:4px;">6% return · current pace</div>
+          </div>
+        </div>
+
+        <!-- accounts + tax buckets -->
+        <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:12px;margin-top:12px;align-items:start;">
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 22px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><div style="font-size:14px;font-weight:600;color:var(--text);">Retirement accounts</div><sc-if value="{{ canEdit }}" hint-placeholder-val="{{ false }}"><span onClick="{{ onAddRetire }}" style="cursor:pointer;font-size:12px;color:#46b888;font-weight:600;">+ Add</span></sc-if></div>
+            <sc-for list="{{ retList }}" as="r" hint-placeholder-count="5">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--bd);">
+              <div style="display:flex;align-items:center;gap:12px;"><span style="width:9px;height:9px;border-radius:2px;background:{{ r.dot }};"></span><div><div style="font-size:13.5px;color:var(--text2);">{{ r.name }}</div><div style="font-size:11px;color:var(--faint);margin-top:1px;">{{ r.inst }}</div></div></div>
+              <div style="display:flex;align-items:center;gap:12px;"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:{{ r.tagColor }};background:{{ r.tagBg }};padding:3px 8px;border-radius:4px;">{{ r.tagLabel }}</span><span style="font-size:13.5px;color:var(--text);width:96px;text-align:right;">{{ r.fmt }}</span><sc-if value="{{ canEdit }}" hint-placeholder-val="{{ false }}"><span onClick="{{ r.onEdit }}" title="Edit" style="cursor:pointer;color:var(--faint);font-size:13px;" style-hover="color:#46b888;">✎</span></sc-if></div>
+            </div>
+            </sc-for>
+          </div>
+
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 22px;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;">By tax treatment</div>
+            <div style="font-size:11.5px;color:var(--faint);margin-bottom:16px;line-height:1.5;">How withdrawals will be taxed — the basis for retirement-income planning.</div>
+            <div style="display:flex;flex-direction:column;gap:16px;">
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>Tax-deferred</span><span style="color:var(--muted);">{{ taxDef.fmt }} · {{ taxDef.pct }}</span></div>
+                <div style="height:10px;background:var(--track);border-radius:5px;overflow:hidden;"><div style="width:{{ taxDef.w }};height:100%;background:#46b888;"></div></div>
+                <div style="font-size:11px;color:var(--faint);margin-top:5px;">Traditional 401(k) &amp; IRA · taxed as income on withdrawal · RMDs from 73</div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>Tax-free</span><span style="color:var(--muted);">{{ taxFree.fmt }} · {{ taxFree.pct }}</span></div>
+                <div style="height:10px;background:var(--track);border-radius:5px;overflow:hidden;"><div style="width:{{ taxFree.w }};height:100%;background:#d9b96a;"></div></div>
+                <div style="font-size:11px;color:var(--faint);margin-top:5px;">Roth · grows and withdraws tax-free · no RMDs</div>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px;"><span>Guaranteed income</span><span style="color:var(--muted);">{{ taxGuar.fmt }} · {{ taxGuar.pct }}</span></div>
+                <div style="height:10px;background:var(--track);border-radius:5px;overflow:hidden;"><div style="width:{{ taxGuar.w }};height:100%;background:#6c97c4;"></div></div>
+                <div style="font-size:11px;color:var(--faint);margin-top:5px;">Defined-benefit pension · an income stream, not a balance</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- pension card + projection -->
+        <div style="display:grid;grid-template-columns:1fr 1.35fr;gap:12px;margin-top:12px;">
+          <div style="background:var(--pgrad);border:1px solid var(--pbd);border-radius:10px;padding:22px 24px;">
+            <div style="display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--plabel);">Defined-benefit pension</div>
+            <div style="font-size:15px;color:var(--text2);margin-top:8px;">CalSTRS · Sarah</div>
+            <div style="font-size:40px;font-weight:600;color:var(--ptext);margin-top:14px;line-height:1;">$38,400<span style="font-size:16px;color:var(--pmuted);font-weight:500;"> / yr</span></div>
+            <div style="font-size:13px;color:var(--pmuted);margin-top:10px;line-height:1.5;">Guaranteed lifetime income · begins 2042 · 2% annual COLA</div>
+            <div style="height:1px;background:var(--bd2);margin:18px 0;"></div>
+            <div style="font-size:12.5px;color:var(--pmuted);line-height:1.6;">Present value ≈ <span style="color:var(--text2);">{{ pensionFmt }}</span>. Carried on the balance sheet as income, not a withdrawable account — it can't be liquidated or rolled over.</div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:20px 22px;">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;">
+              <div style="font-size:14px;font-weight:600;color:var(--text);">Projected retirement balance</div>
+              <div style="font-size:13px;color:var(--up);">~$8.4M by 2042</div>
+            </div>
+            <div style="font-size:11.5px;color:var(--faint);margin-top:3px;">Excludes pension · assumes 6% blended return and maxing both 401(k)s</div>
+            <svg viewBox="0 0 600 190" width="100%" height="190" preserveAspectRatio="none" style="display:block;margin-top:12px;">
+              <defs><linearGradient id="rt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(70,184,136,.32)"/><stop offset="1" stop-color="rgba(70,184,136,0)"/></linearGradient></defs>
+              <line x1="10" y1="50" x2="590" y2="50" style="stroke:var(--grid)" stroke-width="1"/>
+              <line x1="10" y1="105" x2="590" y2="105" style="stroke:var(--grid)" stroke-width="1"/>
+              <path d="M10,158 L120,146 L230,128 L340,102 L450,68 L590,28 L590,170 L10,170 Z" fill="url(#rt)"/>
+              <path d="M10,158 L120,146 L230,128 L340,102 L450,68 L590,28" fill="none" stroke="#46b888" stroke-width="2.5"/>
+              <circle cx="10" cy="158" r="4.5" style="fill:var(--card);stroke:var(--muted)" stroke-width="2"/>
+              <circle cx="590" cy="28" r="5" fill="#d9f0e4" stroke="#46b888" stroke-width="2"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--axis);margin-top:4px;letter-spacing:.05em;">
+              <span>NOW · $3.0M (age 49)</span><span>AGE 65 · 2042</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ REAL ESTATE ============ -->
+      <sc-if value="{{ isProperty }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:flex;align-items:baseline;gap:14px;margin-bottom:16px;">
+          <div style="font-size:16px;font-weight:600;color:var(--text);">Real estate</div>
+          <div style="font-size:13px;color:var(--label);">{{ reValueM }} value · {{ reMortM }} mortgages · {{ reEquityM }} equity</div>
+          <sc-if value="{{ canEdit }}" hint-placeholder-val="{{ false }}"><span onClick="{{ onAddProperty }}" style="margin-left:auto;cursor:pointer;font-size:12px;color:#46b888;font-weight:600;">+ Add property</span></sc-if>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <sc-for list="{{ reCards }}" as="p" hint-placeholder-count="2">
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;overflow:hidden;">
+            <div style="height:120px;background:var(--photo);display:flex;align-items:flex-end;padding:14px 20px;border-bottom:1px solid var(--bd);">
+              <span style="font-size:11px;font-family:'Archivo';color:var(--faint);letter-spacing:.1em;">[ PROPERTY PHOTO ]</span>
+            </div>
+            <div style="padding:20px 22px;">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;"><div style="font-size:16px;font-weight:600;color:var(--text);">{{ p.name }}</div><span style="display:flex;align-items:center;gap:9px;font-size:11px;color:var(--label);">{{ p.inst }}<sc-if value="{{ canEdit }}" hint-placeholder-val="{{ false }}"><span onClick="{{ p.onEdit }}" title="Edit" style="cursor:pointer;color:var(--faint);font-size:12px;" style-hover="color:#46b888;">✎</span></sc-if></span></div>
+              <div style="font-size:30px;font-weight:600;color:var(--strong);margin-top:10px;">{{ p.valFmt }}</div>
+              <div style="font-size:12.5px;color:var(--up);margin-top:3px;">▲ {{ p.chg }}</div>
+              <div style="margin-top:18px;font-size:12px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:7px;"><span>Equity {{ p.eqM }}</span><span>{{ p.eqPct }}</span></div>
+              <div style="height:10px;background:var(--track);border-radius:5px;overflow:hidden;"><div style="width:{{ p.eqPct }};height:100%;background:#46b888;"></div></div>
+              <div style="display:flex;justify-content:space-between;margin-top:16px;font-size:13px;"><span style="color:var(--muted);">{{ p.mortName }}</span><span style="color:var(--liab);">{{ p.mortFmt }}</span></div>
+            </div>
+          </div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;">
+          <div style="background:var(--grad);border:1px solid var(--accent-bd);border-radius:10px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Total equity</div><div style="font-size:28px;font-weight:600;color:var(--text);margin-top:8px;">{{ reEquityFull }}</div></div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Rental income / yr</div><div style="font-size:28px;font-weight:600;color:#d9b96a;margin-top:8px;">$50,400</div></div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:18px 20px;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Blended LTV</div><div style="font-size:28px;font-weight:600;color:var(--text);margin-top:8px;">{{ reLTV }}</div></div>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ============ CASH FLOW ============ -->
+      <sc-if value="{{ isCash }}" hint-placeholder-val="{{ false }}">
+      <div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:17px 20px;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Income / mo</div><div style="font-size:25px;font-weight:600;color:var(--text);margin-top:8px;">$32,400</div></div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:17px 20px;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Spending / mo</div><div style="font-size:25px;font-weight:600;color:#e0b48a;margin-top:8px;">$21,500</div></div>
+          <div style="background:var(--grad);border:1px solid var(--accent-bd);border-radius:10px;padding:17px 20px;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Net saved / mo</div><div style="font-size:25px;font-weight:600;color:var(--up);margin-top:8px;">$10,900</div></div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:17px 20px;"><div style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--label);">Savings rate</div><div style="font-size:25px;font-weight:600;color:#d9b96a;margin-top:8px;">34%</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:12px;margin-top:12px;">
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:20px 22px;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px;">Income vs. spending · 12 months</div>
+            <svg viewBox="0 0 720 210" width="100%" height="220" style="display:block;">
+              <line x1="20" y1="180" x2="700" y2="180" style="stroke:var(--grid)" stroke-width="1"/>
+              <sc-for list="{{ cashMonths }}" as="m" hint-placeholder-count="12">
+                <rect x="{{ m.ix }}" y="{{ m.iy }}" width="16" height="{{ m.ih }}" fill="#46b888" rx="1"></rect>
+                <rect x="{{ m.ex }}" y="{{ m.ey }}" width="16" height="{{ m.eh }}" fill="#3a5d50" rx="1"></rect>
+                <text x="{{ m.lx }}" y="198" font-size="11" style="fill:var(--axis)" text-anchor="middle" font-family="Archivo">{{ m.label }}</text>
+              </sc-for>
+            </svg>
+            <div style="display:flex;gap:18px;margin-top:6px;font-size:12px;color:var(--muted);">
+              <span style="display:flex;align-items:center;gap:7px;"><span style="width:9px;height:9px;background:#46b888;border-radius:2px;"></span>Income</span>
+              <span style="display:flex;align-items:center;gap:7px;"><span style="width:9px;height:9px;background:#3a5d50;border-radius:2px;"></span>Spending</span>
+            </div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:20px 22px;">
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px;">Where it goes · monthly</div>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>Housing & mortgages</span><span style="color:var(--muted);">$5,600</span></div><div style="height:8px;background:var(--track);border-radius:4px;overflow:hidden;"><div style="width:100%;height:100%;background:#a9743f;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>Childcare & school</span><span style="color:var(--muted);">$3,800</span></div><div style="height:8px;background:var(--track);border-radius:4px;overflow:hidden;"><div style="width:68%;height:100%;background:#b9913f;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>Travel & lifestyle</span><span style="color:var(--muted);">$3,400</span></div><div style="height:8px;background:var(--track);border-radius:4px;overflow:hidden;"><div style="width:61%;height:100%;background:#d9b96a;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>Food & dining</span><span style="color:var(--muted);">$2,600</span></div><div style="height:8px;background:var(--track);border-radius:4px;overflow:hidden;"><div style="width:46%;height:100%;background:#6c97c4;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>Property tax & insurance</span><span style="color:var(--muted);">$2,100</span></div><div style="height:8px;background:var(--track);border-radius:4px;overflow:hidden;"><div style="width:38%;height:100%;background:#46b888;"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>Transportation</span><span style="color:var(--muted);">$1,400</span></div><div style="height:8px;background:var(--track);border-radius:4px;overflow:hidden;"><div style="width:25%;height:100%;background:var(--muted);"></div></div></div>
+              <div><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;"><span>Healthcare & other</span><span style="color:var(--muted);">$2,600</span></div><div style="height:8px;background:var(--track);border-radius:4px;overflow:hidden;"><div style="width:46%;height:100%;background:#3a5d50;"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </sc-if>
+
+    </div>
+  </div>
+</div>
+
+
+<sc-if value="{{ drawerOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeDrawer }}" style="position:fixed;inset:0;background:rgba(4,10,7,.62);z-index:62;"></div>
+  <div style="position:fixed;top:0;right:0;bottom:0;width:440px;background:var(--card);border-left:1px solid var(--bd2);z-index:63;box-shadow:-30px 0 80px rgba(0,0,0,.5);display:flex;flex-direction:column;font-family:'Archivo',sans-serif;font-variant-numeric:tabular-nums;">
+    <div style="padding:22px 26px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:16px;font-weight:600;color:var(--text);">{{ draft.title }}</div>
+      <div onClick="{{ closeDrawer }}" style="cursor:pointer;width:30px;height:30px;border-radius:8px;background:var(--bd);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;">✕</div>
+    </div>
+    <div style="flex:1;overflow:auto;padding:20px 26px;display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:7px;">Account name</div>
+        <input value="{{ draft.name }}" onInput="{{ draft.setName }}" placeholder="e.g. Chase checking" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--bd2);border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:'Archivo',sans-serif;"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:7px;">Institution</div>
+          <input value="{{ draft.inst }}" onInput="{{ draft.setInst }}" placeholder="e.g. Fidelity" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--bd2);border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:'Archivo',sans-serif;"/>
+        </div>
+        <div>
+          <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:7px;">Type</div>
+          <input value="{{ draft.type }}" onInput="{{ draft.setType }}" placeholder="e.g. Checking" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--bd2);border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:'Archivo',sans-serif;"/>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:7px;">Category</div>
+        <select value="{{ draft.group }}" onChange="{{ draft.setGroup }}" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--bd2);border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:'Archivo',sans-serif;cursor:pointer;">
+          <option value="Banking & cash">Banking &amp; cash</option>
+          <option value="Retirement">Retirement</option>
+          <option value="Investments">Investments</option>
+          <option value="Real estate">Real estate</option>
+          <option value="Liabilities">Liabilities</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div>
+          <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:7px;">{{ draft.balLabel }}</div>
+          <input value="{{ draft.balAbs }}" onInput="{{ draft.setBal }}" inputmode="decimal" placeholder="0" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--bd2);border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:'Archivo',sans-serif;"/>
+        </div>
+        <div>
+          <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:7px;">Change / rate</div>
+          <input value="{{ draft.chg }}" onInput="{{ draft.setChg }}" placeholder="e.g. +4.4% APY" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--bd2);border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:'Archivo',sans-serif;"/>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:7px;">Notes</div>
+        <textarea value="{{ draft.note }}" onInput="{{ draft.setNote }}" rows="3" placeholder="Optional" style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--bd2);border-radius:8px;padding:10px 12px;font-size:13.5px;font-family:'Archivo',sans-serif;resize:vertical;"></textarea>
+      </div>
+      <div style="font-size:11.5px;color:var(--faint);line-height:1.5;">Saving recomputes net worth, allocation and subtotals instantly and syncs to your accounts via the API.</div>
+    </div>
+    <div style="padding:18px 26px;border-top:1px solid var(--bd);display:flex;gap:10px;">
+      <div onClick="{{ closeDrawer }}" style="cursor:pointer;font-size:13px;font-weight:600;padding:11px 18px;border-radius:8px;background:var(--bd);color:var(--text2);">Cancel</div>
+      <div onClick="{{ draft.onSave }}" style="flex:1;text-align:center;cursor:pointer;font-size:13px;font-weight:600;padding:11px;border-radius:8px;background:#46b888;color:#07120d;">Save account</div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ confirmOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ confirm.onCancel }}" style="position:fixed;inset:0;background:rgba(4,10,7,.66);z-index:70;display:flex;align-items:center;justify-content:center;">
+    <div onClick="{{ confirm.stop }}" style="width:380px;background:var(--card);border:1px solid var(--bd2);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.55);padding:26px;font-family:'Archivo',sans-serif;">
+      <div style="font-size:17px;font-weight:600;color:var(--text);">Delete account?</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:10px;line-height:1.55;">“{{ confirm.name }}” will be removed and all totals will update. This can’t be undone.</div>
+      <div style="display:flex;gap:10px;margin-top:22px;">
+        <div onClick="{{ confirm.onCancel }}" style="flex:1;text-align:center;cursor:pointer;font-size:13px;font-weight:600;padding:11px;border-radius:8px;background:var(--bd);color:var(--text2);">Keep</div>
+        <div onClick="{{ confirm.onConfirm }}" style="flex:1;text-align:center;cursor:pointer;font-size:13px;font-weight:600;padding:11px;border-radius:8px;background:#a9743f;color:#fff;">Delete</div>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ settingsOpen }}" hint-placeholder-val="{{ false }}">
+  <div onClick="{{ closeSettings }}" style="position:fixed;inset:0;background:rgba(4,10,7,.62);z-index:60;"></div>
+  <div style="position:fixed;top:0;right:0;bottom:0;width:448px;background:var(--card);border-left:1px solid var(--bd2);z-index:61;box-shadow:-30px 0 80px rgba(0,0,0,.5);display:flex;flex-direction:column;font-family:'Archivo',sans-serif;font-variant-numeric:tabular-nums;">
+    <div style="padding:22px 26px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;justify-content:space-between;">
+      <div>
+        <div style="font-size:16px;font-weight:600;color:var(--text);">Members &amp; roles</div>
+        <div style="font-size:12px;color:var(--label);margin-top:3px;">Who can see and change this household's finances</div>
+      </div>
+      <div onClick="{{ closeSettings }}" style="cursor:pointer;width:30px;height:30px;border-radius:8px;background:var(--bd);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:14px;">✕</div>
+    </div>
+    <div style="flex:1;overflow:auto;padding:14px 26px 26px;">
+      <sc-for list="{{ members }}" as="m" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;gap:13px;padding:14px 0;border-bottom:1px solid var(--bd);">
+          <div style="width:38px;height:38px;border-radius:50%;background:{{ m.roleSoft }};border:1.5px solid {{ m.accent }};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:{{ m.accent }};flex:none;">{{ m.initials }}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13.5px;color:var(--text);white-space:nowrap;">{{ m.name }}</div>
+            <div style="font-size:11px;color:var(--label);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ m.email }}</div>
+          </div>
+          <select onChange="{{ m.onRoleChange }}" value="{{ m.role }}" style="background:var(--card);color:var(--text3);border:1px solid var(--bd2);border-radius:7px;padding:7px 9px;font-size:12.5px;font-family:'Archivo',sans-serif;cursor:pointer;flex:none;">
+            <option value="Owner">Owner</option>
+            <option value="Co-owner">Co-owner</option>
+            <option value="Advisor">Advisor</option>
+            <option value="Accountant">Accountant</option>
+            <option value="Viewer">Viewer</option>
+          </select>
+        </div>
+      </sc-for>
+
+      <div style="margin-top:18px;padding:13px 16px;border:1px dashed var(--bd2);border-radius:10px;display:flex;align-items:center;gap:10px;color:#7fbf9c;font-size:13px;cursor:pointer;" style-hover="background:rgba(70,184,136,.06);">
+        <span style="font-size:18px;line-height:1;">+</span> Invite a member
+      </div>
+
+      <div style="margin-top:26px;">
+        <div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);margin-bottom:12px;">What each role can do</div>
+        <div style="display:flex;flex-direction:column;gap:11px;">
+          <div style="display:flex;gap:11px;align-items:baseline;"><span style="width:9px;height:9px;border-radius:2px;background:#46b888;flex:none;transform:translateY(2px);"></span><div><span style="font-size:13px;color:var(--text2);">Owner</span> <span style="font-size:12px;color:var(--label);">— full access; manage data, members and roles.</span></div></div>
+          <div style="display:flex;gap:11px;align-items:baseline;"><span style="width:9px;height:9px;border-radius:2px;background:#6c97c4;flex:none;transform:translateY(2px);"></span><div><span style="font-size:13px;color:var(--text2);">Co-owner</span> <span style="font-size:12px;color:var(--label);">— full access to all accounts and entries.</span></div></div>
+          <div style="display:flex;gap:11px;align-items:baseline;"><span style="width:9px;height:9px;border-radius:2px;background:#d9b96a;flex:none;transform:translateY(2px);"></span><div><span style="font-size:13px;color:var(--text2);">Advisor</span> <span style="font-size:12px;color:var(--label);">— can view and edit, but not delete accounts.</span></div></div>
+          <div style="display:flex;gap:11px;align-items:baseline;"><span style="width:9px;height:9px;border-radius:2px;background:#c98f5a;flex:none;transform:translateY(2px);"></span><div><span style="font-size:13px;color:var(--text2);">Accountant</span> <span style="font-size:12px;color:var(--label);">— view and export only, for tax prep.</span></div></div>
+          <div style="display:flex;gap:11px;align-items:baseline;"><span style="width:9px;height:9px;border-radius:2px;background:var(--muted);flex:none;transform:translateY(2px);"></span><div><span style="font-size:13px;color:var(--text2);">Viewer</span> <span style="font-size:12px;color:var(--label);">— read-only access to balances and charts.</span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</sc-if></x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;householdName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;The Whitfield Household&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;asOf&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;As of June 19, 2026&quot;,&quot;tsType&quot;:&quot;string&quot;}}">
+class Component extends DCLogic {
+  state = {
+    tab: 'overview', range: '1y', selAcct: 'fid401k',
+    theme: (() => { try { return localStorage.getItem('wd-theme') || 'dark'; } catch (e) { return 'dark'; } })(),
+    menuOpen: false, settingsOpen: false, activeMember: 'sarah',
+    members: [
+      { id:'sarah',   name:'Sarah Whitfield',   email:'sarah@whitfield.family',   role:'Owner',      initials:'SW', accent:'#46b888' },
+      { id:'michael', name:'Michael Whitfield', email:'michael@whitfield.family', role:'Co-owner',   initials:'MW', accent:'#6c97c4' },
+      { id:'dana',    name:'Dana Reyes, CFP',   email:'dana@northpoint.fa',       role:'Advisor',    initials:'DR', accent:'#d9b96a' },
+      { id:'ellis',   name:'Ellis & Cho CPA',   email:'team@ellischo.cpa',        role:'Accountant', initials:'EC', accent:'#c98f5a' },
+    ],
+    drawerOpen:false, drawerNew:false, draft:null, confirmId:null,
+    accounts: [
+      { id:'chase', name:'Chase checking', inst:'JPMorgan Chase', type:'Checking', group:'Banking & cash', bal:48200, chg:'—', note:'Primary household checking for bills, payroll deposits and day-to-day spending.' },
+      { id:'ally', name:'Ally savings', inst:'Ally Bank', type:'Savings', group:'Banking & cash', bal:185000, chg:'+4.4% APY', note:'Emergency fund — roughly 8 months of expenses held in high-yield savings.' },
+      { id:'marcus', name:'Marcus HYSA', inst:'Goldman Sachs', type:'Savings · 4.4% APY', group:'Banking & cash', bal:220000, chg:'+4.4% APY', note:'Short-term reserve earmarked for a future property down payment.' },
+      { id:'fidcash', name:'Fidelity cash management', inst:'Fidelity', type:'Cash management', group:'Banking & cash', bal:92500, chg:'—', note:'Brokerage-linked cash sweep used for investing and quarterly taxes.' },
+      { id:'cd', name:'NavyFed CD', inst:'Navy Federal', type:'CD · 5.0% APY', group:'Banking & cash', bal:135000, chg:'+5.0% APY', note:'13-month certificate laddered to mature in March 2027.' },
+      { id:'ibond', name:'Series I bonds', inst:'TreasuryDirect', type:'Inflation bonds', group:'Banking & cash', bal:99000, chg:'+3.1%', note:'Annual I-bond purchases held as an inflation hedge.' },
+      { id:'fid401k', name:'Fidelity 401(k) · Sarah', inst:'Fidelity', type:'401(k)', group:'Retirement', bal:1120000, chg:'+11.2% YTD', tax:'deferred', note:'Sarah’s employer 401(k), maxed annually with a 5% company match.' },
+      { id:'van401k', name:'Vanguard 401(k) · Michael', inst:'Vanguard', type:'401(k)', group:'Retirement', bal:940000, chg:'+10.8% YTD', tax:'deferred', note:'Michael’s 401(k) in a low-cost target-date 2045 fund.' },
+      { id:'rollira', name:'Rollover IRA', inst:'Fidelity', type:'Traditional IRA', group:'Retirement', bal:560000, chg:'+9.4% YTD', tax:'deferred', note:'Consolidated from two former employer plans.' },
+      { id:'roth', name:'Roth IRA · 2 accounts', inst:'Vanguard', type:'Roth IRA', group:'Retirement', bal:185000, chg:'+12.6% YTD', tax:'free', note:'His-and-hers Roth accounts funded via backdoor contributions.' },
+      { id:'pension', name:'State teachers’ pension', inst:'CalSTRS', type:'Pension · present value', group:'Retirement', bal:195000, chg:'+2.0% COLA', tax:'guaranteed', note:'Sarah’s defined-benefit pension, shown at estimated present value.' },
+      { id:'schwab', name:'Schwab brokerage', inst:'Charles Schwab', type:'Taxable', group:'Investments', bal:612000, chg:'+13.1% YTD', note:'Core taxable portfolio of broad index funds and a few single stocks.' },
+      { id:'wealthfront', name:'Wealthfront', inst:'Wealthfront', type:'Robo · taxable', group:'Investments', bal:238000, chg:'+9.8% YTD', note:'Automated, tax-loss-harvested diversified portfolio.' },
+      { id:'coinbase', name:'Coinbase', inst:'Coinbase', type:'Crypto', group:'Investments', bal:84000, chg:'+22.4% YTD', note:'Long-term Bitcoin and Ethereum position — about 1% of net worth.' },
+      { id:'rsu', name:'Vested RSUs · NDAQ', inst:'Nasdaq', type:'Equity comp', group:'Investments', bal:66000, chg:'+18.0% YTD', note:'Vested restricted stock from Michael’s employer, being diversified over time.' },
+      { id:'primary', name:'Primary residence', inst:'Maplewood Dr', type:'Primary home', group:'Real estate', bal:1850000, chg:'+4.1% YoY', mortId:'mort1', note:'Four-bedroom family home purchased in 2016 for $1.10M.' },
+      { id:'rental', name:'Rental duplex', inst:'Cedar St', type:'Rental', group:'Real estate', bal:1250000, chg:'+3.6% YoY', mortId:'mort2', note:'Two-unit rental generating $4,200/mo at a ~4% cap rate.' },
+      { id:'mort1', name:'Primary mortgage', inst:'Wells Fargo', type:'30yr fixed · 3.1%', group:'Liabilities', bal:-620000, chg:'3.10% APR', re:true, note:'Locked at 3.1% in 2021 — no plans to prepay at this rate.' },
+      { id:'mort2', name:'Rental mortgage', inst:'US Bank', type:'30yr fixed · 4.2%', group:'Liabilities', bal:-210000, chg:'4.20% APR', re:true, note:'Serviced entirely by rental income.' },
+      { id:'auto', name:'Auto loan', inst:'Tesla Finance', type:'5yr', group:'Liabilities', bal:-31300, chg:'5.90% APR', note:'Two years remaining on the family EV.' },
+      { id:'cards', name:'Credit cards', inst:'Visa + Amex', type:'Revolving', group:'Liabilities', bal:-15000, chg:'—', note:'Paid in full monthly — carried for rewards, not interest.' },
+    ],
+  };
+
+  fmt(n) {
+    const a = Math.abs(n).toLocaleString('en-US');
+    return n < 0 ? '\u2212$' + a : '$' + a;
+  }
+
+  _applyTheme() { try { document.documentElement.setAttribute('data-theme', this.state.theme); localStorage.setItem('wd-theme', this.state.theme); } catch (e) {} }
+  componentDidMount() { this._applyTheme(); }
+  componentDidUpdate() { this._applyTheme(); }
+
+  _newId() { return 'acc' + Math.random().toString(36).slice(2, 8); }
+  _openAdd(group) { this.setState({ menuOpen:false, drawerOpen:true, drawerNew:true, draft:{ id:null, group:group||'Banking & cash', name:'', inst:'', type:'', balAbs:'', chg:'', note:'' } }); }
+  _openEdit(id) { const a = this.state.accounts.find(x=>x.id===id); if(!a) return; this.setState({ menuOpen:false, drawerOpen:true, drawerNew:false, draft:{ id:a.id, group:a.group, name:a.name, inst:a.inst, type:a.type, balAbs:String(Math.abs(a.bal)), chg:a.chg||'', note:a.note||'', tax:a.tax, re:a.re, mortId:a.mortId } }); }
+  _setDraft(k, v) { this.setState(st => ({ draft: { ...st.draft, [k]: v } })); }
+  _closeDrawer() { this.setState({ drawerOpen:false, draft:null }); }
+  _saveDraft() {
+    const d = this.state.draft;
+    if (!d || !d.name || String(d.balAbs).trim() === '') return;
+    const num = parseFloat(String(d.balAbs).replace(/[^0-9.]/g, '')) || 0;
+    const bal = d.group === 'Liabilities' ? -Math.abs(num) : Math.abs(num);
+    this.setState(st => {
+      let accs = st.accounts.slice();
+      if (d.id) {
+        accs = accs.map(a => a.id === d.id ? { ...a, name:d.name, inst:d.inst, type:d.type, group:d.group, bal, chg:d.chg } : a);
+        return { accounts:accs, drawerOpen:false, draft:null };
+      }
+      const rec = { id:this._newId(), name:d.name, inst:d.inst, type:d.type, group:d.group, bal, chg:d.chg, note:d.note };
+      if (d.group === 'Retirement') rec.tax = 'deferred';
+      accs.push(rec);
+      return { accounts:accs, drawerOpen:false, draft:null, selAcct:rec.id };
+    });
+  }
+  _askDelete(id) { this.setState({ confirmId:id }); }
+  _cancelDelete() { this.setState({ confirmId:null }); }
+  _confirmDelete() {
+    const id = this.state.confirmId;
+    this.setState(st => {
+      const accs = st.accounts.filter(a => a.id !== id);
+      const selAcct = st.selAcct === id ? (accs[0] ? accs[0].id : null) : st.selAcct;
+      return { accounts:accs, confirmId:null, drawerOpen:false, draft:null, selAcct };
+    });
+  }
+
+  renderVals() {
+    const S = this.state;
+    const ACC = S.accounts;
+
+    const fmt = (n) => this.fmt(n);
+    const fmtM = (n) => (n<0?'−$':'$') + (Math.abs(n)/1e6).toFixed(2) + 'M';
+    const _mem = S.members.find(m=>m.id===S.activeMember) || S.members[0];
+    const _perm = ({Owner:[1,1],'Co-owner':[1,1],Advisor:[1,0],Accountant:[0,0],Viewer:[0,0]})[_mem.role] || [0,0];
+    const canEdit = !!_perm[0], canDelete = !!_perm[1];
+
+    const GROUP_ORDER = ['Banking & cash','Retirement','Investments','Real estate','Liabilities'];
+    const ASSET_GROUPS = ['Banking & cash','Retirement','Investments','Real estate'];
+    const groupColor = { 'Banking & cash':'#9fb3a8', 'Retirement':'#46b888', 'Investments':'#6c97c4', 'Real estate':'#d9b96a', 'Liabilities':'#a9743f' };
+    const inGroup = (g) => ACC.filter(a => a.group === g);
+    const catTotal = (g) => inGroup(g).reduce((x,a)=>x+a.bal,0);
+
+    const assets = ASSET_GROUPS.reduce((x,g)=>x+catTotal(g),0);
+    const liabRaw = catTotal('Liabilities');
+    const liabilities = -liabRaw;
+    const netWorth = assets + liabRaw;
+    const liquid = catTotal('Banking & cash');
+
+    const groups = GROUP_ORDER.map(gname => {
+      const items = inGroup(gname);
+      return {
+        name: gname,
+        sub: fmt(items.reduce((x,a)=>x+a.bal,0)),
+        onAdd: () => this._openAdd(gname),
+        items: items.map(a => ({
+          id: a.id, name: a.name, inst: a.inst, type: a.type, fmt: fmt(a.bal), chg: a.chg,
+          onSelect: () => this.setState({ selAcct: a.id }),
+          rowBg: a.id === S.selAcct ? 'var(--row-active)' : 'transparent',
+          dot: a.bal < 0 ? '#a9743f' : (groupColor[gname] || '#46b888'),
+          chgCol: a.bal < 0 ? 'var(--liab)' : 'var(--muted)',
+        })),
+      };
+    });
+
+    const s = ACC.find(a => a.id === S.selAcct) || ACC[0];
+    const sel = s ? { id:s.id, name:s.name, inst:s.inst, type:s.type, fmt:fmt(s.bal), chg:s.chg, note:s.note, group:s.group, isLiab:s.bal<0, isAsset:s.bal>=0, onEdit:()=>this._openEdit(s.id), onDelete:()=>this._askDelete(s.id) } : { name:'No account selected', inst:'', type:'', fmt:'', chg:'', note:'Add an account to get started.', group:'', isLiab:false, isAsset:true, onEdit:()=>{}, onDelete:()=>{} };
+
+    const allocDefs = [ ['Real estate', catTotal('Real estate'), '#d9b96a'], ['Retirement', catTotal('Retirement'), '#46b888'], ['Investments', catTotal('Investments'), '#6c97c4'], ['Cash', catTotal('Banking & cash'), '#9fb3a8'] ];
+    const DON_C = 464.96; let _cum = 0;
+    const allocSegs = allocDefs.map(([label,val,color]) => { const pct = assets>0?val/assets:0; const dash = pct*DON_C; const seg = { color, dash: dash.toFixed(1)+' '+(DON_C-dash).toFixed(1), offset: (-_cum).toFixed(1) }; _cum += dash; return seg; });
+    const allocLegend = allocDefs.map(([label,val,color]) => ({ label, color, pct: (assets>0?Math.round(val/assets*100):0)+'%' }));
+    const allocCenter = fmtM(assets);
+    const largest = ACC.filter(a=>a.bal>0).slice().sort((a,b)=>b.bal-a.bal).slice(0,6).map(a=>({ name:a.name, fm:fmtM(a.bal) }));
+
+    const retItems = inGroup('Retirement');
+    const retTotal = catTotal('Retirement');
+    const taxMeta = { deferred:['Tax-deferred','#46b888','rgba(70,184,136,.12)','#7fbf9c'], free:['Tax-free','#d9b96a','rgba(217,185,106,.12)','#d9b96a'], guaranteed:['Guaranteed','#6c97c4','rgba(108,151,196,.14)','var(--plabel)'] };
+    const retList = retItems.map(a => { const t = taxMeta[a.tax] || taxMeta.deferred; return { id:a.id, name:a.name, inst:a.inst, fmt:fmt(a.bal), dot:t[1], tagLabel:t[0], tagBg:t[2], tagColor:t[3], onEdit:()=>this._openEdit(a.id) }; });
+    const sumTax = (t) => retItems.filter(a=>a.tax===t).reduce((x,a)=>x+a.bal,0);
+    const mkB = (v) => ({ fmt:fmtM(v), pct:(retTotal>0?Math.round(v/retTotal*100):0)+'%', w:(retTotal>0?Math.round(v/retTotal*100):0)+'%' });
+    const taxDef = mkB(sumTax('deferred')), taxFree = mkB(sumTax('free')), taxGuar = mkB(sumTax('guaranteed'));
+    const _pension = ACC.find(a=>a.tax==='guaranteed');
+    const pensionFmt = _pension ? fmt(_pension.bal) : '—';
+    const retPctNW = (netWorth>0?Math.round(retTotal/netWorth*100):0) + '%';
+
+    const reItems = inGroup('Real estate');
+    const reValue = catTotal('Real estate');
+    const reMort = -ACC.filter(a => a.group==='Liabilities' && a.re).reduce((x,a)=>x+a.bal,0);
+    const reEquity = reValue - reMort;
+    const reCards = reItems.map(p => { const mr = ACC.find(a=>a.id===p.mortId); const mort = mr ? -mr.bal : 0; const eq = p.bal - mort; return { id:p.id, name:p.name, inst:p.inst, valFmt:fmt(p.bal), chg:p.chg, eqM:fmtM(eq), eqPct:(p.bal>0?Math.round(eq/p.bal*100):0)+'%', mortName: mr ? ('Mortgage · '+mr.inst) : 'No mortgage', mortFmt: mr ? fmt(mr.bal) : '—', onEdit:()=>this._openEdit(p.id) }; });
+    const reLTV = (reValue>0?Math.round(reMort/reValue*100):0) + '%';
+    const invM = fmtM(catTotal('Investments'));
+
+    const _d = S.draft;
+    const draft = _d ? {
+      title: S.drawerNew ? 'Add account' : 'Edit account',
+      name:_d.name, inst:_d.inst, type:_d.type, group:_d.group, balAbs:_d.balAbs, chg:_d.chg, note:_d.note,
+      balLabel: _d.group==='Liabilities' ? 'Amount owed' : 'Current balance',
+      setName:(e)=>this._setDraft('name', e.target.value), setInst:(e)=>this._setDraft('inst', e.target.value), setType:(e)=>this._setDraft('type', e.target.value),
+      setGroup:(e)=>this._setDraft('group', e.target.value), setBal:(e)=>this._setDraft('balAbs', e.target.value), setChg:(e)=>this._setDraft('chg', e.target.value), setNote:(e)=>this._setDraft('note', e.target.value),
+      onSave:()=>this._saveDraft(),
+    } : { title:'', name:'', inst:'', type:'', group:'Banking & cash', balAbs:'', chg:'', note:'', balLabel:'Current balance', setName:()=>{}, setInst:()=>{}, setType:()=>{}, setGroup:()=>{}, setBal:()=>{}, setChg:()=>{}, setNote:()=>{}, onSave:()=>{} };
+    const _c = S.confirmId ? ACC.find(a=>a.id===S.confirmId) : null;
+    const confirm = { name: _c ? _c.name : '', onConfirm:()=>this._confirmDelete(), onCancel:()=>this._cancelDelete(), stop:(e)=>{ e.stopPropagation(); } };
+
+    const ranges = {
+      ytd: '+$402,100 \u00b7 +6.1% YTD',
+      '1y': '+$892,100 \u00b7 +14.6% trailing year',
+      all: '+$3.10M \u00b7 +79% since 2019',
+    };
+
+    const inc = [31,33,30,34,32,36,33,31,35,34,32,38];
+    const exp = [20,22,21,22,21,23,22,20,22,21,22,23];
+    const labels = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+    const cashMonths = inc.map((v, i) => {
+      const gx = 24 + i * 56.5;
+      const ih = v / 42 * 150, eh = exp[i] / 42 * 150;
+      return { ix: gx + 10, iy: 180 - ih, ih, ex: gx + 28, ey: 180 - eh, eh, lx: gx + 19, label: labels[i] };
+    });
+
+    const roleInfo = {
+      'Owner':      { desc:'Full access', color:'#46b888', soft:'rgba(70,184,136,.14)',  canEdit:true,  canDelete:true  },
+      'Co-owner':   { desc:'Full access', color:'#6c97c4', soft:'rgba(108,151,196,.16)', canEdit:true,  canDelete:true  },
+      'Advisor':    { desc:'Edit, no delete', color:'#d9b96a', soft:'rgba(217,185,106,.14)', canEdit:true, canDelete:false },
+      'Accountant': { desc:'View & export', color:'#c98f5a', soft:'rgba(201,143,90,.16)', canEdit:false, canDelete:false },
+      'Viewer':     { desc:'Read-only', color:'var(--muted)', soft:'rgba(159,179,168,.15)', canEdit:false, canDelete:false },
+    };
+    const meRec = S.members.find(m => m.id === S.activeMember) || S.members[0];
+    const meRole = roleInfo[meRec.role] || roleInfo['Viewer'];
+    const memberList = S.members.map(m => {
+      const ri = roleInfo[m.role] || roleInfo['Viewer'];
+      return {
+        id:m.id, name:m.name, email:m.email, initials:m.initials, accent:m.accent,
+        role:m.role, roleColor:ri.color, roleSoft:ri.soft,
+        activeRing: m.id === S.activeMember ? 'rgba(70,184,136,.5)' : 'rgba(255,255,255,0)',
+        onSelect: () => this.setState({ activeMember:m.id, menuOpen:false }),
+        onRoleChange: (e) => { const v = e.target.value; this.setState(st => ({ members: st.members.map(x => x.id===m.id ? {...x, role:v} : x) })); },
+      };
+    });
+
+    const navBg = (t) => S.tab === t ? 'var(--nav-active-bg)' : 'transparent';
+    const navCol = (t) => S.tab === t ? 'var(--nav-active-text)' : 'var(--nav-text)';
+    const rBg = (r) => S.range === r ? 'var(--toggle-on-bg)' : 'var(--toggle-off-bg)';
+    const rCol = (r) => S.range === r ? 'var(--toggle-on-text)' : 'var(--toggle-off-text)';
+
+    return {
+      household: this.props.householdName ?? 'The Whitfield Household',
+      asOf: this.props.asOf ?? 'As of June 19, 2026',
+      isOverview: S.tab==='overview', isAccounts: S.tab==='accounts', isInvest: S.tab==='invest', isRetire: S.tab==='retire', isProperty: S.tab==='property', isCash: S.tab==='cash',
+      setOverview:()=>this.setState({tab:'overview'}), setAccounts:()=>this.setState({tab:'accounts'}), setInvest:()=>this.setState({tab:'invest'}), setRetire:()=>this.setState({tab:'retire'}), setProperty:()=>this.setState({tab:'property'}), setCash:()=>this.setState({tab:'cash'}),
+      ovBg:navBg('overview'), acBg:navBg('accounts'), inBg:navBg('invest'), rtBg:navBg('retire'), prBg:navBg('property'), caBg:navBg('cash'),
+      ovCol:navCol('overview'), acCol:navCol('accounts'), inCol:navCol('invest'), rtCol:navCol('retire'), prCol:navCol('property'), caCol:navCol('cash'),
+      setYTD:()=>this.setState({range:'ytd'}), set1Y:()=>this.setState({range:'1y'}), setAll:()=>this.setState({range:'all'}),
+      rangeCaption: ranges[S.range],
+      ytdBg:rBg('ytd'), y1Bg:rBg('1y'), allBg:rBg('all'),
+      ytdCol:rCol('ytd'), y1Col:rCol('1y'), allCol:rCol('all'),
+      groups, sel, cashMonths,
+      kpiNetWorth: fmtM(netWorth), kpiAssets: fmtM(assets), kpiLiab: fmtM(liabilities), kpiLiquid: fmtM(liquid),
+      allocSegs, allocLegend, allocCenter, largest,
+      retM: fmtM(retTotal), retPctNW, retList, taxDef, taxFree, taxGuar, pensionFmt,
+      reValueM: fmtM(reValue), reMortM: fmtM(reMort), reEquityM: fmtM(reEquity), reEquityFull: fmt(reEquity), reCards, reLTV,
+      invM, canEdit, canDelete,
+      onAddRetire:()=>this._openAdd('Retirement'), onAddProperty:()=>this._openAdd('Real estate'),
+      closeDrawer:()=>this._closeDrawer(),
+      draft, drawerOpen: S.drawerOpen, confirm, confirmOpen: !!S.confirmId,
+      me: { name:meRec.name, email:meRec.email, initials:meRec.initials, accent:meRec.accent, role:meRec.role, roleColor:meRole.color, roleSoft:meRole.soft, roleDesc:meRole.desc },
+      members: memberList,
+      menuOpen: S.menuOpen, settingsOpen: S.settingsOpen,
+      toggleMenu:()=>this.setState(st=>({menuOpen:!st.menuOpen})),
+      closeMenu:()=>this.setState({menuOpen:false}),
+      openSettings:()=>this.setState({settingsOpen:true, menuOpen:false}),
+      closeSettings:()=>this.setState({settingsOpen:false}),
+      theme:S.theme,
+      setDark:()=>this.setState({theme:'dark'}), setLight:()=>this.setState({theme:'light'}),
+      darkBg: S.theme==='dark'?'var(--toggle-on-bg)':'transparent', lightBg: S.theme==='light'?'var(--toggle-on-bg)':'transparent',
+      darkCol: S.theme==='dark'?'var(--toggle-on-text)':'var(--muted)', lightCol: S.theme==='light'?'var(--toggle-on-text)':'var(--muted)',
+    };
+  }
+}
+</script>
+</body>
+</html>
