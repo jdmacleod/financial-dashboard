@@ -144,6 +144,58 @@ def net_investment_income_tax(
     return base * tax_tables.NIIT_RATE
 
 
+def alternative_minimum_tax(
+    *,
+    tax_year: int,
+    filing_status: str,
+    amti: Decimal,
+    regular_tax: Decimal,
+    qualified_income: Decimal = Decimal("0"),
+) -> Decimal:
+    """Additional Alternative Minimum Tax owed (26 U.S.C. §55).
+
+    The AMT is a parallel calculation: tentative minimum tax (TMT) is 26%/28% of
+    alternative minimum taxable income (AMTI) above an exemption that itself phases
+    out at high income, and the taxpayer owes the amount by which TMT exceeds the
+    regular tax. Long-term capital gains and qualified dividends keep their
+    preferential rates under the AMT, so the 26/28% rates apply only to the
+    ordinary portion of the AMT base.
+
+    `amti` is alternative minimum taxable income. In this engine AMTI is regular
+    taxable income with the standard deduction added back, plus any caller-supplied
+    AMT preference income. Other preference items (SALT add-backs, incentive-stock-
+    option spread, private-activity-bond interest) are not tracked, so without a
+    preference input the AMT here reflects only the standard-deduction add-back and
+    is effectively always $0 for the high TCJA exemptions. Returns 0 when the
+    regular tax already meets or exceeds TMT.
+    """
+    exemption_base = tax_tables.AMT_EXEMPTION[tax_year][filing_status]
+    threshold = tax_tables.AMT_PHASEOUT_THRESHOLD[tax_year][filing_status]
+    phaseout_rate = tax_tables.AMT_PHASEOUT_RATE[tax_year]
+    rate_28_threshold = tax_tables.AMT_28_THRESHOLD[tax_year][filing_status]
+    low_rate, high_rate = tax_tables.AMT_RATES
+
+    amti = max(amti, Decimal("0"))
+    qualified_income = max(qualified_income, Decimal("0"))
+
+    over_threshold = max(amti - threshold, Decimal("0"))
+    exemption = max(exemption_base - phaseout_rate * over_threshold, Decimal("0"))
+    amt_base = max(amti - exemption, Decimal("0"))
+
+    # Qualified income stacks on top and keeps the preferential schedule; the
+    # 26/28% rates apply only to the ordinary portion of the AMT base.
+    qualified_in_base = min(qualified_income, amt_base)
+    ordinary_base = amt_base - qualified_in_base
+    tmt_ordinary = low_rate * min(ordinary_base, rate_28_threshold) + high_rate * max(
+        ordinary_base - rate_28_threshold, Decimal("0")
+    )
+    breakpoints = tax_tables.CAPITAL_GAINS_BREAKPOINTS[tax_year][filing_status]
+    tmt_qualified = preferential_tax(breakpoints, ordinary_base, qualified_in_base)
+    tentative_minimum_tax = tmt_ordinary + tmt_qualified
+
+    return max(tentative_minimum_tax - max(regular_tax, Decimal("0")), Decimal("0"))
+
+
 def bracket_ceiling_for_rate(brackets: tax_tables.BracketTable, rate: Decimal) -> Decimal | None:
     """Taxable-income ceiling at the top of the bracket taxed at `rate`.
 
@@ -167,6 +219,7 @@ def estimate_federal_tax(
     ordinary_income: Decimal,
     social_security: Decimal,
     qualified_income: Decimal = Decimal("0"),
+    amt_preference_income: Decimal = Decimal("0"),
 ) -> FederalTaxEstimate:
     """Estimate federal income tax for the given income components and year.
 
@@ -174,6 +227,9 @@ def estimate_federal_tax(
     rental income, pensions, traditional withdrawals/RMDs). `qualified_income` is
     long-term capital gains and qualified dividends, taxed at the preferential
     0/15/20 schedule. `social_security` is gross benefits, taxed via §86.
+    `amt_preference_income` is AMT-only add-backs (SALT, ISO spread, etc.) added to
+    AMTI on top of the standard-deduction add-back; it defaults to 0 (callers
+    without preference data get an AMT that is effectively always $0).
 
     Raises ValueError for an unsupported year or filing status; callers that
     accept arbitrary years should pass `resolve_tax_year(year)`.
@@ -214,6 +270,16 @@ def estimate_federal_tax(
         _CENTS, ROUND_HALF_UP
     )
 
+    # §55 AMT is a parallel tax. AMTI is regular taxable income with the standard
+    # deduction added back (i.e. gross_taxable) plus any AMT preference income.
+    amt = alternative_minimum_tax(
+        tax_year=tax_year,
+        filing_status=filing_status,
+        amti=gross_taxable + max(amt_preference_income, Decimal("0")),
+        regular_tax=federal_tax,
+        qualified_income=qualified_income,
+    ).quantize(_CENTS, ROUND_HALF_UP)
+
     # Roth-conversion headroom and the marginal rate are about ordinary income (a
     # conversion adds ordinary income), so they read off the ordinary taxable base.
     room, next_rate = bracket_headroom(brackets, ordinary_taxable)
@@ -223,7 +289,7 @@ def estimate_federal_tax(
     # separate surtax and is reported on its own line, not folded into this rate.
     rate_base = ordinary_income + taxable_ss + qualified_income
     effective_rate = float(federal_tax / rate_base) if rate_base > 0 else 0.0
-    after_tax = (ordinary_income + social_security + qualified_income) - federal_tax - niit
+    after_tax = (ordinary_income + social_security + qualified_income) - federal_tax - niit - amt
 
     return FederalTaxEstimate(
         tax_year=tax_year,
@@ -237,6 +303,7 @@ def estimate_federal_tax(
         federal_tax=federal_tax,
         qualified_tax=qualified_tax.quantize(_CENTS, ROUND_HALF_UP),
         net_investment_income_tax=niit,
+        alternative_minimum_tax=amt,
         after_tax_income=after_tax.quantize(_CENTS, ROUND_HALF_UP),
         effective_rate=effective_rate,
         marginal_rate=marginal_rate_for(brackets, ordinary_taxable),
