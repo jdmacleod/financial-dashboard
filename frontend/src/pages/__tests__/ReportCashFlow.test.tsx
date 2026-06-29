@@ -35,6 +35,8 @@ const mockCashFlow = {
     total: "0.00",
     has_data: false,
   },
+  federal_tax_estimate: null,
+  state_tax_estimate: null,
 }
 
 const mockSpending = {
@@ -280,6 +282,7 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         taxable_income: "62500.00",
         federal_tax: "7023.00",
         qualified_tax: "0.00",
+        net_investment_income_tax: "0.00",
         after_tax_income: "92977.00",
         effective_rate: 0.0747,
         marginal_rate: 0.12,
@@ -292,7 +295,7 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
     expect(screen.getByText("Estimated federal tax")).toBeInTheDocument()
     expect(screen.getByText("$92,977.00")).toBeInTheDocument()
     expect(screen.getByText(/% marginal/)).toBeInTheDocument()
-    expect(screen.getByText(/federal only/)).toBeInTheDocument()
+    expect(screen.getByText(/Estimate only/)).toBeInTheDocument()
     // No qualified income -> no preferential-rate line.
     expect(screen.queryByText(/preferential rates/)).toBeNull()
     // Roth conversion headroom line.
@@ -325,6 +328,7 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         taxable_income: "74250.00",
         federal_tax: "10549.00",
         qualified_tax: "1500.00",
+        net_investment_income_tax: "0.00",
         after_tax_income: "79451.00",
         effective_rate: 0.1172,
         marginal_rate: 0.22,
@@ -365,6 +369,7 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         taxable_income: "62500.00",
         federal_tax: "7023.00",
         qualified_tax: "0.00",
+        net_investment_income_tax: "0.00",
         after_tax_income: "92977.00",
         effective_rate: 0.0747,
         marginal_rate: 0.37,
@@ -375,5 +380,91 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
     renderPage()
     await waitFor(() => expect(screen.getByText("$7,023.00")).toBeInTheDocument())
     expect(screen.queryByText(/Roth conversion room/)).toBeNull()
+  })
+
+  it("shows the state tax line and NIIT line for a high earner in a taxing state", async () => {
+    const { reportsApi: mock } = await import("@/api/reports")
+    ;(mock.cashFlow as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...mockCashFlow,
+      federal_tax_estimate: {
+        tax_year: 2025,
+        filing_status: "single",
+        ordinary_income: "300000.00",
+        qualified_income: "50000.00",
+        social_security_gross: "0.00",
+        taxable_social_security: "0.00",
+        standard_deduction: "15750.00",
+        taxable_income: "334250.00",
+        federal_tax: "85000.00",
+        qualified_tax: "7500.00",
+        net_investment_income_tax: "1900.00",
+        after_tax_income: "263100.00",
+        effective_rate: 0.24,
+        marginal_rate: 0.35,
+        roth_conversion_room: null,
+        next_bracket_rate: null,
+      },
+      state_tax_estimate: {
+        state: "CA",
+        tax_year: 2025,
+        filing_status: "single",
+        modeled: true,
+        taxable_income: "344460.00",
+        state_tax: "30000.00",
+        effective_rate: 0.0857,
+        marginal_rate: 0.093,
+        note: null,
+      },
+    })
+    renderPage()
+    await waitFor(() => expect(screen.getByText("Estimated federal tax")).toBeInTheDocument())
+    // NIIT surtax line.
+    expect(screen.getByText(/net investment income tax/)).toBeInTheDocument()
+    expect(screen.getByText("$1,900.00")).toBeInTheDocument()
+    // State tax line.
+    expect(screen.getByText(/CA state tax/)).toBeInTheDocument()
+    expect(screen.getByText("$30,000.00")).toBeInTheDocument()
+  })
+
+  it("shows the no-income-tax note for a household in a state without income tax", async () => {
+    const { reportsApi: mock } = await import("@/api/reports")
+    ;(mock.cashFlow as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...mockCashFlow,
+      federal_tax_estimate: {
+        tax_year: 2025,
+        filing_status: "single",
+        ordinary_income: "80000.00",
+        qualified_income: "0.00",
+        social_security_gross: "0.00",
+        taxable_social_security: "0.00",
+        standard_deduction: "15750.00",
+        taxable_income: "64250.00",
+        federal_tax: "9049.00",
+        qualified_tax: "0.00",
+        net_investment_income_tax: "0.00",
+        after_tax_income: "70951.00",
+        effective_rate: 0.1131,
+        marginal_rate: 0.22,
+        roth_conversion_room: null,
+        next_bracket_rate: null,
+      },
+      state_tax_estimate: {
+        state: "TX",
+        tax_year: 2025,
+        filing_status: "single",
+        modeled: true,
+        taxable_income: "0.00",
+        state_tax: "0.00",
+        effective_rate: 0,
+        marginal_rate: 0,
+        note: "TX has no state income tax.",
+      },
+    })
+    renderPage()
+    await waitFor(() => expect(screen.getByText("Estimated federal tax")).toBeInTheDocument())
+    expect(screen.getByText("TX has no state income tax.")).toBeInTheDocument()
+    // No NIIT line (zero surtax) and no "state tax:" amount line.
+    expect(screen.queryByText(/net investment income tax/)).toBeNull()
+    expect(screen.queryByText(/state tax:/)).toBeNull()
   })
 })

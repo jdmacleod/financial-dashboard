@@ -126,6 +126,24 @@ def preferential_tax(
     return at_15 * tax_tables.CAPITAL_GAINS_RATES[1] + at_20 * tax_tables.CAPITAL_GAINS_RATES[2]
 
 
+def net_investment_income_tax(
+    filing_status: str, magi: Decimal, net_investment_income: Decimal
+) -> Decimal:
+    """§1411 net investment income tax: 3.8% surtax.
+
+    Charged on the *lesser* of net investment income and the amount by which
+    modified AGI exceeds the filing-status threshold, so it phases in only for
+    higher-income households with investment income. `net_investment_income` here
+    is the household's qualified income (long-term capital gains + qualified
+    dividends); taxable interest, rents, and royalties are out of scope, so this
+    can understate NII. Returns 0 below the threshold or with no investment income.
+    """
+    threshold = tax_tables.NIIT_THRESHOLD[filing_status]
+    over_threshold = max(magi - threshold, Decimal("0"))
+    base = min(max(net_investment_income, Decimal("0")), over_threshold)
+    return base * tax_tables.NIIT_RATE
+
+
 def bracket_ceiling_for_rate(brackets: tax_tables.BracketTable, rate: Decimal) -> Decimal | None:
     """Taxable-income ceiling at the top of the bracket taxed at `rate`.
 
@@ -188,15 +206,24 @@ def estimate_federal_tax(
     qualified_tax = preferential_tax(breakpoints, ordinary_taxable, qualified_taxable)
     federal_tax = (ordinary_tax + qualified_tax).quantize(_CENTS, ROUND_HALF_UP)
 
+    # §1411 NIIT is a separate surtax on top of the income tax. MAGI is
+    # approximated by AGI (total income that entered the return, before the
+    # standard deduction); net investment income is the qualified bucket.
+    magi = ordinary_income + taxable_ss + qualified_income
+    niit = net_investment_income_tax(filing_status, magi, qualified_income).quantize(
+        _CENTS, ROUND_HALF_UP
+    )
+
     # Roth-conversion headroom and the marginal rate are about ordinary income (a
     # conversion adds ordinary income), so they read off the ordinary taxable base.
     room, next_rate = bracket_headroom(brackets, ordinary_taxable)
 
-    # Effective rate is tax over the income that actually entered the return
-    # (ordinary + includable SS + qualified), not over gross SS.
+    # Effective rate is the income tax over the income that actually entered the
+    # return (ordinary + includable SS + qualified), not over gross SS. NIIT is a
+    # separate surtax and is reported on its own line, not folded into this rate.
     rate_base = ordinary_income + taxable_ss + qualified_income
     effective_rate = float(federal_tax / rate_base) if rate_base > 0 else 0.0
-    after_tax = (ordinary_income + social_security + qualified_income) - federal_tax
+    after_tax = (ordinary_income + social_security + qualified_income) - federal_tax - niit
 
     return FederalTaxEstimate(
         tax_year=tax_year,
@@ -209,6 +236,7 @@ def estimate_federal_tax(
         taxable_income=taxable_income.quantize(_CENTS, ROUND_HALF_UP),
         federal_tax=federal_tax,
         qualified_tax=qualified_tax.quantize(_CENTS, ROUND_HALF_UP),
+        net_investment_income_tax=niit,
         after_tax_income=after_tax.quantize(_CENTS, ROUND_HALF_UP),
         effective_rate=effective_rate,
         marginal_rate=marginal_rate_for(brackets, ordinary_taxable),

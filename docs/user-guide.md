@@ -207,6 +207,8 @@ Shows income and expenses grouped by time period. Configure:
 
 **Retirement income breakdown:** When the range includes retirement income, a **Retirement income** card breaks out **Social Security**, **Pension**, and **RMDs** (plus a total). These are a subset of total income, not an addition. The card hides itself when there's no retirement income. See [How to read the retirement income breakdown](howto-track-retirement-income.md).
 
+**Estimated tax:** When your household has a filing status set (Settings → Household & tax), an **Estimated federal tax** panel shows the federal income tax over the period's full taxable income, your after-tax income, and your marginal rate. Qualified income (long-term capital gains and qualified dividends) is taxed at preferential rates on its own line, and higher earners with investment income also see a federal net investment income tax (NIIT) line. If you also set your state of residence, a **state income tax** line appears: a full estimate for California, New York, Georgia, and Illinois; a $0 with a note for the eight no-income-tax states (Texas, Florida, Tennessee, and the rest); and a "not yet modeled" note for any other state. All figures are planning estimates, not tax preparation: they exclude AMT, credits, and itemized deductions, and state estimates tax capital gains as ordinary income and exclude Social Security.
+
 ### Investments
 
 Shows your `investment_brokerage` accounts with balance history, plus, when you have cost-basis lots, a **Holdings** card:

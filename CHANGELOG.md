@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.14.0] - 2026-06-29
+
+### Added
+
+- **The Cash Flow report now estimates your state income tax and the federal net investment income tax, not just federal income tax.** When your household profile has a filing status and a state of residence, the "Estimated federal tax" panel also shows your state income tax with its marginal rate, and, for higher earners with investment income, the 3.8% federal net investment income tax (NIIT). State brackets are modeled in full for California, New York, Georgia, and Illinois; the eight states with no income tax (Texas, Florida, Tennessee, and the rest) correctly show $0 with a short note; any other state shows a clear "not yet modeled" note instead of a wrong number. Set your state under Settings → Household & tax. This is a planning estimate, not tax preparation: states are modeled to tax capital gains and qualified dividends as ordinary income, Social Security is excluded (none of the four modeled states tax it), and state-specific retirement-income exclusions are not applied.
+
+### For contributors
+
+- New `app/services/state_tax.py` and `state_tax_tables.py` mirror the federal `tax.py` / `tax_tables.py` split: data-only year-keyed constants (Tax Foundation 2025, cited in the module docstring) and pure functions returning a `StateTaxEstimate`. `estimate_state_tax()` always returns an estimate keyed off `households.state`: a modeled taxing state, a real $0 for no-income-tax states, or `modeled=False` plus a note for any other state. NIIT (§1411) is added to the federal engine as `net_investment_income_tax()` and a new `net_investment_income_tax` field on `FederalTaxEstimate`, netted out of after-tax income but kept out of the income-tax effective rate. `report.py` derives federal and state estimates from a single household fetch and surfaces both on `CashFlowReport`. No migration: the `state` and `filing_status` columns exist since 0018. Documented simplifications: HoH/MFS map to the single state schedule and QSS to married-filing-jointly; only CA/NY/GA/IL are modeled; AMT stays out of scope (tracked in TODOS). Tests: 13 state-engine unit, 5 NIIT engine unit, 1 report integration, 2 frontend.
+
 ## [0.23.13.0] - 2026-06-29
 
 ### Fixed

@@ -1004,6 +1004,51 @@ async def test_cash_flow_tax_estimate_full_income_basis(
     assert est.qualified_tax == Decimal("1500.00")
     # ordinary tax 9,049 + qualified 1,500.
     assert est.federal_tax == Decimal("10549.00")
+    # No state of residence set -> no state estimate.
+    assert report.state_tax_estimate is None
+
+
+async def test_cash_flow_state_tax_estimate_when_state_set(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """With a filing status and a modeled state of residence, the cash-flow report
+    surfaces a state estimate alongside the federal one (states tax qualified
+    income as ordinary, so the CA base is the full 90,000)."""
+    household.filing_status = "single"
+    household.state = "CA"
+    await db_session.flush()
+
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "CA Worker Brokerage")
+    salary_cat = await _add_category(db_session, household.id, "Salary", is_income=True)
+    cg_cat = await _add_category(
+        db_session, household.id, "Capital Gains", is_income=True, slug="capital_gains"
+    )
+    div_cat = await _add_category(
+        db_session, household.id, "Dividends", is_income=True, slug="dividends"
+    )
+    await _add_transaction(
+        db_session, account.id, date(2025, 2, 1), Decimal("80000"), salary_cat.id
+    )
+    await _add_transaction(db_session, account.id, date(2025, 3, 1), Decimal("8000"), cg_cat.id)
+    await _add_transaction(db_session, account.id, date(2025, 4, 1), Decimal("2000"), div_cat.id)
+
+    svc = ReportService(db_session)
+    report = await svc.cash_flow(ctx, date(2025, 1, 1), date(2025, 12, 31))
+
+    st = report.state_tax_estimate
+    assert st is not None
+    assert st.state == "CA"
+    assert st.modeled is True
+    assert st.filing_status == "single"
+    # base = 80,000 ordinary + 10,000 qualified; taxable = 90,000 - 5,540 std.
+    assert st.taxable_income == Decimal("84460.00")
+    #   3,108.72 (first five tiers to 70,606) + 9.3%*(84,460-70,606)=1,288.422
+    assert st.state_tax == Decimal("4397.14")
+    assert st.marginal_rate == 0.093
 
 
 async def test_cash_flow_empty_accounts(

@@ -821,6 +821,35 @@ Income and expenses over time.
     "rmd": "0.0000",
     "total": "0.0000",
     "has_data": false
+  },
+  "federal_tax_estimate": {
+    "tax_year": 2025,
+    "filing_status": "single",
+    "ordinary_income": "80000.0000",
+    "qualified_income": "10000.0000",
+    "social_security_gross": "0.0000",
+    "taxable_social_security": "0.0000",
+    "standard_deduction": "15750.0000",
+    "taxable_income": "74250.0000",
+    "federal_tax": "10549.0000",
+    "qualified_tax": "1500.0000",
+    "net_investment_income_tax": "0.0000",
+    "after_tax_income": "79451.0000",
+    "effective_rate": 0.1172,
+    "marginal_rate": 0.22,
+    "roth_conversion_room": null,
+    "next_bracket_rate": null
+  },
+  "state_tax_estimate": {
+    "state": "CA",
+    "tax_year": 2025,
+    "filing_status": "single",
+    "modeled": true,
+    "taxable_income": "84460.0000",
+    "state_tax": "4397.1400",
+    "effective_rate": 0.0488,
+    "marginal_rate": 0.093,
+    "note": null
   }
 }
 ```
@@ -829,6 +858,21 @@ Income and expenses over time.
 (matched by category name: Social Security, Pension Income, Required Minimum
 Distribution). `has_data` is `false` when the household drew no retirement
 income in the range, letting clients hide the panel.
+
+`federal_tax_estimate` is a planning estimate over the period's full taxable
+income: ordinary-income brackets, the standard deduction, the §86-includable
+portion of Social Security, the preferential 0/15/20 schedule for qualified
+income (long-term capital gains + qualified dividends), and the §1411 net
+investment income tax (`net_investment_income_tax`, a 3.8% surtax above a
+filing-status MAGI threshold). It is `null` unless the household has a filing
+status and had taxable income in the range. `state_tax_estimate` keys off the
+household's state of residence and is `null` unless a state is also set. It is
+present even for states with no income tax (`state_tax` is `0`, `modeled` is
+`true`, `note` explains) and for states whose brackets are not yet modeled
+(`modeled` is `false`, `state_tax` is `0`, `note` says so); modeled states are
+California, New York, Georgia, and Illinois. Both estimates exclude AMT,
+credits, and itemized deductions; state estimates tax qualified income as
+ordinary income and exclude Social Security.
 
 ### `GET /reports/spending-by-category`
 

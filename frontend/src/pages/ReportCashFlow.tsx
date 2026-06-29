@@ -487,7 +487,7 @@ export default function ReportCashFlow() {
                   </strong>{" "}
                   ({(data.federal_tax_estimate.marginal_rate * 100).toFixed(0)}% marginal)
                 </span>
-                <span style={{ color: "var(--faint)" }}>Estimate — federal only</span>
+                <span style={{ color: "var(--faint)" }}>Estimate only</span>
               </div>
               {Number(data.federal_tax_estimate.qualified_income) > 0 && (
                 <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--text2)" }}>
@@ -502,6 +502,32 @@ export default function ReportCashFlow() {
                   at preferential rates.
                 </div>
               )}
+              {Number(data.federal_tax_estimate.net_investment_income_tax) > 0 && (
+                <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--text2)" }}>
+                  Incl. net investment income tax (NIIT){" "}
+                  <strong style={{ color: "var(--liab)" }}>
+                    {formatCurrency(data.federal_tax_estimate.net_investment_income_tax)}
+                  </strong>{" "}
+                  (3.8% on investment income above the threshold).
+                </div>
+              )}
+              {data.state_tax_estimate &&
+                (data.state_tax_estimate.modeled &&
+                Number(data.state_tax_estimate.state_tax) > 0 ? (
+                  <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--text2)" }}>
+                    Est. {data.state_tax_estimate.state} state tax:{" "}
+                    <strong style={{ color: "var(--liab)" }}>
+                      {formatCurrency(data.state_tax_estimate.state_tax)}
+                    </strong>{" "}
+                    ({(data.state_tax_estimate.marginal_rate * 100).toFixed(1)}% marginal)
+                  </div>
+                ) : (
+                  data.state_tax_estimate.note && (
+                    <div style={{ marginTop: "8px", fontSize: "12px", color: "var(--faint)" }}>
+                      {data.state_tax_estimate.note}
+                    </div>
+                  )
+                ))}
               {data.federal_tax_estimate.roth_conversion_room &&
                 Number(data.federal_tax_estimate.roth_conversion_room) > 0 &&
                 data.federal_tax_estimate.next_bracket_rate != null && (
