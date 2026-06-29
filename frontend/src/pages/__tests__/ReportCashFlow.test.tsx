@@ -283,6 +283,7 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         federal_tax: "7023.00",
         qualified_tax: "0.00",
         net_investment_income_tax: "0.00",
+        alternative_minimum_tax: "0.00",
         after_tax_income: "92977.00",
         effective_rate: 0.0747,
         marginal_rate: 0.12,
@@ -329,6 +330,7 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         federal_tax: "10549.00",
         qualified_tax: "1500.00",
         net_investment_income_tax: "0.00",
+        alternative_minimum_tax: "0.00",
         after_tax_income: "79451.00",
         effective_rate: 0.1172,
         marginal_rate: 0.22,
@@ -370,6 +372,7 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         federal_tax: "7023.00",
         qualified_tax: "0.00",
         net_investment_income_tax: "0.00",
+        alternative_minimum_tax: "0.00",
         after_tax_income: "92977.00",
         effective_rate: 0.0747,
         marginal_rate: 0.37,
@@ -398,7 +401,8 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         federal_tax: "85000.00",
         qualified_tax: "7500.00",
         net_investment_income_tax: "1900.00",
-        after_tax_income: "263100.00",
+        alternative_minimum_tax: "12000.00",
+        after_tax_income: "251100.00",
         effective_rate: 0.24,
         marginal_rate: 0.35,
         roth_conversion_room: null,
@@ -421,6 +425,9 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
     // NIIT surtax line.
     expect(screen.getByText(/net investment income tax/)).toBeInTheDocument()
     expect(screen.getByText("$1,900.00")).toBeInTheDocument()
+    // AMT line (positive AMT in this mock).
+    expect(screen.getByText(/alternative minimum tax/)).toBeInTheDocument()
+    expect(screen.getByText("$12,000.00")).toBeInTheDocument()
     // State tax line.
     expect(screen.getByText(/CA state tax/)).toBeInTheDocument()
     expect(screen.getByText("$30,000.00")).toBeInTheDocument()
@@ -442,6 +449,7 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         federal_tax: "9049.00",
         qualified_tax: "0.00",
         net_investment_income_tax: "0.00",
+        alternative_minimum_tax: "0.00",
         after_tax_income: "70951.00",
         effective_rate: 0.1131,
         marginal_rate: 0.22,

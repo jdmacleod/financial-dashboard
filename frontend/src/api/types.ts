@@ -394,6 +394,7 @@ export interface FederalTaxEstimate {
   federal_tax: string
   qualified_tax: string
   net_investment_income_tax: string
+  alternative_minimum_tax: string
   after_tax_income: string
   effective_rate: number
   marginal_rate: number
