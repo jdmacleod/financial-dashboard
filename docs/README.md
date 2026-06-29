@@ -27,6 +27,7 @@ architectural rules, and coding conventions that apply to every phase.
 | File                                     | Purpose                                                                                                              |
 | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `../CLAUDE.md`                           | Project context, rules, conventions: Claude Code reads this automatically                                            |
+| `../DESIGN.md`                           | Frontend design system: color/type/spacing tokens, component vocabulary, known drift (read before UI work)           |
 | `docs/architecture.md`                   | System architecture, Docker Compose, nginx routing, RBAC summary                                                     |
 | `docs/data-model.md`                     | Complete consolidated database schema (all amendments incorporated)                                                  |
 | `docs/phase-0-infrastructure.md`         | Docker Compose stack, DB init, Alembic baseline migration                                                            |
