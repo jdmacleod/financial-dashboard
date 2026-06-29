@@ -834,6 +834,7 @@ Income and expenses over time.
     "federal_tax": "10549.0000",
     "qualified_tax": "1500.0000",
     "net_investment_income_tax": "0.0000",
+    "alternative_minimum_tax": "0.0000",
     "after_tax_income": "79451.0000",
     "effective_rate": 0.1172,
     "marginal_rate": 0.22,
@@ -862,10 +863,12 @@ income in the range, letting clients hide the panel.
 `federal_tax_estimate` is a planning estimate over the period's full taxable
 income: ordinary-income brackets, the standard deduction, the §86-includable
 portion of Social Security, the preferential 0/15/20 schedule for qualified
-income (long-term capital gains + qualified dividends), and the §1411 net
+income (long-term capital gains + qualified dividends), the §1411 net
 investment income tax (`net_investment_income_tax`, a 3.8% surtax above a
-filing-status MAGI threshold). It is `null` unless the household has a filing
-status and had taxable income in the range. `state_tax_estimate` keys off the
+filing-status MAGI threshold), and the §55 alternative minimum tax
+(`alternative_minimum_tax`, the amount the parallel AMT exceeds the regular tax;
+typically `0` because the report tracks no AMT preference items). It is `null`
+unless the household has a filing status and had taxable income in the range. `state_tax_estimate` keys off the
 household's state of residence and is `null` unless a state is also set. It is
 present even for states with no income tax (`state_tax` is `0`, `modeled` is
 `true`, `note` explains) and for states whose brackets are not yet modeled

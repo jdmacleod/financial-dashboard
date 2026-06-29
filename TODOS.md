@@ -38,15 +38,15 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Tax-estimate engine — remaining scope (AMT, broader state coverage)
+### Tax-estimate engine — remaining scope (AMT preference items, broader state coverage)
 
-**What:** Two follow-ons now that state income tax + NIIT have shipped (see Completed, 2026-06-29): (1) the federal Alternative Minimum Tax (AMT) — exemption, phase-out, and the 26%/28% rate schedule; (2) expand state coverage beyond the four modeled states (CA/NY/GA/IL) toward all taxing states, and add the state-specific retirement-income exclusions currently documented as out of scope (Illinois's full exclusion, Georgia's age-based exclusion, New York's $20k pension exclusion).
+**What:** Three follow-ons now that the federal AMT machinery has shipped (see Completed, 2026-06-29): (1) feed real AMT preference items into the AMT calc (state-tax add-backs, incentive-stock-option spread, private-activity-bond interest) so the AMT estimate can actually bind — today the engine is correct but always returns $0 because the cash-flow report tracks no preference items; (2) expand state coverage beyond the four modeled states (CA/NY/GA/IL) toward all taxing states; (3) add the state-specific retirement-income exclusions currently documented as out of scope (Illinois's full exclusion, Georgia's age-based exclusion, New York's $20k pension exclusion).
 
-**Why:** The cash-flow estimate now covers federal income tax (full-income basis + preferential rates + NIIT) and state income tax for the demo-relevant states, but AMT can bind for high-deduction households, and a retiree in IL/GA/NY is currently overstated because the state engine ignores their retirement-income exclusions.
+**Why:** The cash-flow estimate now computes federal income tax (full-income basis + preferential rates + NIIT + AMT) and state income tax for the demo-relevant states. The AMT line is computed correctly but hidden in practice (no preference data); surfacing real preferences would make it meaningful. A retiree in IL/GA/NY is still overstated because the state engine ignores their retirement-income exclusions.
 
-**Cons:** State brackets for the remaining ~37 taxing states are a large annual-maintenance surface — keep the isolate-and-cite discipline in `state_tax_tables.py` (one cited source per year). AMT is a narrower, self-contained add-on. Retirement-income exclusions need the cash-flow basis to separate retirement-ordinary income from wage-ordinary income at the state level.
+**Cons:** AMT preference items need a data source the app doesn't have yet (itemized SALT, ISO exercises) — likely a manual input. State brackets for the remaining ~37 taxing states are a large annual-maintenance surface — keep the isolate-and-cite discipline in `state_tax_tables.py` (one cited source per year). Retirement-income exclusions need the cash-flow basis to separate retirement-ordinary income from wage-ordinary income at the state level.
 
-**Depends on:** State tax engine + NIIT (shipped 2026-06-29); the existing `state_tax.py` / `state_tax_tables.py` modules extend directly.
+**Depends on:** Federal AMT engine (shipped 2026-06-29, `tax.alternative_minimum_tax()` + the `amt_preference_income` input already exist); state tax engine + NIIT (shipped 2026-06-29).
 
 ---
 
@@ -63,6 +63,25 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### Federal Alternative Minimum Tax (Tax-estimate engine)
+
+**Completed:** v0.23.15.0 (2026-06-29, branch `feat/amt-estimate`) — Added the §55
+AMT to the federal tax engine. New pure `tax.alternative_minimum_tax()` computes the
+tentative minimum tax (26%/28% over the year-keyed exemption, which phases out at high
+income) and owes `max(0, TMT - regular_tax)`; long-term capital gains / qualified
+dividends keep their preferential rates on the ordinary AMT base. Cited 2025/2026
+constants in `tax_tables.py` (IRS Rev. Proc. 2024-40 / 2025-32 via Tax Foundation),
+including the OBBBA 2026 change that cut the exemption phaseout thresholds to
+$500k/$1M and accelerated the phaseout rate from 25% to 50%. `estimate_federal_tax()`
+gained an optional `amt_preference_income` input (default 0) and a new
+`alternative_minimum_tax` field on `FederalTaxEstimate`, netted from after-tax income;
+the cash-flow panel renders an AMT line gated on `> 0`. Honest limitation: with only
+the standard-deduction add-back (no tracked preference items), AMT never exceeds the
+regular tax under the high TCJA exemptions, so the live line is effectively always $0
+— the engine is correct and tested with binding cases via the preference input, but
+needs a preference-item data source to bind (see open item). No migration. Tests: 4
+engine unit + 2 integration + AMT-line assertions on the cash-flow panel test.
 
 ### State income tax estimate + federal NIIT (Tax-estimate engine)
 
