@@ -1,19 +1,5 @@
 # TODOS
 
-### DESIGN.md — HearthLedger design system document
-
-**What:** Run `/design-consultation` to produce a `DESIGN.md` at the repo root documenting HearthLedger-specific design tokens: type scale (Archivo headings, Spectral body), color palette (indigo-600 accent, gray-200 borders), component vocabulary (section header pattern, range toggle pill style, modal pattern), and spacing rules.
-
-**Why:** Without a design system document, each new UI feature is reviewed against universal principles instead of HearthLedger-specific conventions. The `plan-design-review` skill flagged its absence during the Budgets sort/filter design review. Without it, decisions like "what should the sort select look like?" get made ad-hoc instead of from a documented token.
-
-**Pros:** Future UI reviews become faster and more precise. New contributors have a reference. Prevents design drift as the feature set grows.
-
-**Cons:** Takes one session. Requires keeping the document current as the design evolves.
-
-**Depends on:** Nothing.
-
----
-
 ### WCAG 2.1 AA accessibility audit — HearthLedger v1 (Post-Phase 7)
 
 **What:** Run a full WCAG 2.1 AA audit across all HearthLedger pages: color contrast ratios (4.5:1 body text, 3:1 large text), screen reader label completeness, keyboard navigation order, and focus indicator visibility.
@@ -77,6 +63,21 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### DESIGN.md — HearthLedger design system document
+
+**Completed:** 2026-06-29 (branch `docs/design-system-md`) — Added `DESIGN.md` at
+the repo root, extracted from the code rather than the original TODO's hints
+(which were stale: the shipped accent is green via Hearth CSS variables, not
+indigo-600, and Archivo — not Spectral — is the body font; Spectral 600 is the
+brand wordmark only). Documents the color/text/accent token set in `index.css`
+(dark-default + light), typography + type scale, the spacing/radius scale, the
+`AppLayout` shell (214px sidebar, nav, segmented range toggle), and the canonical
+`components/ui/` primitives (`SectionHeader`, `DataCard`, `DataRow`). Honestly
+flags the live two-system drift (Hearth tokens vs ad-hoc indigo-600/gray-200/
+bg-white in reports/forms), the dark-only `@theme` limitation, the two modal
+patterns, and vestigial `App.css`, with convergence guidance. Linked from the
+docs index; auto-read by the gstack design-review tooling at repo root.
 
 ### Custom date mode for the Spending Report (cash-flow drill-down range)
 
