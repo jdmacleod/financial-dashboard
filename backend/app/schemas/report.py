@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.schemas.tax import FederalTaxEstimate
+from app.schemas.tax import FederalTaxEstimate, StateTaxEstimate
 
 BudgetPeriod = Literal["monthly", "quarterly", "annual"]
 
@@ -83,6 +83,11 @@ class CashFlowReport(BaseModel):
     # preferential rates, and the §86-includable portion of Social Security). None
     # when the household hasn't set a filing status or has no taxable income.
     federal_tax_estimate: FederalTaxEstimate | None = None
+    # State income-tax estimate keyed off the household's state of residence. None
+    # when no filing status / state is set or there is no taxable income; otherwise
+    # present even for no-income-tax states (state_tax = 0) and not-yet-modeled
+    # states (modeled = False).
+    state_tax_estimate: StateTaxEstimate | None = None
 
 
 class SpendingCategoryItem(BaseModel):

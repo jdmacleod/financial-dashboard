@@ -54,8 +54,9 @@ from app.schemas.report import (
     SpendingByCategoryReport,
     SpendingCategoryItem,
 )
-from app.schemas.tax import FederalTaxEstimate
+from app.schemas.tax import FederalTaxEstimate, StateTaxEstimate
 from app.services.pension_valuation import pension_present_value, pension_value_at
+from app.services.state_tax import estimate_state_tax, resolve_state_tax_year
 from app.services.tax import estimate_federal_tax, resolve_tax_year
 
 Interval = Literal["monthly", "quarterly", "annual"]
@@ -647,41 +648,55 @@ class ReportService:
             total=retirement_total,
             has_data=retirement_total > 0,
         )
-        tax_estimate = await self._household_tax_estimate(ctx, tax_basis, to_date)
+        federal_estimate, state_estimate = await self._household_tax_estimates(
+            ctx, tax_basis, to_date
+        )
         return CashFlowReport(
             series=series,
             totals=totals,
             retirement_income=retirement_income,
-            federal_tax_estimate=tax_estimate,
+            federal_tax_estimate=federal_estimate,
+            state_tax_estimate=state_estimate,
         )
 
-    async def _household_tax_estimate(
+    async def _household_tax_estimates(
         self,
         ctx: VisibilityContext,
         basis: dict[str, Decimal],
         to_date: date,
-    ) -> FederalTaxEstimate | None:
-        """Federal tax estimate over the period's full household income.
+    ) -> tuple[FederalTaxEstimate | None, StateTaxEstimate | None]:
+        """Federal and state tax estimates over the period's full household income.
 
         `basis` carries the income classified by tax treatment: ``ordinary`` (wages,
         business/rental income, pensions, RMDs), ``qualified`` (long-term capital
         gains + qualified dividends, preferential rates), and ``social_security``
-        (taxed via §86). Returns None unless the household has a filing status set
-        and had taxable income in the period. State income tax is still out of scope
-        (tracked separately), so this is a federal-only estimate."""
+        (taxed via §86). Both estimates require a filing status and taxable income;
+        the state estimate additionally requires the household's state of residence.
+        Either component is None when its prerequisites are missing."""
         total = basis["ordinary"] + basis["qualified"] + basis["social_security"]
         if total <= 0:
-            return None
+            return None, None
         household = await self.session.get(Household, ctx.household_id)
         if household is None or household.filing_status is None:
-            return None
-        return estimate_federal_tax(
+            return None, None
+        federal = estimate_federal_tax(
             tax_year=resolve_tax_year(to_date.year),
             filing_status=household.filing_status,
             ordinary_income=basis["ordinary"],
             qualified_income=basis["qualified"],
             social_security=basis["social_security"],
         )
+        state_estimate: StateTaxEstimate | None = None
+        if household.state:
+            state_estimate = estimate_state_tax(
+                state=household.state,
+                tax_year=resolve_state_tax_year(to_date.year),
+                filing_status=household.filing_status,
+                ordinary_income=basis["ordinary"],
+                qualified_income=basis["qualified"],
+                social_security=basis["social_security"],
+            )
+        return federal, state_estimate
 
     # --- Savings rate ----------------------------------------------------
 

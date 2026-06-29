@@ -16,6 +16,7 @@ from app.services.tax import (
     estimate_federal_tax,
     federal_tax_for,
     marginal_rate_for,
+    net_investment_income_tax,
     preferential_tax,
     resolve_tax_year,
     taxable_social_security,
@@ -212,6 +213,61 @@ def test_estimate_qualified_income_defaults_to_zero() -> None:
     assert est.qualified_income == Decimal("0")
     assert est.qualified_tax == Decimal("0.00")
     assert est.federal_tax == Decimal("7023.00")  # unchanged from the retiree case
+
+
+def test_niit_charged_on_lesser_of_nii_and_magi_excess() -> None:
+    # Single threshold 200,000. MAGI 250,000 (excess 50,000), NII 30,000:
+    #   base = min(30,000, 50,000) = 30,000; tax = 3.8% * 30,000 = 1,140.
+    assert net_investment_income_tax(
+        tax_tables.SINGLE, Decimal("250000"), Decimal("30000")
+    ) == Decimal("1140.000")
+
+
+def test_niit_zero_below_threshold() -> None:
+    # MAGI under the 200,000 single threshold -> no NIIT regardless of NII.
+    assert net_investment_income_tax(
+        tax_tables.SINGLE, Decimal("150000"), Decimal("20000")
+    ) == Decimal("0")
+
+
+def test_niit_capped_by_magi_excess() -> None:
+    # Single MAGI 210,000 (excess 10,000) but NII 50,000: charged on the 10,000
+    #   excess, not the full NII. tax = 3.8% * 10,000 = 380.
+    assert net_investment_income_tax(
+        tax_tables.SINGLE, Decimal("210000"), Decimal("50000")
+    ) == Decimal("380.000")
+
+
+def test_estimate_includes_niit_for_high_investment_income() -> None:
+    # Single 2025: 300,000 ordinary + 50,000 qualified, no SS.
+    #   MAGI = 350,000; excess over 200,000 = 150,000; NII = 50,000.
+    #   NIIT = 3.8% * min(50,000, 150,000) = 1,900.
+    est = estimate_federal_tax(
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        ordinary_income=Decimal("300000"),
+        qualified_income=Decimal("50000"),
+        social_security=Decimal("0"),
+    )
+    assert est.net_investment_income_tax == Decimal("1900.00")
+    # After-tax nets out both the income tax and the NIIT surtax.
+    assert est.after_tax_income == Decimal("350000") - est.federal_tax - Decimal("1900.00")
+    # The income-tax effective rate excludes the NIIT surtax.
+    assert est.effective_rate == pytest.approx(float(est.federal_tax) / 350000, rel=1e-6)
+
+
+def test_estimate_no_niit_without_investment_income() -> None:
+    # The MFJ retiree (no qualified income) owes no NIIT, and federal_tax is
+    # unchanged from before NIIT was added.
+    est = estimate_federal_tax(
+        tax_year=2025,
+        filing_status=tax_tables.MFJ,
+        ordinary_income=Decimal("60000"),
+        social_security=Decimal("40000"),
+    )
+    assert est.net_investment_income_tax == Decimal("0.00")
+    assert est.federal_tax == Decimal("7023.00")
+    assert est.after_tax_income == Decimal("92977.00")
 
 
 def test_qss_uses_mfj_schedule_but_single_ss_base() -> None:

@@ -177,6 +177,19 @@ CAPITAL_GAINS_BREAKPOINTS: dict[int, dict[str, CapGainsBreakpoints]] = {
 CAPITAL_GAINS_BREAKPOINTS[2025][QSS] = CAPITAL_GAINS_BREAKPOINTS[2025][MFJ]
 CAPITAL_GAINS_BREAKPOINTS[2026][QSS] = CAPITAL_GAINS_BREAKPOINTS[2026][MFJ]
 
+# §1411 Net Investment Income Tax. A flat 3.8% surtax on the lesser of net
+# investment income and the excess of MAGI over a filing-status threshold. The
+# rate and thresholds are statutory (26 U.S.C. §1411) and NOT inflation-indexed,
+# so they don't change year to year. MFS-living-with-spouse uses $125,000.
+NIIT_RATE = Decimal("0.038")
+NIIT_THRESHOLD: dict[str, Decimal] = {
+    SINGLE: Decimal("200000"),
+    HOH: Decimal("200000"),
+    QSS: Decimal("250000"),
+    MFJ: Decimal("250000"),
+    MFS: Decimal("125000"),
+}
+
 # §86 base amounts (base1 -> up to 50% taxable, base2 -> up to 85% taxable).
 # MFS living with spouse is $0/$0 (up to 85% taxable from the first dollar); we
 # model MFS as that common case.
