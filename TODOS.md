@@ -1,5 +1,32 @@
 # TODOS
 
+### Fold SPA file-upload import onto staging/promote (needs frontend review queue)
+
+**What:** Route browser CSV/OFX uploads (`run_import_job`) through the
+`staging_transactions` table + the audited promote step, instead of writing
+directly to `transactions`. Requires a frontend review/promote UI (list a staged
+batch, edit/confirm, call `POST .../import/staging/{batch_id}/promote`).
+
+**Why:** Today uploaded rows hit balances pre-review and the worker write has no
+`@audit` coverage; the new CLI ingest path goes through staging and is audited.
+Folding removes that inconsistency and closes the audit gap for uploads too.
+
+**Pros:** One import path, consistent audit + review semantics, no balance change
+before a human confirms.
+
+**Cons:** Behavior change to the upload UX — deferred precisely because doing it
+backend-only would send uploads into a queue with no UI to promote them. Needs
+frontend work first.
+
+**Context:** Backend foundation shipped on `feat/ingest-api-foundation`
+(T1–T6). `PromoteService` + the promote endpoint already exist and are tested;
+the worker already shares the dedupe index. The fold is the remaining R2 step,
+held until the frontend review queue lands. Decision logged 2026-06-30.
+
+**Depends on:** frontend staging-review/promote UI.
+
+---
+
 ### WCAG 2.1 AA accessibility audit — HearthLedger v1 (Post-Phase 7)
 
 **What:** Run a full WCAG 2.1 AA audit across all HearthLedger pages: color contrast ratios (4.5:1 body text, 3:1 large text), screen reader label completeness, keyboard navigation order, and focus indicator visibility.

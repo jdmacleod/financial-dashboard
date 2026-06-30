@@ -12,7 +12,7 @@ Tracks the 8 build tasks (T1-T8) from the eng review. Each task: status, what la
 | T2   | Shared ctx resolver + prefix routing                                           | ✅ done    |
 | T3   | staging_transaction table + sync endpoint + server PII                         | ✅ done    |
 | T4   | Shared dedupe/transfer service (batch-prefetch, per-row failure, unique index) | ✅ done    |
-| T5   | Audited promote-on-review + fold run_import_job                                | 🟡 partial |
+| T5   | Audited promote-on-review (fold deferred to frontend, see TODOS)               | ✅ done    |
 | T6   | Migrations: source enum→VARCHAR + confidence                                   | ✅ done    |
 | T7   | Ingest CLI package                                                             | ⬜ pending |
 | T8   | E2E tests (round-trip; PAT lifecycle)                                          | ⬜ pending |
@@ -87,4 +87,4 @@ Status: 🟡 partial
 - ✅ `services/promote.py` `PromoteService.promote_batch`: staging rows → `transactions` (one audit row PER promoted entity; the @audit decorator can't batch), source + confidence carried, staging rows deleted. Post-promote transfer pairing across the household, each mutation audited (the old worker mutated committed rows silently).
 - ✅ `POST /accounts/{id}/import/staging/{batch_id}/promote` (`require_import_write_ctx`).
 - ✅ Tests `tests/integration/test_promote.py` (4 ✓): round-trip (balance reflects only after promote), staging cleared, one-audit-row-per-txn, cross-account transfer pairing + audit, 404.
-- ⏸️ **OPEN DECISION — folding the SPA file-upload path onto staging/promote.** Doing this now changes the upload UX (uploads land in a review queue instead of directly in transactions) and needs a frontend review/promote UI that is outside the R1-R3 backend scope. Flagged to the user.
+- ⏭️ **Fold of the SPA file-upload path onto staging/promote: DEFERRED** (user decision 2026-06-30). It changes the upload UX and needs a frontend review/promote queue (outside R1-R3 backend scope). Captured in `TODOS.md`. The promote backend + endpoint are ready for it.
