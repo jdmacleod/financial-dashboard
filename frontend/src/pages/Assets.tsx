@@ -99,8 +99,10 @@ function PropertyCard({
   const propertyValue = property?.current_estimated_value
     ? Number(property.current_estimated_value)
     : null
-  const mortgageBalance = equity?.mortgage_balance ? Number(equity.mortgage_balance) : null
-  const equityValue = equity?.equity ? Number(equity.equity) : null
+  // Use explicit null checks: a $0 balance (e.g. a just-paid-off or freshly
+  // opened mortgage) is real data, not "missing", so it must not be coerced away.
+  const mortgageBalance = equity?.mortgage_balance != null ? Number(equity.mortgage_balance) : null
+  const equityValue = equity?.equity != null ? Number(equity.equity) : null
 
   // Equity bar: proportion of property value that is equity
   const equityPct =

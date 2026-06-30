@@ -613,6 +613,8 @@ export default function PropertyDetail() {
                         </p>
                       )}
                     </>
+                  ) : property.linked_mortgage_account_id ? (
+                    <p className="text-sm text-gray-400 mt-1">Linked · no balance recorded yet</p>
                   ) : (
                     <p className="text-sm text-gray-400 mt-1">No mortgage linked</p>
                   )}
