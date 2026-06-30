@@ -26,17 +26,24 @@ function HouseholdTaxForm({ household }: { household: HouseholdResponse }) {
   const queryClient = useQueryClient()
   const [filingStatus, setFilingStatus] = useState<string>(household.filing_status ?? "")
   const [state, setState] = useState<string>(household.state ?? "")
+  const [salt, setSalt] = useState<string>(household.amt_salt_preference ?? "")
+  const [iso, setIso] = useState<string>(household.amt_iso_preference ?? "")
   const [error, setError] = useState<string | null>(null)
   const [saved, setSaved] = useState(false)
 
   const hasChanges =
-    filingStatus !== (household.filing_status ?? "") || state !== (household.state ?? "")
+    filingStatus !== (household.filing_status ?? "") ||
+    state !== (household.state ?? "") ||
+    salt !== (household.amt_salt_preference ?? "") ||
+    iso !== (household.amt_iso_preference ?? "")
 
   const update = useMutation({
     mutationFn: () =>
       householdApi.update({
         filing_status: (filingStatus || null) as FilingStatus | null,
         state: state || null,
+        amt_salt_preference: salt.trim() === "" ? null : salt,
+        amt_iso_preference: iso.trim() === "" ? null : iso,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["household"] })
@@ -106,7 +113,58 @@ function HouseholdTaxForm({ household }: { household: HouseholdResponse }) {
           ))}
         </select>
         <p className="mt-1 text-xs text-gray-400">
-          Used by future federal and state tax estimates. Not yet consumed by any report.
+          Drives the federal and state income-tax estimates on the Cash Flow report.
+        </p>
+      </div>
+
+      <div>
+        <label htmlFor="amt-salt" className="block text-sm font-medium text-gray-700 mb-1">
+          AMT: state/local tax add-back (annual)
+        </label>
+        <input
+          id="amt-salt"
+          type="number"
+          min="0"
+          step="1000"
+          inputMode="decimal"
+          value={salt}
+          onChange={(e) => {
+            setSalt(e.target.value)
+            setSaved(false)
+            setError(null)
+          }}
+          placeholder="0"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <p className="mt-1 text-xs text-gray-400">
+          State and local taxes you deduct, which the AMT adds back. Only relevant if you itemize;
+          the estimate otherwise uses the standard deduction, so treat this as a planning input.
+        </p>
+      </div>
+
+      <div>
+        <label htmlFor="amt-iso" className="block text-sm font-medium text-gray-700 mb-1">
+          AMT: incentive-stock-option spread (annual)
+        </label>
+        <input
+          id="amt-iso"
+          type="number"
+          min="0"
+          step="1000"
+          inputMode="decimal"
+          value={iso}
+          onChange={(e) => {
+            setIso(e.target.value)
+            setSaved(false)
+            setError(null)
+          }}
+          placeholder="0"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        />
+        <p className="mt-1 text-xs text-gray-400">
+          The bargain element from exercising and holding incentive stock options this year, an AMT
+          preference. Leave blank if none. Together with the SALT add-back, this is what can make
+          the AMT line appear on your Cash Flow estimate.
         </p>
       </div>
 
@@ -151,8 +209,9 @@ export default function SettingsHousehold() {
       <div>
         <h1 className="text-2xl font-semibold">Household &amp; tax</h1>
         <p className="text-sm text-gray-500 mt-0.5">
-          Your household's filing status and state of residence. These feed upcoming tax estimates
-          (federal brackets, standard deduction, and after-tax retirement income).
+          Your household's filing status, state of residence, and AMT preference items. These feed
+          the tax estimates on the Cash Flow report (federal brackets, state income tax, NIIT, and
+          the alternative minimum tax).
         </p>
       </div>
 
@@ -173,6 +232,18 @@ export default function SettingsHousehold() {
           <p className="text-sm text-gray-600">
             State of residence:{" "}
             <span className="font-medium text-gray-900">{household.state ?? "Not set"}</span>
+          </p>
+          <p className="text-sm text-gray-600">
+            AMT state/local add-back:{" "}
+            <span className="font-medium text-gray-900">
+              {household.amt_salt_preference ?? "Not set"}
+            </span>
+          </p>
+          <p className="text-sm text-gray-600">
+            AMT incentive-stock-option spread:{" "}
+            <span className="font-medium text-gray-900">
+              {household.amt_iso_preference ?? "Not set"}
+            </span>
           </p>
           <p className="text-xs text-gray-400 pt-1">
             Only a primary member can change household tax settings.

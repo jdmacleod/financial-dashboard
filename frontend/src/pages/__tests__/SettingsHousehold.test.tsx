@@ -25,6 +25,8 @@ const household: HouseholdResponse = {
   settings: {},
   filing_status: "married_filing_jointly",
   state: "NY",
+  amt_salt_preference: null,
+  amt_iso_preference: null,
   created_at: "2025-01-01T00:00:00Z",
 }
 
@@ -67,7 +69,12 @@ describe("SettingsHousehold", () => {
     await user.click(screen.getByRole("button", { name: /save changes/i }))
 
     await waitFor(() => {
-      expect(householdApi.update).toHaveBeenCalledWith({ filing_status: "single", state: "CA" })
+      expect(householdApi.update).toHaveBeenCalledWith({
+        filing_status: "single",
+        state: "CA",
+        amt_salt_preference: null,
+        amt_iso_preference: null,
+      })
     })
     expect(await screen.findByText(/saved/i)).toBeInTheDocument()
   })
@@ -88,7 +95,37 @@ describe("SettingsHousehold", () => {
     await user.click(screen.getByRole("button", { name: /save changes/i }))
 
     await waitFor(() => {
-      expect(householdApi.update).toHaveBeenCalledWith({ filing_status: null, state: null })
+      expect(householdApi.update).toHaveBeenCalledWith({
+        filing_status: null,
+        state: null,
+        amt_salt_preference: null,
+        amt_iso_preference: null,
+      })
+    })
+  })
+
+  it("saves AMT preference inputs", async () => {
+    const user = userEvent.setup()
+    vi.mocked(householdApi.get).mockResolvedValue(household)
+    vi.mocked(householdApi.update).mockResolvedValue({
+      ...household,
+      amt_salt_preference: "40000",
+      amt_iso_preference: "150000",
+    })
+    renderPage()
+
+    const salt = await screen.findByLabelText(/state\/local tax add-back/i)
+    await user.type(salt, "40000")
+    await user.type(screen.getByLabelText(/incentive-stock-option spread/i), "150000")
+    await user.click(screen.getByRole("button", { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(householdApi.update).toHaveBeenCalledWith({
+        filing_status: "married_filing_jointly",
+        state: "NY",
+        amt_salt_preference: "40000",
+        amt_iso_preference: "150000",
+      })
     })
   })
 
