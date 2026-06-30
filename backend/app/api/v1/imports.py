@@ -15,9 +15,11 @@ from app.schemas.import_job import ImportJobResponse, ImportPreviewResponse
 from app.schemas.staging import (
     ImportStagingRequest,
     ImportStagingResponse,
+    PromoteResponse,
     StagingTransactionResponse,
 )
 from app.services.import_service import ImportService
+from app.services.promote import PromoteService
 from app.services.staging import StagingService
 from app.worker.queue import get_arq_pool
 
@@ -56,6 +58,25 @@ async def list_staging_batch(
 ) -> list[StagingTransactionResponse]:
     rows = await StagingService(session).list_batch(ctx, account_id, batch_id)
     return [StagingTransactionResponse.model_validate(r) for r in rows]
+
+
+@router.post(
+    "/accounts/{account_id}/import/staging/{batch_id}/promote",
+    response_model=PromoteResponse,
+)
+async def promote_staging_batch(
+    account_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    ctx: VisibilityContext = Depends(require_import_write_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> PromoteResponse:
+    """Promote a reviewed staging batch into real transactions.
+
+    Each promoted row writes one audit entry; transfer pairs are detected across
+    the household and audited. Only after this do the rows count in balances.
+    """
+    count = await PromoteService(session).promote_batch(ctx, account_id, batch_id)
+    return PromoteResponse(promoted=count)
 
 
 @router.post("/accounts/{account_id}/import/preview", response_model=ImportPreviewResponse)

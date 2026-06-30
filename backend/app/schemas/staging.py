@@ -45,6 +45,10 @@ class ImportStagingResponse(BaseModel):
     errors: list[StagingRowError]
 
 
+class PromoteResponse(BaseModel):
+    promoted: int
+
+
 class StagingTransactionResponse(BaseModel):
     """A staged row as shown in the review queue."""
 

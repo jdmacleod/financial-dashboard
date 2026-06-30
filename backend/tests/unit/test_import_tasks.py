@@ -7,7 +7,7 @@ from app.db.models.account import Account
 from app.db.models.category import Category
 from app.db.models.household import Household
 from app.db.models.transaction import Transaction
-from app.importers.csv_importer import ParsedRow
+from app.services.dedupe import build_dedupe_index
 from app.worker.tasks import import_tasks
 
 
@@ -67,10 +67,8 @@ async def test_is_duplicate_matches_on_external_id(
         amount=Decimal("-10.00"),
         external_id="TXN-1",
     )
-    row = ParsedRow(
-        transaction_date=date(2025, 1, 15), amount=Decimal("-10.00"), external_id="TXN-1"
-    )
-    assert await import_tasks._is_duplicate(db_session, account.id, row) is True
+    index = await build_dedupe_index(db_session, account.id, [date(2025, 1, 15)])
+    assert index.is_duplicate(date(2025, 1, 15), Decimal("-10.00"), None, "TXN-1") is True
 
 
 async def test_is_duplicate_external_id_scoped_to_account(
@@ -85,10 +83,8 @@ async def test_is_duplicate_external_id_scoped_to_account(
         amount=Decimal("-10.00"),
         external_id="TXN-1",
     )
-    row = ParsedRow(
-        transaction_date=date(2025, 1, 15), amount=Decimal("-10.00"), external_id="TXN-1"
-    )
-    assert await import_tasks._is_duplicate(db_session, account_b.id, row) is False
+    index = await build_dedupe_index(db_session, account_b.id, [date(2025, 1, 15)])
+    assert index.is_duplicate(date(2025, 1, 15), Decimal("-10.00"), None, "TXN-1") is False
 
 
 async def test_is_duplicate_fuzzy_payee_match_without_external_id(
@@ -102,10 +98,8 @@ async def test_is_duplicate_fuzzy_payee_match_without_external_id(
         amount=Decimal("-84.23"),
         payee_raw="WHOLEFDS #123",
     )
-    row = ParsedRow(
-        transaction_date=date(2025, 1, 15), amount=Decimal("-84.23"), payee_raw="WHOLEFDS #124"
-    )
-    assert await import_tasks._is_duplicate(db_session, account.id, row) is True
+    index = await build_dedupe_index(db_session, account.id, [date(2025, 1, 15)])
+    assert index.is_duplicate(date(2025, 1, 15), Decimal("-84.23"), "WHOLEFDS #124", None) is True
 
 
 async def test_is_duplicate_false_when_payee_dissimilar(
@@ -119,12 +113,11 @@ async def test_is_duplicate_false_when_payee_dissimilar(
         amount=Decimal("-84.23"),
         payee_raw="WHOLEFDS #123",
     )
-    row = ParsedRow(
-        transaction_date=date(2025, 1, 15),
-        amount=Decimal("-84.23"),
-        payee_raw="COMPLETELY DIFFERENT",
+    index = await build_dedupe_index(db_session, account.id, [date(2025, 1, 15)])
+    assert (
+        index.is_duplicate(date(2025, 1, 15), Decimal("-84.23"), "COMPLETELY DIFFERENT", None)
+        is False
     )
-    assert await import_tasks._is_duplicate(db_session, account.id, row) is False
 
 
 async def test_find_transfer_candidate_matches_opposite_amount_different_account(
