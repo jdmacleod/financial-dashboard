@@ -2,13 +2,16 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import ARRAY, Boolean, Date, DateTime, Enum, Numeric, String
+from sqlalchemy import ARRAY, Boolean, Date, DateTime, Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
-TRANSACTION_SOURCES = ("manual", "csv", "ofx", "qfx")
+# Stored as VARCHAR + CHECK (not a PG enum) so new sources are addable with a
+# reversible migration — Postgres can't drop an enum value (eng review Issue 4).
+# 'json'/'pdf'/'ingest' are the offline-ingest sources.
+TRANSACTION_SOURCES = ("manual", "csv", "ofx", "qfx", "json", "pdf", "ingest")
 
 
 class Transaction(Base):
@@ -29,11 +32,10 @@ class Transaction(Base):
     is_transfer: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     transfer_pair_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     tags: Mapped[list[str]] = mapped_column(ARRAY(String), nullable=False, default=list)
-    source: Mapped[str] = mapped_column(
-        Enum(*TRANSACTION_SOURCES, name="transaction_source", create_type=False),
-        nullable=False,
-        default="manual",
-    )
+    source: Mapped[str] = mapped_column(String(16), nullable=False, default="manual")
+    # Parser self-assessment for ingested rows (1.0 deterministic; the model's
+    # score for LLM-parsed PDF). NULL for manual/legacy rows.
+    confidence: Mapped[Decimal | None] = mapped_column(Numeric(4, 3), nullable=True)
     import_job_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     external_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_reviewed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)

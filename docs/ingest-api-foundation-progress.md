@@ -13,7 +13,7 @@ Tracks the 8 build tasks (T1-T8) from the eng review. Each task: status, what la
 | T3   | staging_transaction table + sync endpoint + server PII                         | ✅ done    |
 | T4   | Shared dedupe/transfer service (batch-prefetch, per-row failure, unique index) | 🟡 partial |
 | T5   | Audited promote-on-review + fold run_import_job                                | ⬜ pending |
-| T6   | Migrations: source enum→VARCHAR + confidence                                   | ⬜ pending |
+| T6   | Migrations: source enum→VARCHAR + confidence                                   | ✅ done    |
 | T7   | Ingest CLI package                                                             | ⬜ pending |
 | T8   | E2E tests (round-trip; PAT lifecycle)                                          | ⬜ pending |
 
@@ -64,6 +64,14 @@ Status: ✅ done
 - `schemas/staging.py`: `StagingRow` / `ImportStagingRequest` (client batch_id, ≤5000 rows) / `ImportStagingResponse` / `StagingTransactionResponse`.
 - `api/v1/imports.py`: `POST /accounts/{id}/import/staging` (`require_import_write_ctx` = session writer OR import-write PAT) + `GET .../staging/{batch_id}`.
 - Tests: `tests/unit/test_pii.py` (7 ✓), `tests/integration/test_staging.py` (7 ✓) — **balances exclude staging regression**, idempotent re-batch, intra-batch dup, server PII redaction, partner-session + PAT auth, 404.
+
+## T6 — Migrations: source enum→VARCHAR + confidence
+
+Status: ✅ done
+
+- `db/models/transaction.py`: `source` is now `String(16)` (was PG enum); `TRANSACTION_SOURCES` gains `json`/`pdf`/`ingest`; new `confidence: Numeric(4,3) | None` column.
+- Migration `0023`: drops the column default, converts `source` enum→VARCHAR, drops the `transaction_source` type, re-adds the default, adds a `ck_transactions_source` CHECK, adds `confidence`. Reversible `downgrade()` reclassifies new sources→`manual` before recreating the enum.
+- Validated: existing transaction CRUD + staging suites pass against the migrated schema.
 
 ## T4 — Shared dedupe/transfer service
 
