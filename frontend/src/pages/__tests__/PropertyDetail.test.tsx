@@ -185,4 +185,31 @@ describe("PropertyDetail — EditPropertyModal", () => {
     await userEvent.click(screen.getByRole("button", { name: /^Save$/i }))
     expect(await screen.findByText("Failed to save property details.")).toBeInTheDocument()
   })
+
+  it("invalidates the listing/overview caches so edits refresh without reload", async () => {
+    // Regression: the modal used to invalidate only ["property", id] and
+    // ["property-equity", id], leaving the Real Estate listing and Overview
+    // cards (which read ["property-by-account", account_id]) showing stale
+    // address/type/price/mortgage until staleTime expired or a hard reload.
+    vi.mocked(propertiesApi.update).mockResolvedValue(baseProperty)
+    const client = createClient()
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries")
+
+    render(
+      <QueryClientProvider client={client}>
+        <PropertyDetail />
+      </QueryClientProvider>,
+    )
+    await waitFor(() => screen.getByText("Main House"))
+    await userEvent.click(screen.getByRole("button", { name: /edit/i }))
+    await waitFor(() => screen.getByText("Edit property details"))
+    await userEvent.click(screen.getByRole("button", { name: /^Save$/i }))
+
+    await waitFor(() => expect(propertiesApi.update).toHaveBeenCalled())
+
+    const invalidatedKeys = invalidateSpy.mock.calls.map((c) => JSON.stringify(c[0]?.queryKey))
+    expect(invalidatedKeys).toContain(JSON.stringify(["property-by-account", "acc-1"]))
+    expect(invalidatedKeys).toContain(JSON.stringify(["accounts", "acc-1", "property"]))
+    expect(invalidatedKeys).toContain(JSON.stringify(["properties"]))
+  })
 })

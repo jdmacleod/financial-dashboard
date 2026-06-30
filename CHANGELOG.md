@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.21.1] - 2026-06-30
+
+### Fixed
+
+- **Editing a property's details now updates the Real Estate and Overview pages right away.** After you changed a property in "Edit details" — its address, type, purchase price, ownership, or linked mortgage — the property's own detail page updated, but the Real Estate listing card and the Overview dashboard kept showing the old values for up to a minute (or until a full page reload). Saving an edit now refreshes those pages immediately. (Mortgage balance and equity already refreshed correctly; this closes the gap for the property's other fields.)
+
+### For contributors
+
+- `EditPropertyModal` (`frontend/src/pages/PropertyDetail.tsx`) invalidated only `["property", id]` and `["property-equity", id]` on save. The property record is also cached under three other React Query keys the modal never touched: `["property-by-account", account_id]` (read by both the Real Estate listing `Assets.tsx` and the Overview `Dashboard.tsx`), `["accounts", account_id, "property"]` (Transactions), and `["properties"]` (Insurance). Those stayed stale until their 60s `staleTime` expired or a hard reload. Fix invalidates all four keys in `onSuccess`; `["accounts"]` itself is deliberately left alone since a property edit doesn't change account data. Equity refreshed before because `property-equity` was invalidated — only the property-record fields went stale. Regression test in `PropertyDetail.test.tsx` spies on `invalidateQueries` and asserts the three previously-missing keys fire (fails without the fix). No backend or schema change.
+
 ## [0.23.21.0] - 2026-06-30
 
 ### Fixed
