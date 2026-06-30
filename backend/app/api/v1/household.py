@@ -50,6 +50,10 @@ async def update_household(
         household.filing_status = data.filing_status
     if "state" in data.model_fields_set:
         household.state = data.state
+    if "amt_salt_preference" in data.model_fields_set:
+        household.amt_salt_preference = data.amt_salt_preference
+    if "amt_iso_preference" in data.model_fields_set:
+        household.amt_iso_preference = data.amt_iso_preference
     await session.commit()
     await session.refresh(household)
     return household

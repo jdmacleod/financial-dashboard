@@ -679,12 +679,16 @@ class ReportService:
         household = await self.session.get(Household, ctx.household_id)
         if household is None or household.filing_status is None:
             return None, None
+        amt_preference = (household.amt_salt_preference or Decimal("0")) + (
+            household.amt_iso_preference or Decimal("0")
+        )
         federal = estimate_federal_tax(
             tax_year=resolve_tax_year(to_date.year),
             filing_status=household.filing_status,
             ordinary_income=basis["ordinary"],
             qualified_income=basis["qualified"],
             social_security=basis["social_security"],
+            amt_preference_income=amt_preference,
         )
         state_estimate: StateTaxEstimate | None = None
         if household.state:
