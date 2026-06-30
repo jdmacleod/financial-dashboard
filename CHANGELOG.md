@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.19.0] - 2026-06-30
+
+### Added
+
+- **A locked-out user can now get back in, even the only admin on the install.** If someone forgets their password — or the sole Primary can no longer sign in — whoever runs the server resets it from the host shell: `docker-compose exec backend python scripts/reset_password.py user@example.com`. The script shows the matched user and asks for confirmation, then prints a one-time temporary password; the user is forced to choose their own on first login. The reset also clears any login lockout and signs out existing sessions. There is no email-based reset because HearthLedger runs locally with no mail server, so recovery is operator-driven by design. See [Account recovery](docs/getting-started.md#account-recovery-forgotten-password).
+
+### For contributors
+
+- New `AuthService.admin_reset_password(email)` and the `backend/scripts/reset_password.py` CLI that wraps it. This is the only recovery path that needs neither the current password (rules out `/auth/change-password`) nor an authenticated session (rules out the in-app `regenerate_temporary_password`, which also 409s for an established user) — so it unblocks a locked-out sole Primary. The method mints a temp password via `generate_temporary_password`, sets `must_change_password=True` (reusing the existing forced-rotation flow), and clears `refresh_token_hash`, `failed_login_attempts`, and `locked_until`. It writes an `auth.password_reset_admin` audit event only when the user has a household (mirrors `login()`'s `if household_id` guard, so an orphan user with `member_id=None` resets cleanly instead of crashing); the audit row carries no password material (CLAUDE.md rule #4). The CLI confirms the matched user before writing (`--yes` skips the prompt). Tests: 5 unit + 1 integration in `test_service_auth.py` (established-user reset clears lockout/sessions, audit excludes secrets, unknown-email raises, orphan-user skips audit, login-after-reset forces rotation).
+
 ## [0.23.18.0] - 2026-06-30
 
 ### Security

@@ -171,6 +171,23 @@ docker compose logs worker      # Background job logs
 docker compose logs nginx       # Access logs
 ```
 
+## Account recovery (forgotten password)
+
+If a user is locked out — a forgotten password, or the only Primary on the
+install can no longer sign in — reset their password from the host shell. There
+is no email-based reset (HearthLedger runs locally with no mail server); the
+operator who controls the host performs the reset.
+
+```bash
+docker-compose exec backend python scripts/reset_password.py user@example.com
+```
+
+The script shows the matched user and asks for confirmation before changing
+anything, then prints a one-time temporary password. Give it to the user; they
+are forced to set their own password on first login. The reset also clears any
+active lockout and signs out existing sessions. Add `--yes` to skip the
+confirmation prompt in scripts.
+
 ## Next steps
 
 - [Demo Quickstart](demo-quickstart.md): load seven sample households and explore all features with real data
