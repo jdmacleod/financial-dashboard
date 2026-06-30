@@ -529,6 +529,16 @@ export default function ReportCashFlow() {
                       {formatCurrency(data.state_tax_estimate.state_tax)}
                     </strong>{" "}
                     ({(data.state_tax_estimate.marginal_rate * 100).toFixed(1)}% marginal)
+                    {Number(data.state_tax_estimate.retirement_exclusion) > 0 && (
+                      <>
+                        {" "}
+                        · after{" "}
+                        <strong style={{ color: "var(--up)" }}>
+                          {formatCurrency(data.state_tax_estimate.retirement_exclusion)}
+                        </strong>{" "}
+                        retirement-income exclusion
+                      </>
+                    )}
                   </div>
                 ) : (
                   data.state_tax_estimate.note && (
