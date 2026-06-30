@@ -100,6 +100,14 @@ function EditPropertyModal({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["property", property.id] })
       queryClient.invalidateQueries({ queryKey: ["property-equity", property.id] })
+      // The property record is cached under several other keys that the detail
+      // page never touches. Without invalidating them, edits (address, type,
+      // purchase price, linked mortgage, ownership) stay stale until staleTime
+      // expires or a hard reload — visibly wrong on the Real Estate listing and
+      // Overview cards, which read ["property-by-account", account_id].
+      queryClient.invalidateQueries({ queryKey: ["property-by-account", property.account_id] })
+      queryClient.invalidateQueries({ queryKey: ["accounts", property.account_id, "property"] })
+      queryClient.invalidateQueries({ queryKey: ["properties"] })
       onClose()
     },
     onError: () => setError("Failed to save property details."),
