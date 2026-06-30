@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.16.0] - 2026-06-29
+
+### Added
+
+- **You can now enter AMT preference items, so the alternative minimum tax estimate actually works.** The previous release added the AMT engine but had no data to feed it, so the AMT line never appeared. Settings → Household & tax now has two inputs: your annual state/local tax add-back and your incentive-stock-option exercise spread. Enter either one and the Cash Flow report's AMT line shows the extra tax, if the parallel AMT comes out higher than your regular tax. One honest caveat, spelled out next to the field: the state/local add-back is only a real AMT item when you itemize, but the estimate always uses the standard deduction, so treat these as planning inputs rather than a filed-return figure.
+
+### For contributors
+
+- Migration `0020` adds two nullable `NUMERIC(18,4)` columns to `households`: `amt_salt_preference` and `amt_iso_preference` (reversible; mirrors the `0018` identity-column pattern). Exposed on `HouseholdResponse` / `HouseholdUpdate` (primary-only PATCH, `model_fields_set` so an explicit null clears them, non-negative validator). `report.py` sums the two into the `amt_preference_income` it passes to `estimate_federal_tax`, which already supported the input, so the AMT line can finally bind. The Household & tax settings page gained two currency inputs with help text including the itemize caveat. Tests: household integration (set/clear/reject-negative) + report integration (AMT binds to $44,527 with preferences, $0 without) + frontend (saves the inputs).
+
 ## [0.23.15.0] - 2026-06-29
 
 ### Added
