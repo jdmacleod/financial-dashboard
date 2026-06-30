@@ -646,3 +646,94 @@ async def test_latest_valuation_as_of_returns_none_when_no_valuations(
     result = await repo.latest_valuation_as_of(prop.id, date(2025, 12, 31))
 
     assert result is None
+
+
+async def test_get_equity_uses_transaction_balance_for_mortgage(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Regression: a manually-added mortgage has transactions but no snapshot.
+
+    Equity used to read the snapshot table only, so the mortgage balance came
+    back None and the equity bar vanished. It must now resolve the balance from
+    the linked account's transactions, exactly like the Accounts ledger does.
+    """
+    from app.schemas.transaction import TransactionCreate
+    from app.services.transaction import TransactionService
+
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    mortgage_account = await _make_account(
+        db_session, ctx, account_type="mortgage", nickname="New Mortgage"
+    )
+    # Two transactions sum to -250000 owed. No snapshot is ever written.
+    txn_svc = TransactionService(db_session)
+    await txn_svc.create(
+        ctx,
+        mortgage_account.id,
+        TransactionCreate(transaction_date=date(2025, 1, 1), amount=Decimal("-260000.00")),
+    )
+    await txn_svc.create(
+        ctx,
+        mortgage_account.id,
+        TransactionCreate(transaction_date=date(2025, 6, 1), amount=Decimal("10000.00")),
+    )
+
+    re_account = await _make_account(db_session, ctx, nickname="Linked House")
+    svc = RealEstateService(db_session)
+    prop = await svc.create(
+        ctx,
+        PropertyCreate(
+            account_id=re_account.id,
+            address="9 Mortgaged Way",
+            linked_mortgage_account_id=mortgage_account.id,
+        ),
+    )
+    await svc.add_valuation(
+        ctx,
+        prop.id,
+        ValuationCreate(valuation_date=date(2025, 1, 1), estimated_value=Decimal("500000.00")),
+    )
+    await db_session.flush()
+
+    equity = await svc.get_equity(ctx, prop.id)
+    assert equity.mortgage_balance == Decimal("250000.00")
+    assert equity.equity == Decimal("250000.00")
+    assert equity.mortgage_balance_visible is True
+
+
+async def test_get_equity_linked_mortgage_without_balance_is_distinct_from_unlinked(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A linked mortgage with no transactions/snapshot yet reports a null balance
+    and null equity (not full property value) — that's how the UI tells 'linked,
+    no balance recorded yet' apart from 'no mortgage linked' (full equity)."""
+    ctx = _ctx(household, primary_member, "primary", primary_user)
+    mortgage_account = await _make_account(
+        db_session, ctx, account_type="mortgage", nickname="Empty Mortgage"
+    )
+    re_account = await _make_account(db_session, ctx, nickname="House With Empty Mortgage")
+    svc = RealEstateService(db_session)
+    prop = await svc.create(
+        ctx,
+        PropertyCreate(
+            account_id=re_account.id,
+            address="11 Pending Ln",
+            linked_mortgage_account_id=mortgage_account.id,
+        ),
+    )
+    await svc.add_valuation(
+        ctx,
+        prop.id,
+        ValuationCreate(valuation_date=date(2025, 1, 1), estimated_value=Decimal("400000.00")),
+    )
+    await db_session.flush()
+
+    equity = await svc.get_equity(ctx, prop.id)
+    assert equity.mortgage_balance is None
+    assert equity.equity is None  # NOT 400000 — that would mean "no mortgage linked"
+    assert equity.mortgage_balance_visible is True

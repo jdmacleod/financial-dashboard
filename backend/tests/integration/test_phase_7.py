@@ -13,7 +13,6 @@ from app.core.visibility import VisibilityContext
 from app.db.models.household import Household
 from app.db.models.member import HouseholdMember
 from app.db.models.pension import PensionAccount
-from app.db.models.snapshot import AccountSnapshot
 from app.db.models.user import User
 from app.schemas.account import AccountCreate
 from app.services.account import AccountService
@@ -168,18 +167,20 @@ async def test_property_equity_with_mortgage(
         headers=headers,
     )
 
-    # Add mortgage snapshot
-    snap = AccountSnapshot(
-        account_id=mortgage_id,
-        snapshot_date=date(2025, 6, 1),
-        balance=Decimal("200000.00"),
-        contributed_ytd=Decimal("0"),
-        employer_match_ytd=Decimal("0"),
-        source="manual",
-        created_at=_now(),
+    # Record the mortgage balance the way mortgages actually track it — as a
+    # transaction (mortgage is transaction-based), not a snapshot. Equity reads
+    # the same balance source as the Accounts ledger, so -200000 owed yields a
+    # 200000 mortgage balance and 200000 equity against a 400000 valuation.
+    resp = await client.post(
+        f"/api/v1/accounts/{mortgage_id}/transactions",
+        json={
+            "transaction_date": "2025-06-01",
+            "amount": "-200000.00",
+            "payee_normalized": "Opening balance",
+        },
+        headers=headers,
     )
-    db_session.add(snap)
-    await db_session.flush()
+    assert resp.status_code == 201
 
     resp = await client.get(f"/api/v1/properties/{property_id}/equity", headers=headers)
     assert resp.status_code == 200
