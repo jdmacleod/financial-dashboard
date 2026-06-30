@@ -3,6 +3,20 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.21.0] - 2026-06-30
+
+### Fixed
+
+- **Linking a mortgage to a property now actually shows the mortgage and equity on the Real Estate page.** Previously, after you added a mortgage account and linked it to a property, the property still showed full equity with no mortgage — the equity bar simply vanished and the property detail said "No mortgage linked" even though it was. The equity calculation was reading the mortgage balance from the wrong place (point-in-time snapshots) instead of the same transaction-based balance the Accounts page shows, so a manually-added mortgage always looked empty. Now equity uses one consistent balance source, so a linked mortgage with a balance shows its amount and the property's true equity. A linked mortgage that has no balance recorded yet now says "Linked · no balance recorded yet" instead of the misleading "No mortgage linked."
+
+### Added
+
+- **You can now set a starting balance right when you add an account.** The Add account / Add asset form has an optional balance field — "Balance owed" for liabilities (mortgage, loans, credit cards) or "Current balance" for cash and investment accounts. Enter the amount and the account opens with that balance instead of $0, so a new mortgage immediately shows up against its property. No more adding a separate transaction just to set the opening figure. The opening entry is kept out of your Cash Flow and Spending reports so it doesn't look like a giant expense the month you add the account.
+
+### For contributors
+
+- Root cause was a balance-source split: `AccountService` computes transaction-based account balances (mortgage, loans, cash, lines of credit) as the SUM of their transactions, but `RealEstateService.get_equity` read the linked mortgage's balance from `AccountSnapshot` only. A manually-added mortgage has no snapshot, so equity returned `mortgage_balance=null`/`equity=null` and the frontend hid the bar. Seed demo data masked the bug by writing a snapshot per mortgage. Fix introduces one source of truth: `TRANSACTION_BASED_TYPES` moved to `app/db/models/account.py` (shared) and a new `AccountRepository.current_balance(account)` that resolves the balance the same way the ledger does (transaction-sum for transaction-based types, latest snapshot otherwise); `get_equity` now uses it. Verified net-worth-neutral for seeded households (their mortgages reconcile to a transaction-sum equal to their snapshot). Frontend: `AddAccountModal` records the opening balance as a transaction (transaction-based types) or snapshot (valuation-based types), liabilities stored negative, marked `is_transfer=true` so reports (which filter transfers) exclude it while the balance SUM still counts it. Also `Assets.tsx` stops coercing a real `$0` balance to null, and `PropertyDetail.tsx` distinguishes linked-no-balance from unlinked. No schema change / no migration. Tests: 2 backend equity regression tests (transaction-based balance shows; linked-no-balance stays distinct from unlinked), updated `test_phase_7` integration test (mortgage balance now seeded via a transaction, matching reality), and 4 frontend `AddAccountModal` tests (liability→negative txn, asset→positive txn, valuation→snapshot, blank→no entry).
+
 ## [0.23.20.0] - 2026-06-30
 
 ### Documentation
