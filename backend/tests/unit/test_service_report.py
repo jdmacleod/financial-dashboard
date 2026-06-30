@@ -1107,6 +1107,44 @@ async def test_cash_flow_amt_zero_without_preference_inputs(
     assert est.alternative_minimum_tax == Decimal("0.00")
 
 
+async def test_cash_flow_state_retirement_exclusion_for_georgia_retiree(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """A Georgia retiree aged 65+ excludes up to $65k of pension/RMD income from
+    the state base. 80,000 pension + 20,000 salary -> $65k excluded; taxable
+    100,000 - 65,000 - 12,000 std = 23,000; tax = 23,000 * 5.39% = 1,239.70."""
+    household.filing_status = "single"
+    household.state = "GA"
+    primary_member.date_of_birth = date(1959, 1, 1)  # age 66 as of 2025-12-31
+    await db_session.flush()
+
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "GA Retiree")
+    pension_cat = await _add_category(
+        db_session, household.id, "Pension Income", is_income=True, slug="pension_income"
+    )
+    salary_cat = await _add_category(db_session, household.id, "Salary", is_income=True)
+    await _add_transaction(
+        db_session, account.id, date(2025, 3, 1), Decimal("80000"), pension_cat.id
+    )
+    await _add_transaction(
+        db_session, account.id, date(2025, 4, 1), Decimal("20000"), salary_cat.id
+    )
+
+    svc = ReportService(db_session)
+    report = await svc.cash_flow(ctx, date(2025, 1, 1), date(2025, 12, 31))
+
+    st = report.state_tax_estimate
+    assert st is not None
+    assert st.state == "GA"
+    assert st.retirement_exclusion == Decimal("65000.00")
+    assert st.taxable_income == Decimal("23000.00")
+    assert st.state_tax == Decimal("1239.70")
+
+
 async def test_cash_flow_empty_accounts(
     db_session: AsyncSession,
     household: Household,

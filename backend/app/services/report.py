@@ -55,6 +55,7 @@ from app.schemas.report import (
     SpendingCategoryItem,
 )
 from app.schemas.tax import FederalTaxEstimate, StateTaxEstimate
+from app.services.age import current_age
 from app.services.pension_valuation import pension_present_value, pension_value_at
 from app.services.state_tax import estimate_state_tax, resolve_state_tax_year
 from app.services.tax import estimate_federal_tax, resolve_tax_year
@@ -648,8 +649,9 @@ class ReportService:
             total=retirement_total,
             has_data=retirement_total > 0,
         )
+        retirement_ordinary = retirement["pension"] + retirement["rmd"]
         federal_estimate, state_estimate = await self._household_tax_estimates(
-            ctx, tax_basis, to_date
+            ctx, tax_basis, retirement_ordinary, to_date
         )
         return CashFlowReport(
             series=series,
@@ -663,6 +665,7 @@ class ReportService:
         self,
         ctx: VisibilityContext,
         basis: dict[str, Decimal],
+        retirement_ordinary: Decimal,
         to_date: date,
     ) -> tuple[FederalTaxEstimate | None, StateTaxEstimate | None]:
         """Federal and state tax estimates over the period's full household income.
@@ -670,9 +673,11 @@ class ReportService:
         `basis` carries the income classified by tax treatment: ``ordinary`` (wages,
         business/rental income, pensions, RMDs), ``qualified`` (long-term capital
         gains + qualified dividends, preferential rates), and ``social_security``
-        (taxed via §86). Both estimates require a filing status and taxable income;
-        the state estimate additionally requires the household's state of residence.
-        Either component is None when its prerequisites are missing."""
+        (taxed via §86). `retirement_ordinary` is the pension + RMD portion of
+        ordinary income, eligible for a state retirement-income exclusion. Both
+        estimates require a filing status and taxable income; the state estimate
+        additionally requires the household's state of residence. Either component is
+        None when its prerequisites are missing."""
         total = basis["ordinary"] + basis["qualified"] + basis["social_security"]
         if total <= 0:
             return None, None
@@ -692,6 +697,7 @@ class ReportService:
         )
         state_estimate: StateTaxEstimate | None = None
         if household.state:
+            member_ages = await self._household_member_ages(ctx, to_date)
             state_estimate = estimate_state_tax(
                 state=household.state,
                 tax_year=resolve_state_tax_year(to_date.year),
@@ -699,8 +705,27 @@ class ReportService:
                 ordinary_income=basis["ordinary"],
                 qualified_income=basis["qualified"],
                 social_security=basis["social_security"],
+                retirement_income=retirement_ordinary,
+                member_ages=member_ages,
             )
         return federal, state_estimate
+
+    async def _household_member_ages(self, ctx: VisibilityContext, to_date: date) -> list[int]:
+        """Ages (as of `to_date`) of the active primary/partner members with a DOB,
+        used by the age-gated state retirement-income exclusions."""
+        result = await self.session.execute(
+            select(HouseholdMember.date_of_birth).where(
+                HouseholdMember.household_id == ctx.household_id,
+                HouseholdMember.is_active.is_(True),
+                HouseholdMember.role.in_(("primary", "partner")),
+            )
+        )
+        ages: list[int] = []
+        for (dob,) in result.all():
+            age = current_age(dob, to_date)
+            if age is not None:
+                ages.append(age)
+        return ages
 
     # --- Savings rate ----------------------------------------------------
 
