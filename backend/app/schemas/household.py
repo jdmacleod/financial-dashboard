@@ -1,5 +1,6 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -32,6 +33,9 @@ class HouseholdResponse(BaseModel):
     settings: dict[str, Any]
     filing_status: FilingStatus | None = None
     state: str | None = None
+    # Annual AMT preference estimates (feed the §55 alternative minimum tax).
+    amt_salt_preference: Decimal | None = None
+    amt_iso_preference: Decimal | None = None
     created_at: datetime
 
 
@@ -40,6 +44,8 @@ class HouseholdUpdate(BaseModel):
     settings: dict[str, Any] | None = None
     filing_status: FilingStatus | None = None
     state: str | None = None
+    amt_salt_preference: Decimal | None = None
+    amt_iso_preference: Decimal | None = None
 
     @field_validator("state")
     @classmethod
@@ -50,6 +56,13 @@ class HouseholdUpdate(BaseModel):
         if code not in US_STATES:
             raise ValueError("state must be a two-letter US state or DC code")
         return code
+
+    @field_validator("amt_salt_preference", "amt_iso_preference")
+    @classmethod
+    def _validate_amt_preference(cls, v: Decimal | None) -> Decimal | None:
+        if v is not None and v < 0:
+            raise ValueError("AMT preference amounts must be non-negative")
+        return v
 
 
 class ValuationConfigResponse(BaseModel):

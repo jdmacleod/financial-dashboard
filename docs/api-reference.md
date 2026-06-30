@@ -126,22 +126,40 @@ Returns the household record.
 {
   "id": "uuid",
   "name": "Smith Family",
-  "settings": {}
+  "settings": {},
+  "filing_status": "married_filing_jointly",
+  "state": "CA",
+  "amt_salt_preference": "40000.0000",
+  "amt_iso_preference": null
 }
 ```
 
+`filing_status` and `state` drive the federal and state income-tax estimates.
+`amt_salt_preference` (state/local taxes added back for AMT) and
+`amt_iso_preference` (incentive-stock-option exercise spread) are annual AMT
+preference estimates summed into the alternative minimum tax calculation. All
+four are nullable.
+
 ### `PATCH /household`
 
-Updates the household name or settings. Primary only.
+Updates the household name, settings, or tax attributes. Primary only.
 
 **Request body (all fields optional):**
 
 ```json
 {
   "name": "The Smith Household",
-  "settings": {}
+  "settings": {},
+  "filing_status": "single",
+  "state": "ny",
+  "amt_salt_preference": "40000",
+  "amt_iso_preference": "150000"
 }
 ```
+
+`state` is validated as a two-letter US/DC code and uppercased; the AMT
+preference amounts must be non-negative. An explicit `null` clears a field;
+omitting it leaves the stored value untouched.
 
 ### `GET /settings/valuation-provider`
 

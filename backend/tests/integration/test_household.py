@@ -120,3 +120,46 @@ async def test_non_primary_cannot_update(
         headers=headers,
     )
     assert resp.status_code == 403
+
+
+async def test_set_and_clear_amt_preferences(
+    client: AsyncClient,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    headers = auth_headers(primary_user, primary_member, "primary")
+    resp = await client.patch(
+        "/api/v1/household",
+        json={"amt_salt_preference": "40000.00", "amt_iso_preference": "150000"},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["amt_salt_preference"] == "40000.0000"
+    assert data["amt_iso_preference"] == "150000.0000"
+
+    # Explicit nulls clear them (model_fields_set path); state is untouched.
+    resp = await client.patch(
+        "/api/v1/household",
+        json={"amt_salt_preference": None, "amt_iso_preference": None},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    assert resp.json()["amt_salt_preference"] is None
+    assert resp.json()["amt_iso_preference"] is None
+
+
+async def test_negative_amt_preference_rejected(
+    client: AsyncClient,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    headers = auth_headers(primary_user, primary_member, "primary")
+    resp = await client.patch(
+        "/api/v1/household",
+        json={"amt_salt_preference": "-1"},
+        headers=headers,
+    )
+    assert resp.status_code == 422

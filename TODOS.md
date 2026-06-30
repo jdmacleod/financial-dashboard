@@ -38,15 +38,15 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Tax-estimate engine — remaining scope (AMT preference items, broader state coverage)
+### Tax-estimate engine — remaining scope (broader state coverage, state retirement exclusions)
 
-**What:** Three follow-ons now that the federal AMT machinery has shipped (see Completed, 2026-06-29): (1) feed real AMT preference items into the AMT calc (state-tax add-backs, incentive-stock-option spread, private-activity-bond interest) so the AMT estimate can actually bind — today the engine is correct but always returns $0 because the cash-flow report tracks no preference items; (2) expand state coverage beyond the four modeled states (CA/NY/GA/IL) toward all taxing states; (3) add the state-specific retirement-income exclusions currently documented as out of scope (Illinois's full exclusion, Georgia's age-based exclusion, New York's $20k pension exclusion).
+**What:** Two follow-ons now that the federal engine is complete (full-income basis + preferential rates + NIIT + AMT with SALT/ISO preference inputs, all shipped — see Completed): (1) expand state coverage beyond the four modeled states (CA/NY/GA/IL) toward all taxing states; (2) add the state-specific retirement-income exclusions currently documented as out of scope (Illinois's full exclusion, Georgia's age-based exclusion, New York's $20k pension exclusion). A possible third: itemized-deduction support, which would let the AMT SALT add-back be exact rather than a planning input (today the regular-tax baseline always uses the standard deduction).
 
-**Why:** The cash-flow estimate now computes federal income tax (full-income basis + preferential rates + NIIT + AMT) and state income tax for the demo-relevant states. The AMT line is computed correctly but hidden in practice (no preference data); surfacing real preferences would make it meaningful. A retiree in IL/GA/NY is still overstated because the state engine ignores their retirement-income exclusions.
+**Why:** The federal side is now feature-complete. State coverage is the main remaining gap: only four states are modeled, and a retiree in IL/GA/NY is overstated because the state engine ignores their retirement-income exclusions.
 
-**Cons:** AMT preference items need a data source the app doesn't have yet (itemized SALT, ISO exercises) — likely a manual input. State brackets for the remaining ~37 taxing states are a large annual-maintenance surface — keep the isolate-and-cite discipline in `state_tax_tables.py` (one cited source per year). Retirement-income exclusions need the cash-flow basis to separate retirement-ordinary income from wage-ordinary income at the state level.
+**Cons:** State brackets for the remaining ~37 taxing states are a large annual-maintenance surface — keep the isolate-and-cite discipline in `state_tax_tables.py` (one cited source per year). Retirement-income exclusions need the cash-flow basis to separate retirement-ordinary income from wage-ordinary income at the state level. Itemized deductions are a meaningful new modeling layer (Schedule A), out of scope for a quick win.
 
-**Depends on:** Federal AMT engine (shipped 2026-06-29, `tax.alternative_minimum_tax()` + the `amt_preference_income` input already exist); state tax engine + NIIT (shipped 2026-06-29).
+**Depends on:** State tax engine + NIIT + AMT, all shipped 2026-06-29; `state_tax_tables.py` extends directly.
 
 ---
 
@@ -63,6 +63,22 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### AMT preference inputs — SALT + ISO (Tax-estimate engine)
+
+**Completed:** v0.23.16.0 (2026-06-29, branch `feat/amt-preference-inputs`) — Gave the
+AMT engine real data to work with. Migration `0020` adds two nullable `NUMERIC(18,4)`
+household columns (`amt_salt_preference`, `amt_iso_preference`); they are exposed on
+`HouseholdResponse` / `HouseholdUpdate` (primary-only PATCH, `model_fields_set` clear,
+non-negative validator) and entered on the Settings → Household & tax page as two
+currency inputs with help text. `report.py` sums them into the `amt_preference_income`
+it passes to `estimate_federal_tax`, so the Cash Flow AMT line now binds when a
+household supplies preferences. Documented caveat surfaced in the UI: the SALT add-back
+is only a real AMT item when itemizing, but the estimate uses the standard deduction, so
+the inputs are planning estimates. Remaining tax scope (see open item): broader state
+coverage + state retirement-income exclusions + optional itemized deductions. Tests:
+household integration (set/clear/reject-negative) + report integration (AMT binds to
+$44,527 with preferences, $0 without) + frontend (saves the inputs).
 
 ### Federal Alternative Minimum Tax (Tax-estimate engine)
 

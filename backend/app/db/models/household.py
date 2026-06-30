@@ -1,8 +1,9 @@
 import uuid
 from datetime import datetime
+from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import DateTime, Enum, String
+from sqlalchemy import DateTime, Enum, Numeric, String
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -28,4 +29,7 @@ class Household(Base):
         Enum(*FILING_STATUSES, name="filing_status", create_type=False), nullable=True
     )
     state: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    # AMT preference inputs (annual estimates) for the §55 alternative minimum tax.
+    amt_salt_preference: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
+    amt_iso_preference: Mapped[Decimal | None] = mapped_column(Numeric(18, 4), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

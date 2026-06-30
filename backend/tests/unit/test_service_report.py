@@ -1051,6 +1051,62 @@ async def test_cash_flow_state_tax_estimate_when_state_set(
     assert st.marginal_rate == 0.093
 
 
+async def test_cash_flow_amt_binds_with_preference_inputs(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """AMT preference inputs (SALT + ISO) on the household flow into the federal
+    estimate so the AMT line can bind. Single 2025 with 250,000 ordinary income
+    and 200,000 of preferences -> AMTI 450,000, regular tax 52,023, AMT 44,527."""
+    household.filing_status = "single"
+    household.amt_salt_preference = Decimal("150000")
+    household.amt_iso_preference = Decimal("50000")
+    await db_session.flush()
+
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "AMT Worker")
+    salary_cat = await _add_category(db_session, household.id, "Salary", is_income=True)
+    await _add_transaction(
+        db_session, account.id, date(2025, 2, 1), Decimal("250000"), salary_cat.id
+    )
+
+    svc = ReportService(db_session)
+    report = await svc.cash_flow(ctx, date(2025, 1, 1), date(2025, 12, 31))
+
+    est = report.federal_tax_estimate
+    assert est is not None
+    assert est.federal_tax == Decimal("52023.00")
+    assert est.alternative_minimum_tax == Decimal("44527.00")
+
+
+async def test_cash_flow_amt_zero_without_preference_inputs(
+    db_session: AsyncSession,
+    household: Household,
+    primary_member: HouseholdMember,
+    primary_user: User,
+) -> None:
+    """Without preference inputs the AMT stays 0 even at the same income, because
+    the standard-deduction add-back alone never lifts TMT above the regular tax."""
+    household.filing_status = "single"
+    await db_session.flush()
+
+    ctx = _ctx(household, primary_member, primary_user)
+    account = await _make_account(db_session, ctx, "checking", "No-AMT Worker")
+    salary_cat = await _add_category(db_session, household.id, "Salary", is_income=True)
+    await _add_transaction(
+        db_session, account.id, date(2025, 2, 1), Decimal("250000"), salary_cat.id
+    )
+
+    svc = ReportService(db_session)
+    report = await svc.cash_flow(ctx, date(2025, 1, 1), date(2025, 12, 31))
+
+    est = report.federal_tax_estimate
+    assert est is not None
+    assert est.alternative_minimum_tax == Decimal("0.00")
+
+
 async def test_cash_flow_empty_accounts(
     db_session: AsyncSession,
     household: Household,

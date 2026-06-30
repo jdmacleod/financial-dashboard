@@ -36,6 +36,8 @@ export interface HouseholdResponse {
   settings: Record<string, unknown>
   filing_status: FilingStatus | null
   state: string | null
+  amt_salt_preference: string | null
+  amt_iso_preference: string | null
   created_at: string
 }
 
@@ -43,6 +45,8 @@ export interface HouseholdUpdate {
   name?: string
   filing_status?: FilingStatus | null
   state?: string | null
+  amt_salt_preference?: string | null
+  amt_iso_preference?: string | null
 }
 
 export interface MemberResponse {
