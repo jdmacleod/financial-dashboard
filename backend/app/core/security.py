@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
@@ -77,3 +79,50 @@ def decode_token(
     if payload.get("type") != expected_type:
         raise JWTError("Wrong token type")
     return payload
+
+
+# --- Personal access tokens (programmatic API auth) ---------------------------
+#
+# PATs are NOT bcrypt-hashed. bcrypt is a deliberately-slow password primitive
+# (and truncates at 72 bytes); a PAT is high-entropy random and verified on
+# every API request, so a fast SHA-256 of the secret is the correct choice.
+# Wire format:  hl_pat_<prefix>.<secret>
+#   - prefix  : non-secret, indexed, O(1) lookup of the token row
+#   - secret  : token_urlsafe(32); only its SHA-256 is stored
+# The full token is shown to the user exactly once, at creation.
+
+PAT_PREFIX = "hl_pat_"
+
+
+def _hash_pat_secret(secret: str) -> str:
+    return hashlib.sha256(secret.encode("utf-8")).hexdigest()
+
+
+def generate_pat() -> tuple[str, str, str]:
+    """Mint a PAT. Returns (full_token, lookup_prefix, token_hash).
+
+    Only ``token_hash`` is persisted; ``full_token`` is returned to the caller
+    once and never stored.
+    """
+    prefix = secrets.token_urlsafe(9)[:12]
+    secret = secrets.token_urlsafe(32)
+    full = f"{PAT_PREFIX}{prefix}.{secret}"
+    return full, prefix, _hash_pat_secret(secret)
+
+
+def parse_pat(token: str) -> tuple[str, str] | None:
+    """Split a presented bearer credential into (prefix, secret).
+
+    Returns None when the credential is not PAT-shaped (e.g. it is a JWT), so
+    the auth layer can route deterministically by prefix instead of guessing.
+    """
+    if not token.startswith(PAT_PREFIX):
+        return None
+    prefix, sep, secret = token[len(PAT_PREFIX) :].partition(".")
+    if not sep or not prefix or not secret:
+        return None
+    return prefix, secret
+
+
+def verify_pat_secret(secret: str, token_hash: str) -> bool:
+    return hmac.compare_digest(_hash_pat_secret(secret), token_hash)

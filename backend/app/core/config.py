@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     refresh_token_expire_days: int = 30
     max_login_attempts: int = 5
     lockout_minutes: int = 15
+    # Personal access tokens (programmatic ingest API)
+    pat_default_ttl_days: int = 90
+    pat_max_active: int = 10
     re_valuation_provider: str = "manual"
     re_valuation_api_key: str = ""
     re_valuation_refresh_schedule: str = "0 3 * * 1"

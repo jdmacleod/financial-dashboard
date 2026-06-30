@@ -19,6 +19,7 @@ from app.api.v1 import (
     investment_lots,
     members,
     ownership_entities,
+    pat,
     pension,
     properties,
     reports,
@@ -32,6 +33,7 @@ router = APIRouter()
 
 router.include_router(setup.router)
 router.include_router(auth.router)
+router.include_router(pat.router)
 router.include_router(household.router)
 router.include_router(members.router)
 router.include_router(users.router)
