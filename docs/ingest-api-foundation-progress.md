@@ -6,16 +6,16 @@ Scope: R1-R3 foundation (PAT auth, staging endpoint + worker, ingest CLI). R4/R5
 
 Tracks the 8 build tasks (T1-T8) from the eng review. Each task: status, what landed, files, how verified.
 
-| Task | Title                                                                          | Status     |
-| ---- | ------------------------------------------------------------------------------ | ---------- |
-| T1   | PAT model & SHA-256+prefix verification                                        | ✅ done    |
-| T2   | Shared ctx resolver + prefix routing                                           | ✅ done    |
-| T3   | staging_transaction table + sync endpoint + server PII                         | ✅ done    |
-| T4   | Shared dedupe/transfer service (batch-prefetch, per-row failure, unique index) | ✅ done    |
-| T5   | Audited promote-on-review (fold deferred to frontend, see TODOS)               | ✅ done    |
-| T6   | Migrations: source enum→VARCHAR + confidence                                   | ✅ done    |
-| T7   | Ingest CLI package                                                             | ⬜ pending |
-| T8   | E2E tests (round-trip; PAT lifecycle)                                          | ⬜ pending |
+| Task | Title                                                                          | Status         |
+| ---- | ------------------------------------------------------------------------------ | -------------- |
+| T1   | PAT model & SHA-256+prefix verification                                        | ✅ done        |
+| T2   | Shared ctx resolver + prefix routing                                           | ✅ done        |
+| T3   | staging_transaction table + sync endpoint + server PII                         | ✅ done        |
+| T4   | Shared dedupe/transfer service (batch-prefetch, per-row failure, unique index) | ✅ done        |
+| T5   | Audited promote-on-review (fold deferred to frontend, see TODOS)               | ✅ done        |
+| T6   | Migrations: source enum→VARCHAR + confidence                                   | ✅ done        |
+| T7   | Ingest CLI package                                                             | ✅ done        |
+| T8   | E2E tests (round-trip; PAT lifecycle)                                          | 🟡 in progress |
 
 Legend: ⬜ pending · 🟡 in progress · ✅ done · ⚠️ done-with-concerns
 
@@ -88,3 +88,11 @@ Status: 🟡 partial
 - ✅ `POST /accounts/{id}/import/staging/{batch_id}/promote` (`require_import_write_ctx`).
 - ✅ Tests `tests/integration/test_promote.py` (4 ✓): round-trip (balance reflects only after promote), staging cleared, one-audit-row-per-txn, cross-account transfer pairing + audit, 404.
 - ⏭️ **Fold of the SPA file-upload path onto staging/promote: DEFERRED** (user decision 2026-06-30). It changes the upload UX and needs a frontend review/promote queue (outside R1-R3 backend scope). Captured in `TODOS.md`. The promote backend + endpoint are ready for it.
+
+## T7 — Ingest CLI package
+
+Status: ✅ done
+
+- New standalone package `ingest/` (`hearthledger_ingest`) with its own `pyproject.toml` + `hearthledger-ingest` console script. Privacy-first sidecar: parses locally, pushes only plaintext fields, server re-redacts.
+- `parsers.py`: deterministic `parse_csv` (auto header mapping, currency/paren-negative handling) + `parse_json` → canonical rows (confidence 1.0). `pii.py`: local redaction hint (mirrors server). `client.py`: `IngestClient.stage` (token bearer, client batch_id for idempotency, injectable httpx client). `cli.py`: argparse entry (`--account-id`, `--api-url`, `--token`/`HEARTHLEDGER_TOKEN`, `--dry-run`).
+- Tests: `ingest/tests/` (12 ✓) — parser mapping/currency/PII/JSON/dispatch, client posts to staging with token (MockTransport), CLI dry-run + token-required + bad-file.
