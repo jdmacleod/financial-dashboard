@@ -61,6 +61,10 @@ This prevents an unattended browser session from exporting or downloading sensit
 
 Passwords are hashed with bcrypt (via `passlib[bcrypt]`). The work factor is configured by passlib's defaults. Plaintext passwords are never stored or logged.
 
+### Password recovery
+
+There is no email-based password reset — HearthLedger runs locally with no mail server, so self-service reset would mean adding mail infrastructure to a single-household install. Recovery is operator-driven instead: whoever controls the host runs `scripts/reset_password.py <email>` (`AuthService.admin_reset_password`), which mints a one-time temporary password, forces a rotation on next login (`must_change_password`), clears any lockout, and invalidates existing sessions. This is the only path back in for a locked-out sole Primary, since it requires neither the current password nor an authenticated session. The reset writes an `auth.password_reset_admin` audit event; like every auth event, the row carries no password material. See [Account recovery](getting-started.md#account-recovery-forgotten-password) for the runbook.
+
 ### Client-side cache isolation
 
 The frontend caches API responses (account balances, the household name, reports) in a React Query cache to avoid refetching on every navigation. Because those cached entries are not keyed by user, the cache is cleared whenever the signed-in identity changes, so one account never renders another account's cached data. This happens two ways: explicitly on sign-out (`useAuth.logout` / `clearAuth`), and automatically whenever the access token swaps to a different `sub` (`lib/sessionCache`, hooked into `setAccessToken`). The automatic path closes the gap for any code path that swaps the token without routing through sign-out. A background token refresh issues a new token for the _same_ identity and intentionally leaves the cache in place. This is a browser-side defense-in-depth measure: server-side authorization (the `VisibilityContext` and `AccountRepository.get_visible`) is the real enforcement boundary and is checked on every request regardless.
