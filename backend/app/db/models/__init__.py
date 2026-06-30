@@ -18,6 +18,7 @@ from app.db.models.personal_access_token import PersonalAccessToken
 from app.db.models.property_valuation import PropertyValuation
 from app.db.models.real_estate import RealEstateProperty
 from app.db.models.snapshot import AccountSnapshot
+from app.db.models.staging_transaction import StagingTransaction
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 
@@ -43,6 +44,7 @@ __all__ = [
     "PersonalAccessToken",
     "PropertyValuation",
     "RealEstateProperty",
+    "StagingTransaction",
     "Transaction",
     "User",
     "VestingEvent",

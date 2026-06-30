@@ -10,8 +10,8 @@ Tracks the 8 build tasks (T1-T8) from the eng review. Each task: status, what la
 | ---- | ------------------------------------------------------------------------------ | ---------- |
 | T1   | PAT model & SHA-256+prefix verification                                        | ✅ done    |
 | T2   | Shared ctx resolver + prefix routing                                           | ✅ done    |
-| T3   | staging_transaction table + sync endpoint + server PII                         | ⬜ pending |
-| T4   | Shared dedupe/transfer service (batch-prefetch, per-row failure, unique index) | ⬜ pending |
+| T3   | staging_transaction table + sync endpoint + server PII                         | ✅ done    |
+| T4   | Shared dedupe/transfer service (batch-prefetch, per-row failure, unique index) | 🟡 partial |
 | T5   | Audited promote-on-review + fold run_import_job                                | ⬜ pending |
 | T6   | Migrations: source enum→VARCHAR + confidence                                   | ⬜ pending |
 | T7   | Ingest CLI package                                                             | ⬜ pending |
@@ -55,4 +55,16 @@ Status: ✅ done
 
 ## T3 — Staging table + sync endpoint + server PII
 
-Status: 🟡 in progress
+Status: ✅ done
+
+- `db/models/staging_transaction.py` + migration `0022` (separate table; indexes on account_id, batch_id; partial unique index `(account_id, external_id) WHERE external_id IS NOT NULL`). Registered in `models/__init__.py`.
+- `core/pii.py`: deterministic `redact_pii` (mask account/card/routing digit-runs to last 4) + `contains_pii` (Luhn-aware). **Server is the trust boundary** — re-redacts regardless of what the CLI sent.
+- `services/dedupe.py`: batch-prefetched `DedupeIndex` over committed + staged rows in the batch's date window (kills the per-row N+1); `is_duplicate` (external_id or date+amount+fuzzy payee) + `remember` (intra-batch dups).
+- `services/staging.py`: `StagingService.stage` — synchronous (no ARQ), per-row savepoint (one bad row can't poison the batch), redacts PII, dedupes, IntegrityError = idempotency backstop. Returns batch_id + staged/skipped/failed counts. `list_batch` for the review queue.
+- `schemas/staging.py`: `StagingRow` / `ImportStagingRequest` (client batch_id, ≤5000 rows) / `ImportStagingResponse` / `StagingTransactionResponse`.
+- `api/v1/imports.py`: `POST /accounts/{id}/import/staging` (`require_import_write_ctx` = session writer OR import-write PAT) + `GET .../staging/{batch_id}`.
+- Tests: `tests/unit/test_pii.py` (7 ✓), `tests/integration/test_staging.py` (7 ✓) — **balances exclude staging regression**, idempotent re-batch, intra-batch dup, server PII redaction, partner-session + PAT auth, 404.
+
+## T4 — Shared dedupe/transfer service
+
+Status: 🟡 partial — shared `DedupeIndex` built and used by staging (T3). Remaining: wire the existing `run_import_job` worker onto the shared index (replace its per-row `_is_duplicate`).
