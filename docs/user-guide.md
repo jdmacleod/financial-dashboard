@@ -30,7 +30,7 @@ Real estate accounts appear on the **Assets** page; pension, investment, and ret
 
 1. Go to **Accounts** in the sidebar.
 2. Click the **+** button on the relevant category group, or **+ Add account** in the page header.
-3. For **Banking & Cash** or **Liabilities** accounts, a form appears: set the nickname, type, institution, and optional account number, then click **Save**.
+3. For **Banking & Cash** or **Liabilities** accounts, a form appears: set the nickname, type, institution, and optional account number. You can also set an optional starting balance — labeled **Balance owed** for liabilities (mortgage, loans, credit cards) or **Current balance** for cash accounts — so the account opens with that figure instead of $0. Click **Save**. The opening balance is recorded as a transfer entry, so it sets your balance without showing up as income or spending in your reports.
 4. For **Retirement**, **Investments**, or **Real estate** accounts, clicking **+** navigates to the dedicated page for that account type, where you can add accounts of those kinds.
 
 Transaction account types (shown on the Accounts page):
