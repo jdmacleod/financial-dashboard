@@ -13,6 +13,7 @@ from app.core.security import (
     create_reauth_token,
     create_refresh_token,
     decode_token,
+    generate_temporary_password,
     hash_password,
     verify_password,
 )
@@ -222,3 +223,52 @@ class AuthService:
             ip_address=ip_address,
         )
         await self.session.commit()
+
+    async def admin_reset_password(self, email: str) -> str:
+        """Out-of-band password reset for a locked-out user, run from the CLI.
+
+        This is the only recovery path when an established user — or the sole
+        primary — loses their password: there is no current password to supply
+        (rules out /auth/change-password) and no authenticated session to drive
+        the in-app provisioning flow. The operator runs
+        ``scripts/reset_password.py`` from the host shell, which calls this.
+
+        Mints a server-generated temporary password, forces a rotation on next
+        login (``must_change_password`` → the existing forced-reset flow), clears
+        any active lockout, and kills existing sessions. Returns the plaintext
+        ONCE for the operator to relay; it is never persisted or written to the
+        audit log in the clear (the audit row carries no value payload).
+
+            lookup by email ──> not found ──> raise ValueError (CLI exits non-zero)
+                   │
+                   └─ found ──> mint temp pw, hash it, must_change_password=True,
+                               clear refresh_token_hash + failed_attempts + lockout
+                                     │
+                                     ├─ has household ──> write audit row
+                                     └─ orphan (member_id is None) ──> skip audit
+                                        (write_auth_event needs a household_id;
+                                         mirror login()'s `if household_id` guard)
+        """
+        result = await self.session.execute(select(User).where(User.email == email))
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise ValueError(f"No user with email {email!r}")
+
+        temporary_password = generate_temporary_password()
+        user.hashed_password = hash_password(temporary_password)
+        user.last_password_change = datetime.now(UTC)
+        user.must_change_password = True  # force rotation on first login
+        user.refresh_token_hash = None  # invalidate existing sessions
+        user.failed_login_attempts = 0
+        user.locked_until = None  # clear any active lockout
+        await self.session.flush()
+
+        household_id = await self._get_household_id(user)
+        if household_id:
+            await self.audit_repo.write_auth_event(
+                household_id=household_id,
+                user_id=user.id,
+                action="auth.password_reset_admin",
+            )
+        await self.session.commit()
+        return temporary_password
