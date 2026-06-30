@@ -38,15 +38,15 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
-### Tax-estimate engine — remaining scope (broader state coverage, state retirement exclusions)
+### Tax-estimate engine — remaining scope (broader state coverage, itemized deductions)
 
-**What:** Two follow-ons now that the federal engine is complete (full-income basis + preferential rates + NIIT + AMT with SALT/ISO preference inputs, all shipped — see Completed): (1) expand state coverage beyond the four modeled states (CA/NY/GA/IL) toward all taxing states; (2) add the state-specific retirement-income exclusions currently documented as out of scope (Illinois's full exclusion, Georgia's age-based exclusion, New York's $20k pension exclusion). A possible third: itemized-deduction support, which would let the AMT SALT add-back be exact rather than a planning input (today the regular-tax baseline always uses the standard deduction).
+**What:** Two follow-ons now that the federal engine is complete and the four modeled states (CA/NY/GA/IL) have brackets + retirement-income exclusions: (1) expand state coverage beyond CA/NY/GA/IL toward all taxing states — including each new state's own retirement-income exclusion where it has one (the `STATE_RETIREMENT_EXCLUSION` config + `retirement_exclusion()` engine extend directly); (2) itemized-deduction support (Schedule A), which would let the AMT SALT add-back be exact rather than a planning input (today the regular-tax baseline always uses the standard deduction).
 
-**Why:** The federal side is now feature-complete. State coverage is the main remaining gap: only four states are modeled, and a retiree in IL/GA/NY is overstated because the state engine ignores their retirement-income exclusions.
+**Why:** Federal and the four demo-relevant states are feature-complete. The main remaining gap is breadth: only four states are modeled, so a household in any other taxing state gets a "not yet modeled" note.
 
-**Cons:** State brackets for the remaining ~37 taxing states are a large annual-maintenance surface — keep the isolate-and-cite discipline in `state_tax_tables.py` (one cited source per year). Retirement-income exclusions need the cash-flow basis to separate retirement-ordinary income from wage-ordinary income at the state level. Itemized deductions are a meaningful new modeling layer (Schedule A), out of scope for a quick win.
+**Cons:** State brackets (and per-state retirement exclusions) for the remaining ~37 taxing states are a large annual-maintenance surface — keep the isolate-and-cite discipline in `state_tax_tables.py` (one cited source per year). Itemized deductions are a meaningful new modeling layer (Schedule A), out of scope for a quick win.
 
-**Depends on:** State tax engine + NIIT + AMT, all shipped 2026-06-29; `state_tax_tables.py` extends directly.
+**Depends on:** State tax engine + NIIT + AMT + state retirement exclusions, all shipped 2026-06-29/30; `state_tax_tables.py` extends directly.
 
 ---
 
@@ -63,6 +63,26 @@ and an `InvestmentPositionsPanel` on the Investments page.
 ---
 
 ## Completed
+
+### State retirement-income exclusions — IL/GA/NY (Tax-estimate engine)
+
+**Completed:** v0.23.17.0 (2026-06-30, branch `feat/state-retirement-exclusions`) —
+The state income-tax estimate now excludes retirement income (pensions + RMDs) for
+the three modeled states that offer it: Illinois (full, no age gate), Georgia
+(age-tiered $35k at 62-64 / $65k at 65+), and New York ($20k at 59½, modeled as
+60+). New pure `state_tax.retirement_exclusion(state, member_ages, retirement_income)`
+sums each member's per-taxpayer cap for the highest age tier they meet (so a married
+couple where both qualify gets the doubled cap), capped at the household's retirement
+income; IL excludes the full amount regardless of age. Config in
+`state_tax_tables.STATE_RETIREMENT_EXCLUSION` (`RetirementExclusion` NamedTuple).
+`estimate_state_tax` gained `retirement_income` + `member_ages` params and a
+`retirement_exclusion` field on `StateTaxEstimate`; `report.py` passes pension + RMD
+and queries active members' ages. No migration (reuses `households.state` + member
+DOBs). Documented simplifications: pension + RMD only (not GA's broader investment
+income); NY 59½ → 60+; NY government-pension full exclusion not distinguished;
+age-gated state with no member DOB gets no exclusion (IL still applies). CA has no
+exclusion. Tests: 8 engine unit + report integration (GA retiree, $65k excluded →
+$1,239.70) + frontend (exclusion line renders).
 
 ### AMT preference inputs — SALT + ISO (Tax-estimate engine)
 

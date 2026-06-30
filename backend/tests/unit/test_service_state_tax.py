@@ -11,7 +11,11 @@ from decimal import Decimal
 import pytest
 
 from app.services import tax_tables
-from app.services.state_tax import estimate_state_tax, resolve_state_tax_year
+from app.services.state_tax import (
+    estimate_state_tax,
+    resolve_state_tax_year,
+    retirement_exclusion,
+)
 
 
 def test_california_graduated_single_2025() -> None:
@@ -202,3 +206,83 @@ def test_rejects_unsupported_year_and_status() -> None:
             filing_status="bogus",
             ordinary_income=Decimal("100000"),
         )
+
+
+# --- Retirement-income exclusions --------------------------------------------
+
+
+def test_retirement_exclusion_illinois_full_no_age_gate() -> None:
+    # Illinois fully excludes retirement income regardless of age (even with no DOB).
+    assert retirement_exclusion("IL", [], Decimal("50000")) == Decimal("50000")
+    assert retirement_exclusion("IL", [40], Decimal("50000")) == Decimal("50000")
+
+
+def test_retirement_exclusion_georgia_age_tiers() -> None:
+    assert retirement_exclusion("GA", [66], Decimal("100000")) == Decimal("65000")  # 65+
+    assert retirement_exclusion("GA", [63], Decimal("100000")) == Decimal("35000")  # 62-64
+    assert retirement_exclusion("GA", [60], Decimal("100000")) == Decimal("0")  # under 62
+
+
+def test_retirement_exclusion_georgia_doubles_for_couple() -> None:
+    # Two 65+ members each get the $65k cap (summed); a mixed couple gets 65k + 35k.
+    assert retirement_exclusion("GA", [67, 66], Decimal("300000")) == Decimal("130000")
+    assert retirement_exclusion("GA", [66, 63], Decimal("300000")) == Decimal("100000")
+
+
+def test_retirement_exclusion_new_york_20k_at_60() -> None:
+    assert retirement_exclusion("NY", [60], Decimal("100000")) == Decimal("20000")
+    assert retirement_exclusion("NY", [59], Decimal("100000")) == Decimal("0")
+    assert retirement_exclusion("NY", [60, 61], Decimal("100000")) == Decimal("40000")
+
+
+def test_retirement_exclusion_capped_at_income_and_unmodeled_states() -> None:
+    # The summed caps never exceed the actual retirement income.
+    assert retirement_exclusion("GA", [66], Decimal("10000")) == Decimal("10000")
+    # California has no exclusion; zero/negative income yields nothing.
+    assert retirement_exclusion("CA", [70], Decimal("50000")) == Decimal("0")
+    assert retirement_exclusion("IL", [70], Decimal("0")) == Decimal("0")
+
+
+def test_estimate_illinois_excludes_all_retirement_income() -> None:
+    # IL single, 50,000 pension income, age 70: fully excluded -> $0 state tax.
+    est = estimate_state_tax(
+        state="IL",
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        ordinary_income=Decimal("50000"),
+        retirement_income=Decimal("50000"),
+        member_ages=[70],
+    )
+    assert est.retirement_exclusion == Decimal("50000.00")
+    assert est.taxable_income == Decimal("0.00")
+    assert est.state_tax == Decimal("0.00")
+
+
+def test_estimate_georgia_caps_retirement_exclusion_at_65() -> None:
+    # GA single age 66: 80,000 of 100,000 ordinary is retirement -> $65k excluded.
+    #   taxable = 100,000 - 65,000 - 12,000 std = 23,000; tax = 23,000 * 0.0539.
+    est = estimate_state_tax(
+        state="GA",
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        ordinary_income=Decimal("100000"),
+        retirement_income=Decimal("80000"),
+        member_ages=[66],
+    )
+    assert est.retirement_exclusion == Decimal("65000.00")
+    assert est.taxable_income == Decimal("23000.00")
+    assert est.state_tax == Decimal("1239.70")
+
+
+def test_estimate_no_exclusion_in_california() -> None:
+    # CA has no retirement exclusion: passing retirement income changes nothing.
+    est = estimate_state_tax(
+        state="CA",
+        tax_year=2025,
+        filing_status=tax_tables.SINGLE,
+        ordinary_income=Decimal("100000"),
+        retirement_income=Decimal("80000"),
+        member_ages=[70],
+    )
+    assert est.retirement_exclusion == Decimal("0.00")
+    assert est.taxable_income == Decimal("94460.00")  # 100,000 - 5,540 std, unchanged

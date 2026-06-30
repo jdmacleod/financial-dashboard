@@ -413,6 +413,7 @@ export interface StateTaxEstimate {
   modeled: boolean
   taxable_income: string
   state_tax: string
+  retirement_exclusion: string
   effective_rate: number
   marginal_rate: number
   note: string | null

@@ -866,6 +866,7 @@ Income and expenses over time.
     "modeled": true,
     "taxable_income": "84460.0000",
     "state_tax": "4397.1400",
+    "retirement_exclusion": "0.0000",
     "effective_rate": 0.0488,
     "marginal_rate": 0.093,
     "note": null
@@ -891,9 +892,12 @@ household's state of residence and is `null` unless a state is also set. It is
 present even for states with no income tax (`state_tax` is `0`, `modeled` is
 `true`, `note` explains) and for states whose brackets are not yet modeled
 (`modeled` is `false`, `state_tax` is `0`, `note` says so); modeled states are
-California, New York, Georgia, and Illinois. Both estimates exclude AMT,
-credits, and itemized deductions; state estimates tax qualified income as
-ordinary income and exclude Social Security.
+California, New York, Georgia, and Illinois. For IL/GA/NY, `retirement_exclusion`
+is the pension + RMD income excluded from the state base by that state's
+retirement-income exclusion (Illinois full; Georgia/New York age-gated, using the
+household members' ages). Both estimates exclude credits and itemized deductions;
+state estimates tax qualified income as ordinary income and exclude Social
+Security.
 
 ### `GET /reports/spending-by-category`
 

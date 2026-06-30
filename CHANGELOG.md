@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.17.0] - 2026-06-30
+
+### Added
+
+- **State income-tax estimates now apply retirement-income exclusions for Illinois, Georgia, and New York.** Retirees in those states pay less state tax on pensions and required minimum distributions, and the Cash Flow estimate now reflects it. Illinois excludes qualified retirement income in full. Georgia excludes up to $35,000 per person at ages 62-64 and $65,000 at 65+. New York excludes up to $20,000 per person of private pension/IRA income at 59½+. The exclusion uses your household members' ages and dates of birth, and for a married couple where both spouses qualify the per-person caps add up (so two 65+ Georgians can exclude up to $130,000). The state-tax line on the report shows how much was excluded. California has no such exclusion, so it is unchanged.
+
+### For contributors
+
+- New pure `state_tax.retirement_exclusion(state, member_ages, retirement_income)`: IL excludes the full amount (no age gate); GA/NY sum each member's per-taxpayer cap for the highest age tier they meet, capped at the household's retirement income (so couples get doubled caps). Config in `state_tax_tables.STATE_RETIREMENT_EXCLUSION` (a `RetirementExclusion` NamedTuple, cited). `estimate_state_tax` gained `retirement_income` + `member_ages` params and a `retirement_exclusion` field on `StateTaxEstimate`; `report.py` passes the pension + RMD total and queries active members' ages (`current_age` as of the period end). No migration — reuses `households.state` and member DOBs. Documented simplifications: the exclusion covers pension + RMD only (not the broader investment income GA also allows); NY's 59½ is modeled as age 60+ and its full government-pension exclusion is not distinguished; an age-gated state with no member DOB gets no exclusion (IL still applies). Tests: 8 engine unit + report integration (GA retiree, $65k excluded → $1,239.70) + frontend.
+
 ## [0.23.16.0] - 2026-06-29
 
 ### Added

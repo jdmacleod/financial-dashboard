@@ -415,6 +415,7 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         modeled: true,
         taxable_income: "344460.00",
         state_tax: "30000.00",
+        retirement_exclusion: "0.00",
         effective_rate: 0.0857,
         marginal_rate: 0.093,
         note: null,
@@ -431,6 +432,49 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
     // State tax line.
     expect(screen.getByText(/CA state tax/)).toBeInTheDocument()
     expect(screen.getByText("$30,000.00")).toBeInTheDocument()
+  })
+
+  it("shows the retirement-income exclusion on the state tax line when present", async () => {
+    const { reportsApi: mock } = await import("@/api/reports")
+    ;(mock.cashFlow as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ...mockCashFlow,
+      federal_tax_estimate: {
+        tax_year: 2025,
+        filing_status: "single",
+        ordinary_income: "100000.00",
+        qualified_income: "0.00",
+        social_security_gross: "0.00",
+        taxable_social_security: "0.00",
+        standard_deduction: "15750.00",
+        taxable_income: "84250.00",
+        federal_tax: "14000.00",
+        qualified_tax: "0.00",
+        net_investment_income_tax: "0.00",
+        alternative_minimum_tax: "0.00",
+        after_tax_income: "86000.00",
+        effective_rate: 0.14,
+        marginal_rate: 0.22,
+        roth_conversion_room: null,
+        next_bracket_rate: null,
+      },
+      state_tax_estimate: {
+        state: "GA",
+        tax_year: 2025,
+        filing_status: "single",
+        modeled: true,
+        taxable_income: "23000.00",
+        state_tax: "1239.70",
+        retirement_exclusion: "65000.00",
+        effective_rate: 0.0124,
+        marginal_rate: 0.0539,
+        note: null,
+      },
+    })
+    renderPage()
+    await waitFor(() => expect(screen.getByText("Estimated federal tax")).toBeInTheDocument())
+    expect(screen.getByText(/GA state tax/)).toBeInTheDocument()
+    expect(screen.getByText(/retirement-income exclusion/)).toBeInTheDocument()
+    expect(screen.getByText("$65,000.00")).toBeInTheDocument()
   })
 
   it("shows the no-income-tax note for a household in a state without income tax", async () => {
@@ -463,6 +507,7 @@ describe("ReportCashFlow — Phase 7 redesign", () => {
         modeled: true,
         taxable_income: "0.00",
         state_tax: "0.00",
+        retirement_exclusion: "0.00",
         effective_rate: 0,
         marginal_rate: 0,
         note: "TX has no state income tax.",
