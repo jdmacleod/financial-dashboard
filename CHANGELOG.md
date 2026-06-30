@@ -3,6 +3,12 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.20.0] - 2026-06-30
+
+### Documentation
+
+- **The User Guide now explains what to do if you forget your password.** A new "Forgot your password?" section under Settings → Security tells locked-out members that recovery is done by whoever runs the installation (there's no email reset on a local install), and describes the experience: you sign in with a one-time temporary password and are immediately prompted to set your own. Closes the end-user-facing gap left by v0.23.19.0, which documented the reset only for operators.
+
 ## [0.23.19.0] - 2026-06-30
 
 ### Added

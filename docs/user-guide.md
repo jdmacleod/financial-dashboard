@@ -483,6 +483,12 @@ The preference is stored locally in your browser.
 
 Go to **Settings → Security** to change your password. You'll need to enter your current password. Changing your password invalidates all existing refresh tokens (you'll be logged out of other devices).
 
+### Forgot your password?
+
+There is no self-service "forgot password" email, because HearthLedger runs on your own machine with no mail server. Instead, whoever runs your installation resets it for you from the host shell (see [Account recovery](getting-started.md#account-recovery-forgotten-password) for the operator steps).
+
+They'll give you a one-time temporary password. Sign in with it, and HearthLedger immediately asks you to set a new password of your own before you reach the app. The reset also clears any lockout from too many failed attempts and signs you out everywhere else, so once you've set your new password you're the only one with access again.
+
 ### Security log
 
 Go to **Settings → Security** and scroll down to the **Login history** section to see your authentication event feed: logins, logouts, failed attempts, and password changes, with timestamps and IP address. Primary members can see all household members' auth events; other roles see only their own.
