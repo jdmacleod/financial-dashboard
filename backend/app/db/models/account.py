@@ -37,6 +37,30 @@ ACCOUNT_TYPES = (
 
 TAX_TREATMENTS = ("pretax", "roth", "taxable")
 
+# Account types whose current balance is the running SUM of their transactions.
+# Everything else (valuation-tracked investments/retirement) uses the latest
+# AccountSnapshot, and real_estate uses property valuations. This is the single
+# source of truth shared by the Accounts ledger (AccountService) and the
+# property-equity calc (RealEstateService) so the two never diverge.
+TRANSACTION_BASED_TYPES: frozenset[str] = frozenset(
+    {
+        "checking",
+        "savings",
+        "credit_card",
+        "mortgage",
+        "auto_loan",
+        "personal_loan",
+        "heloc",
+        "student_loan",
+        "other_asset",
+        "other_liability",
+        # Revolving credit lines (migration 0007): balance is the running
+        # transaction sum (draws, interest, paydowns), no amortization schedule.
+        "sbloc",
+        "margin",
+    }
+)
+
 # Default tax treatment inferred from account_type, kept in sync with migration
 # 0014's backfill. Only unambiguous types are mapped; everything else (including
 # inherited_ira, whose distributions follow separate beneficiary rules) is left

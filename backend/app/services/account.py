@@ -10,33 +10,20 @@ from app.core.audit import AUDIT_EXCLUDED_FIELDS, AuditRepository, _snapshot, au
 from app.core.encryption import decrypt, encrypt
 from app.core.visibility import VisibilityContext
 from app.db.models.access_grant import AccountAccessGrant
-from app.db.models.account import DEFAULT_TAX_TREATMENT, Account
+from app.db.models.account import (
+    DEFAULT_TAX_TREATMENT,
+    TRANSACTION_BASED_TYPES,
+    Account,
+)
 from app.db.models.snapshot import AccountSnapshot
 from app.db.models.transaction import Transaction
 from app.repositories.account import AccountRepository
 from app.repositories.real_estate import RealEstateRepository
 from app.schemas.account import AccessGrantCreate, AccountCreate, AccountResponse, AccountUpdate
 
-# Account types whose balance is the running sum of their transactions.
-# Valuation-based types (investments, pension) use AccountSnapshot instead.
-_TRANSACTION_BASED_TYPES: frozenset[str] = frozenset(
-    {
-        "checking",
-        "savings",
-        "credit_card",
-        "mortgage",
-        "auto_loan",
-        "personal_loan",
-        "heloc",
-        "student_loan",
-        "other_asset",
-        "other_liability",
-        # Revolving credit lines (migration 0007): balance is the running
-        # transaction sum (draws, interest, paydowns), no amortization schedule.
-        "sbloc",
-        "margin",
-    }
-)
+# Balance-source split lives in app.db.models.account.TRANSACTION_BASED_TYPES so
+# the Accounts ledger and the property-equity calc resolve balances identically.
+_TRANSACTION_BASED_TYPES = TRANSACTION_BASED_TYPES
 
 
 def _decrypt_opt(val: bytes | None) -> str | None:

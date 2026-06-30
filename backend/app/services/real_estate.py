@@ -186,10 +186,16 @@ class RealEstateService:
 
         if property_.linked_mortgage_account_id is not None:
             try:
-                await self.account_repo.get_by_id(ctx, property_.linked_mortgage_account_id)
-                snap = await self.account_repo.latest_snapshot(property_.linked_mortgage_account_id)
-                if snap is not None:
-                    raw_balance, mortgage_balance_as_of = snap
+                linked = await self.account_repo.get_by_id(
+                    ctx, property_.linked_mortgage_account_id
+                )
+                # Resolve the mortgage balance the same way the Accounts ledger
+                # does (transaction-sum for transaction-based types, snapshot
+                # otherwise). Reading snapshots only — as this did before — left
+                # manually-added mortgages with no balance and hid the equity bar.
+                bal = await self.account_repo.current_balance(linked)
+                if bal is not None:
+                    raw_balance, mortgage_balance_as_of = bal
                     mortgage_balance = abs(raw_balance)
                     equity = latest.estimated_value - mortgage_balance
             except HTTPException as exc:

@@ -4,14 +4,15 @@ from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import or_
 
 from app.core.visibility import VisibilityContext
 from app.db.models.access_grant import AccountAccessGrant
-from app.db.models.account import Account
+from app.db.models.account import TRANSACTION_BASED_TYPES, Account
 from app.db.models.snapshot import AccountSnapshot
+from app.db.models.transaction import Transaction
 
 
 class AccountRepository:
@@ -64,3 +65,25 @@ class AccountRepository:
         if row is None:
             return None
         return Decimal(str(row.balance)), row.snapshot_date
+
+    async def current_balance(self, account: Account) -> tuple[Decimal, date | None] | None:
+        """Resolve an account's current balance the SAME way the Accounts ledger
+        does: the running SUM of transactions for transaction-based types, the
+        latest snapshot otherwise. Returns (balance, as_of) or None when the
+        account has no balance data yet. Transaction-based balances have no
+        as_of date (they are a live aggregate), hence the optional second slot.
+
+        This is the shared resolver the property-equity calc uses so a linked
+        mortgage shows the same balance as it does on the Accounts page —
+        previously equity read snapshots only, so a transaction-based mortgage
+        with no snapshot reported no balance and the equity bar vanished.
+        """
+        if account.account_type in TRANSACTION_BASED_TYPES:
+            result = await self.session.execute(
+                select(func.sum(Transaction.amount)).where(Transaction.account_id == account.id)
+            )
+            total = result.scalar_one_or_none()
+            if total is None:
+                return None
+            return Decimal(str(total)), None
+        return await self.latest_snapshot(account.id)

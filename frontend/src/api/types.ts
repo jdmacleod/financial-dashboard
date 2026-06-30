@@ -181,7 +181,10 @@ export interface TransactionCreate {
   payee_normalized: string
   memo?: string
   category_id?: string | null
-  // is_transfer intentionally omitted from forms — backend defaults to false
+  // Omitted from the manual transaction form (backend defaults to false), but
+  // set true for opening-balance entries so they set the account balance
+  // without polluting Cash Flow / Spending reports (which exclude transfers).
+  is_transfer?: boolean
 }
 
 export type ImportFormat = "csv" | "ofx" | "qfx"
