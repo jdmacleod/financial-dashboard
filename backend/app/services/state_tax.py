@@ -13,6 +13,7 @@ a planning estimate, not tax preparation.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from decimal import ROUND_HALF_UP, Decimal
 
 from app.schemas.tax import StateTaxEstimate
@@ -66,6 +67,33 @@ def _marginal_rate(brackets: state_tax_tables.BracketTable, taxable_income: Deci
     return float(rate)
 
 
+def retirement_exclusion(
+    state_code: str, member_ages: Sequence[int], retirement_income: Decimal
+) -> Decimal:
+    """Retirement-ordinary income a state excludes from its taxable base.
+
+    `retirement_income` is the household's retirement-ordinary income (pensions +
+    RMDs) eligible for exclusion. A state with no age gate (Illinois) excludes the
+    full amount. For age-gated states (Georgia, New York) each member's per-taxpayer
+    cap is added for the highest age tier they meet, and the total is capped at the
+    retirement income, so a married couple where both qualify gets the doubled cap.
+    Returns 0 for states without a modeled exclusion or with no retirement income.
+    """
+    spec = state_tax_tables.STATE_RETIREMENT_EXCLUSION.get(state_code)
+    income = max(retirement_income, Decimal("0"))
+    if spec is None or income <= 0:
+        return Decimal("0")
+    if not spec.age_gated:
+        return income
+    total_cap = Decimal("0")
+    for age in member_ages:
+        for min_age, cap in spec.tiers:  # highest age tier first
+            if age >= min_age:
+                total_cap += cap
+                break
+    return min(income, total_cap)
+
+
 def estimate_state_tax(
     *,
     state: str,
@@ -74,6 +102,8 @@ def estimate_state_tax(
     ordinary_income: Decimal,
     qualified_income: Decimal = Decimal("0"),
     social_security: Decimal = Decimal("0"),
+    retirement_income: Decimal = Decimal("0"),
+    member_ages: Sequence[int] = (),
 ) -> StateTaxEstimate:
     """Estimate state income tax for the given income components and year.
 
@@ -81,7 +111,9 @@ def estimate_state_tax(
     income taxed at ordinary rates; `qualified_income` (capital gains + qualified
     dividends) is taxed as ordinary income at the state level. `social_security`
     is accepted for signature parity with the federal engine but is not taxed by
-    any modeled state.
+    any modeled state. `retirement_income` is the pension + RMD portion of ordinary
+    income eligible for a state retirement-income exclusion, and `member_ages` are
+    the household members' ages (used by the age-gated GA/NY exclusions).
 
     Always returns a `StateTaxEstimate`:
       - no-income-tax state -> modeled=True, state_tax=0, explanatory note;
@@ -131,9 +163,11 @@ def estimate_state_tax(
     std_deduction = state_tax_tables.STATE_STANDARD_DEDUCTION[tax_year][code][key]
 
     # State base: ordinary + qualified (capital gains/dividends taxed as ordinary),
-    # less the state standard deduction. Social Security is excluded.
+    # less any retirement-income exclusion and the state standard deduction. Social
+    # Security is excluded.
     base = max(ordinary_income, Decimal("0")) + max(qualified_income, Decimal("0"))
-    taxable_income = max(base - std_deduction, Decimal("0"))
+    exclusion = retirement_exclusion(code, member_ages, retirement_income)
+    taxable_income = max(base - exclusion - std_deduction, Decimal("0"))
     state_tax = _tax_for_brackets(brackets, taxable_income).quantize(_CENTS, ROUND_HALF_UP)
 
     effective_rate = float(state_tax / base) if base > 0 else 0.0
@@ -145,6 +179,7 @@ def estimate_state_tax(
         modeled=True,
         taxable_income=taxable_income.quantize(_CENTS, ROUND_HALF_UP),
         state_tax=state_tax,
+        retirement_exclusion=exclusion.quantize(_CENTS, ROUND_HALF_UP),
         effective_rate=effective_rate,
         marginal_rate=_marginal_rate(brackets, taxable_income),
         note=None,

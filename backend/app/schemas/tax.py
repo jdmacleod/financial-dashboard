@@ -54,11 +54,14 @@ class StateTaxEstimate(BaseModel):
     ``note``); it is True both for modeled taxing states and for the nine states
     with no individual income tax (where ``state_tax`` is a real 0).
 
+    State-specific retirement-income exclusions are applied for the modeled states
+    (Illinois's full exclusion, Georgia's age-based exclusion, New York's $20k
+    pension exclusion); the excluded amount is reported in ``retirement_exclusion``.
     Documented simplifications: states tax long-term capital gains and qualified
     dividends as ordinary income (no preferential state schedule); Social Security
-    is excluded (none of the modeled states tax it); and state-specific
-    retirement-income exclusions (e.g. Illinois's full exclusion, Georgia's
-    age-based exclusion, New York's $20k pension exclusion) are not applied.
+    is excluded (none of the modeled states tax it); the retirement exclusion
+    applies only to pensions + RMDs, not the broader investment income some states
+    also cover.
     """
 
     state: str
@@ -67,6 +70,10 @@ class StateTaxEstimate(BaseModel):
     modeled: bool
     taxable_income: Decimal
     state_tax: Decimal
+    # Retirement-ordinary income (pensions + RMDs) excluded from the state base by
+    # the state's retirement-income exclusion (IL full, GA/NY age-gated caps). 0
+    # when the state has no exclusion or the household has no retirement income.
+    retirement_exclusion: Decimal = Decimal("0")
     effective_rate: float
     marginal_rate: float
     note: str | None = None

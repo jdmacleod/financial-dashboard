@@ -37,6 +37,7 @@ Documented simplifications (state estimates are for planning, not preparation):
 from __future__ import annotations
 
 from decimal import Decimal
+from typing import NamedTuple
 
 # Internal filing keys. State tables publish single and married-filing-jointly
 # schedules; the engine maps the five household filing statuses onto these two.
@@ -147,4 +148,38 @@ STATE_STANDARD_DEDUCTION: dict[int, dict[str, dict[str, Decimal]]] = {
         "GA": {SINGLE_KEY: Decimal("12000"), MFJ_KEY: Decimal("24000")},
         "IL": {SINGLE_KEY: Decimal("2850"), MFJ_KEY: Decimal("5700")},
     },
+}
+
+
+class RetirementExclusion(NamedTuple):
+    """A state's retirement-income exclusion.
+
+    ``age_gated`` False means a full exclusion regardless of age (Illinois).
+    When age_gated, ``tiers`` is ``(min_age, per-taxpayer cap)`` pairs, highest
+    age first; each household member gets the cap of the highest tier their age
+    meets, and the engine sums those caps across members (so a married couple
+    where both qualify gets the doubled cap).
+    """
+
+    age_gated: bool
+    tiers: tuple[tuple[int, Decimal], ...] = ()
+
+
+# Retirement-income exclusions for the modeled states. The exclusion applies to a
+# household's retirement-ordinary income (pensions + RMDs):
+#   IL -- fully excludes qualified retirement income; no age requirement, no cap.
+#   GA -- age-tiered per-taxpayer exclusion: $35,000 at ages 62-64, $65,000 at 65+.
+#   NY -- $20,000 per-taxpayer exclusion of private pension / annuity / IRA income
+#         at age 59.5+ (modeled as age 60+; government pensions, fully excluded in
+#         reality, are not distinguished here).
+# California has no special retirement exclusion (pensions taxed as ordinary
+# income), so it is absent. GA's broader statutory definition (which also covers
+# some interest/dividends/capital gains up to the cap) is simplified to pension +
+# RMD only. Source: state DOR guidance, tax year 2025.
+STATE_RETIREMENT_EXCLUSION: dict[str, RetirementExclusion] = {
+    "IL": RetirementExclusion(age_gated=False),
+    "GA": RetirementExclusion(
+        age_gated=True, tiers=((65, Decimal("65000")), (62, Decimal("35000")))
+    ),
+    "NY": RetirementExclusion(age_gated=True, tiers=((60, Decimal("20000")),)),
 }
