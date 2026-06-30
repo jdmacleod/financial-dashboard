@@ -89,7 +89,9 @@ export const useAuth = create<AuthState>((set) => ({
     sessionStorage.removeItem(MCP_KEY)
     // Wipe the React Query cache. Query keys aren't user-scoped, so without this
     // the next login renders the previous user's cached data (e.g. the wrong
-    // household) until each query's staleTime elapses.
+    // household) until each query's staleTime elapses. setAccessToken(null) above
+    // also triggers an identity-transition clear (lib/sessionCache); this
+    // explicit clear is kept as defense in depth and to make the guarantee local.
     queryClient.clear()
     set({
       token: null,

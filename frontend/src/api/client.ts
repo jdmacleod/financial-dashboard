@@ -1,3 +1,5 @@
+import { syncSessionCache } from "@/lib/sessionCache"
+
 const BASE = "/api/v1"
 
 let _accessToken: string | null = null
@@ -5,6 +7,12 @@ let _refreshPromise: Promise<string> | null = null
 
 export function setAccessToken(token: string | null) {
   _accessToken = token
+  // Drop the previous user's cached query data when the token swaps to a
+  // different identity (see sessionCache). Silent refresh and expireSession set
+  // _accessToken directly and bypass this — both are intentional: a refresh
+  // keeps the same identity, and expireSession triggers a full-page redirect to
+  // /login that discards the in-memory cache anyway.
+  syncSessionCache(token)
 }
 
 export function getAccessToken(): string | null {

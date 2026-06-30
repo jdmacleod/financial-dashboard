@@ -3,6 +3,16 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.18.0] - 2026-06-30
+
+### Security
+
+- **One account can no longer briefly see another account's cached data after an in-app identity switch.** When you sign out and a different household member signs in, HearthLedger now guarantees the previous person's loaded data (account balances, the household name, reports) is dropped from the browser the moment the login identity changes, not just when you use the Sign Out button. This was already correct for normal sign-out; the change closes the gap for any future "switch account without signing out" path so it can't show stale data from the prior user. A routine background token refresh keeps your data in place as before, so this adds no extra loading.
+
+### For contributors
+
+- New `frontend/src/lib/sessionCache.ts`: `syncSessionCache(token)` decodes the JWT `sub`, tracks the current identity, and calls `queryClient.clear()` only on a transition to a _different_ non-null subject. It is wired into `setAccessToken` (the single chokepoint every token assignment passes through), so cache isolation no longer depends on each flow remembering to clear — it closes the cross-account-bleed gap that TODO #4 flagged (P3 defensive). Deliberate non-clears: same-subject refresh (no thrash; silent refresh also bypasses `setAccessToken` entirely) and "no user → user" login (nothing to leak; login already follows a cache-clearing logout). A "user → no user" transition (logout) does clear, backstopping the explicit `queryClient.clear()` in `useAuth.logout` / `clearAuth`, which is kept as defense in depth. Chose the centralized identity-transition guard over per-query-key scoping (the TODO's other option): scoping would touch 50+ call sites and stay fragile to a forgotten prefix. No backend change, no migration, no behavior change for current flows. Tests: 5 unit (`sessionCache.test.ts`) covering different-user clear, same-user no-clear, clean-login no-clear, logout clear, malformed-token handling.
+
 ## [0.23.17.0] - 2026-06-30
 
 ### Added

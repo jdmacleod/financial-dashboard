@@ -50,19 +50,25 @@ and an `InvestmentPositionsPanel` on the Investments page.
 
 ---
 
+## Completed
+
 ### User-scoped query keys — harden against cross-account cache bleed (P3, defensive)
 
-**What:** Make the frontend resilient to cross-account data bleed by either (a) scoping TanStack Query keys by household/member id (e.g. `["household", householdId]`), or (b) centralizing a single "clear cache on any identity transition" hook. Today the keys are global (`["household"]`, `["accounts"]`, …).
-
-**Why:** v0.23.6.0 (PR #86) fixed the reported bug by calling `queryClient.clear()` in `useAuth.logout`/`clearAuth`. That fully resolves Sign Out → re-login, but the cache-clear is now the _only_ thing preventing one member's cached data from rendering for another, because the keys carry no identity. A future "switch account without full logout" flow (or any code path that swaps the token without routing through `logout`) would reintroduce the bleed. This is defensive hardening, not a current bug — present behavior is correct.
-
-**Cons:** Threading an id into every query key touches many call sites; the centralized-clear approach is lighter but less explicit. Neither is urgent while `logout` is the only identity-transition path.
-
-**Depends on:** Nothing. Builds on the `lib/queryClient.ts` singleton added in v0.23.6.0.
-
----
-
-## Completed
+**Completed:** v0.23.18.0 (2026-06-30, branch `feat/user-scoped-query-keys`) — Closed
+the cross-account cache-bleed gap with the centralized identity-transition guard
+(the TODO's option (b)), chosen over per-query-key scoping (option (a)) because
+scoping would touch 50+ call sites and stay fragile to a forgotten prefix. New
+`frontend/src/lib/sessionCache.ts`: `syncSessionCache(token)` decodes the JWT `sub`,
+tracks the current identity, and calls `queryClient.clear()` only on a transition to
+a _different_ non-null subject. Wired into `setAccessToken` — the single chokepoint
+every token assignment passes through — so cache isolation no longer depends on each
+flow remembering to clear, closing the "swap the token without routing through
+`logout`" gap. Deliberate non-clears: same-subject refresh (no thrash; silent refresh
+also bypasses `setAccessToken`) and "no user → user" login (nothing to leak; login
+follows a cache-clearing logout). A "user → no user" logout transition does clear,
+backstopping the explicit `queryClient.clear()` in `useAuth.logout` / `clearAuth`
+(kept as defense in depth). No backend change, no migration, no behavior change for
+current flows. Tests: 5 unit (`sessionCache.test.ts`).
 
 ### State retirement-income exclusions — IL/GA/NY (Tax-estimate engine)
 
