@@ -3,6 +3,19 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.22.0] - 2026-06-30
+
+### Added
+
+- **Offline statement ingest.** A new `hearthledger-ingest` command-line tool parses exported CSV/JSON statements on your own machine and sends the transactions to HearthLedger for review. Statement files never leave your computer, and account/card numbers are masked before anything is stored.
+- **Personal access tokens** (Settings → Security). Create a token to let the ingest tool talk to HearthLedger. Each token is shown once, can be revoked at any time, expires on a schedule, and can only be created by the household's primary.
+- **Import review queue.** Ingested transactions land in a holding area and do not affect your balances or net worth until you review and confirm them. Confirming records each one and automatically links matching transfers between your accounts.
+- **Consistent duplicate and transfer detection.** The new ingest path and existing file uploads now dedupe the same way, so re-sending the same statement won't create duplicates.
+
+### Fixed
+
+- **The dashboard now uses a consistent (UTC) time source.** Budget alerts and this-month cash flow no longer show the previous month for anyone in a timezone behind UTC during the evening hours.
+
 ## [0.23.21.1] - 2026-06-30
 
 ### Fixed
