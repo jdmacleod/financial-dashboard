@@ -1,7 +1,7 @@
 import calendar
 import uuid
 from collections import defaultdict
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Literal
 
@@ -1075,7 +1075,11 @@ class ReportService:
     # --- Dashboard -------------------------------------------------------
 
     async def dashboard(self, ctx: VisibilityContext) -> DashboardResponse:
-        today = date.today()
+        # UTC, not date.today() (naive local): every timestamp in this app is
+        # TIMESTAMPTZ/UTC (CLAUDE.md), so a naive-local "today" put the dashboard
+        # a day/month behind for anyone west of UTC in the evening — the
+        # "current month" budget alerts and cash-flow then queried the wrong month.
+        today = datetime.now(UTC).date()
         thirty_days_ago = today - timedelta(days=30)
         month_start = today.replace(day=1)
 

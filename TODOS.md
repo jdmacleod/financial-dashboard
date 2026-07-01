@@ -1,5 +1,34 @@
 # TODOS
 
+### Audit remaining naive `date.today()` uses for UTC consistency (P2)
+
+**What:** 14 call sites still use `date.today()` (naive local date) instead of
+`datetime.now(UTC).date()`: `account.py:116`, `fire_detector.py` (×4),
+`milestone.py:28`, `rmd.py:126`, `debt_projector.py` (×2), `valuation_tasks.py:33`,
+`age.py:36`, `member.py:12` (DOB validation), and the PDF/Excel exporters (×2).
+
+**Why:** Every timestamp in this app is TIMESTAMPTZ/UTC (CLAUDE.md), but
+`date.today()` returns the machine's LOCAL date. For anyone west of UTC, in the
+evening the two disagree by a day (and at month/year end, by a month/year). The
+dashboard hit this (fixed in the ingest-foundation branch: budget alerts + MTD
+cash flow queried the wrong month on 2026-07-01 00:xx UTC / 06-30 local). The
+other sites have the same latent drift — "current" FIRE/RMD/milestone/age math can
+be off by a day at the boundary.
+
+**Pros:** One consistent time source; kills a class of date-boundary flakiness.
+
+**Cons:** Some sites (export "generated on" date, DOB `> today` validation) are
+low-risk and could be intentional local-time. Needs per-site judgment, not a blind
+sed.
+
+**Context:** Found during /ship of `feat/ingest-api-foundation` when
+`test_dashboard_budget_alerts...` failed at the month boundary. Root cause fixed
+for the dashboard only (`report.py:1078`), kept right-sized. `grep -rn 'date\.today()' backend/app`.
+
+**Depends on:** nothing.
+
+---
+
 ### Fold SPA file-upload import onto staging/promote (needs frontend review queue)
 
 **What:** Route browser CSV/OFX uploads (`run_import_job`) through the
