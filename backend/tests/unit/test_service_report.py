@@ -1530,8 +1530,10 @@ async def test_dashboard(
 ) -> None:
     ctx = _ctx(household, primary_member, primary_user)
     account = await _make_account(db_session, ctx, "checking", "Dashboard Checking")
-    # Snapshot for today to give a net worth value
-    today = date.today()
+    # Snapshot for today to give a net worth value. Use UTC to match the
+    # dashboard's time source (it now uses datetime.now(UTC).date()); a naive
+    # local date drifts a month at the UTC boundary and the MTD query misses.
+    today = datetime.now(UTC).date()
     await _add_snapshot(db_session, account.id, today, Decimal("10000"))
 
     income_cat = await _add_category(db_session, household.id, "Dash Income", is_income=True)

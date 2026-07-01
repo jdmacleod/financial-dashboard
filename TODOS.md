@@ -1,5 +1,61 @@
 # TODOS
 
+### Audit remaining naive `date.today()` uses for UTC consistency (P2)
+
+**What:** 14 call sites still use `date.today()` (naive local date) instead of
+`datetime.now(UTC).date()`: `account.py:116`, `fire_detector.py` (×4),
+`milestone.py:28`, `rmd.py:126`, `debt_projector.py` (×2), `valuation_tasks.py:33`,
+`age.py:36`, `member.py:12` (DOB validation), and the PDF/Excel exporters (×2).
+
+**Why:** Every timestamp in this app is TIMESTAMPTZ/UTC (CLAUDE.md), but
+`date.today()` returns the machine's LOCAL date. For anyone west of UTC, in the
+evening the two disagree by a day (and at month/year end, by a month/year). The
+dashboard hit this (fixed in the ingest-foundation branch: budget alerts + MTD
+cash flow queried the wrong month on 2026-07-01 00:xx UTC / 06-30 local). The
+other sites have the same latent drift — "current" FIRE/RMD/milestone/age math can
+be off by a day at the boundary.
+
+**Pros:** One consistent time source; kills a class of date-boundary flakiness.
+
+**Cons:** Some sites (export "generated on" date, DOB `> today` validation) are
+low-risk and could be intentional local-time. Needs per-site judgment, not a blind
+sed.
+
+**Context:** Found during /ship of `feat/ingest-api-foundation` when
+`test_dashboard_budget_alerts...` failed at the month boundary. Root cause fixed
+for the dashboard only (`report.py:1078`), kept right-sized. `grep -rn 'date\.today()' backend/app`.
+
+**Depends on:** nothing.
+
+---
+
+### Fold SPA file-upload import onto staging/promote (needs frontend review queue)
+
+**What:** Route browser CSV/OFX uploads (`run_import_job`) through the
+`staging_transactions` table + the audited promote step, instead of writing
+directly to `transactions`. Requires a frontend review/promote UI (list a staged
+batch, edit/confirm, call `POST .../import/staging/{batch_id}/promote`).
+
+**Why:** Today uploaded rows hit balances pre-review and the worker write has no
+`@audit` coverage; the new CLI ingest path goes through staging and is audited.
+Folding removes that inconsistency and closes the audit gap for uploads too.
+
+**Pros:** One import path, consistent audit + review semantics, no balance change
+before a human confirms.
+
+**Cons:** Behavior change to the upload UX — deferred precisely because doing it
+backend-only would send uploads into a queue with no UI to promote them. Needs
+frontend work first.
+
+**Context:** Backend foundation shipped on `feat/ingest-api-foundation`
+(T1–T6). `PromoteService` + the promote endpoint already exist and are tested;
+the worker already shares the dedupe index. The fold is the remaining R2 step,
+held until the frontend review queue lands. Decision logged 2026-06-30.
+
+**Depends on:** frontend staging-review/promote UI.
+
+---
+
 ### WCAG 2.1 AA accessibility audit — HearthLedger v1 (Post-Phase 7)
 
 **What:** Run a full WCAG 2.1 AA audit across all HearthLedger pages: color contrast ratios (4.5:1 body text, 3:1 large text), screen reader label completeness, keyboard navigation order, and focus indicator visibility.

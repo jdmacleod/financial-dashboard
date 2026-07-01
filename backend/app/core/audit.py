@@ -26,7 +26,7 @@ ENCRYPTED_FIELDS = frozenset(
 
 # Auth secrets are not AES-encrypted PII, but must never land in the audit
 # log either — same rationale as ENCRYPTED_FIELDS (CLAUDE.md rule #4).
-AUTH_SECRET_FIELDS = frozenset({"hashed_password", "refresh_token_hash"})
+AUTH_SECRET_FIELDS = frozenset({"hashed_password", "refresh_token_hash", "token_hash"})
 
 AUDIT_EXCLUDED_FIELDS = ENCRYPTED_FIELDS | AUTH_SECRET_FIELDS
 

@@ -14,9 +14,11 @@ from app.db.models.investment_lot import InvestmentLot
 from app.db.models.member import HouseholdMember
 from app.db.models.ownership_entity import OwnershipEntity
 from app.db.models.pension import PensionAccount, PensionEstimateHistory
+from app.db.models.personal_access_token import PersonalAccessToken
 from app.db.models.property_valuation import PropertyValuation
 from app.db.models.real_estate import RealEstateProperty
 from app.db.models.snapshot import AccountSnapshot
+from app.db.models.staging_transaction import StagingTransaction
 from app.db.models.transaction import Transaction
 from app.db.models.user import User
 
@@ -39,8 +41,10 @@ __all__ = [
     "OwnershipEntity",
     "PensionAccount",
     "PensionEstimateHistory",
+    "PersonalAccessToken",
     "PropertyValuation",
     "RealEstateProperty",
+    "StagingTransaction",
     "Transaction",
     "User",
     "VestingEvent",

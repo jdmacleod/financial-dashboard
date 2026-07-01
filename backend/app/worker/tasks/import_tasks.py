@@ -1,6 +1,5 @@
 import uuid
 from datetime import UTC, datetime, timedelta
-from difflib import SequenceMatcher
 from typing import Any
 
 from sqlalchemy import select
@@ -11,33 +10,9 @@ from app.db.models.category import Category
 from app.db.models.import_job import ImportJob
 from app.db.models.transaction import Transaction
 from app.importers import csv_importer, ofx_importer
-from app.importers.csv_importer import ParsedRow
+from app.services.dedupe import build_dedupe_index
 
-FUZZY_MATCH_THRESHOLD = 0.8
 TRANSFER_WINDOW_DAYS = 3
-
-
-async def _is_duplicate(session: AsyncSession, account_id: uuid.UUID, row: ParsedRow) -> bool:
-    if row.external_id:
-        result = await session.execute(
-            select(Transaction.id).where(
-                Transaction.account_id == account_id, Transaction.external_id == row.external_id
-            )
-        )
-        return result.scalar_one_or_none() is not None
-
-    candidates = await session.execute(
-        select(Transaction).where(
-            Transaction.account_id == account_id,
-            Transaction.transaction_date == row.transaction_date,
-            Transaction.amount == row.amount,
-        )
-    )
-    for candidate in candidates.scalars().all():
-        ratio = SequenceMatcher(None, candidate.payee_raw or "", row.payee_raw or "").ratio()
-        if ratio > FUZZY_MATCH_THRESHOLD:
-            return True
-    return False
 
 
 async def _find_transfer_candidate(
@@ -110,8 +85,15 @@ async def run_import_job(
             imported: list[Transaction] = []
             records_skipped = 0
             now = datetime.now(UTC)
+            # Prefetch existing rows once (committed + staged) instead of a
+            # per-row duplicate query — kills the N+1 (eng review, Perf Issue 7).
+            dedupe = await build_dedupe_index(
+                session, job.account_id, [r.transaction_date for r in rows]
+            )
             for row in rows:
-                if await _is_duplicate(session, job.account_id, row):
+                if dedupe.is_duplicate(
+                    row.transaction_date, row.amount, row.payee_raw, row.external_id
+                ):
                     records_skipped += 1
                     continue
                 transaction = Transaction(
@@ -132,6 +114,8 @@ async def run_import_job(
                 session.add(transaction)
                 await session.flush()
                 imported.append(transaction)
+                # Intra-batch dedupe: later rows see this one too.
+                dedupe.remember(row.transaction_date, row.amount, row.payee_raw, row.external_id)
 
             household_uuid = uuid.UUID(household_id)
             for transaction in imported:

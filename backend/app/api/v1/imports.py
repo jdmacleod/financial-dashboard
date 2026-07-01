@@ -5,13 +5,78 @@ from arq import ArqRedis
 from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.visibility import VisibilityContext, get_visibility_ctx
+from app.core.visibility import (
+    VisibilityContext,
+    get_visibility_ctx,
+    require_import_write_ctx,
+)
 from app.db.base import get_session
 from app.schemas.import_job import ImportJobResponse, ImportPreviewResponse
+from app.schemas.staging import (
+    ImportStagingRequest,
+    ImportStagingResponse,
+    PromoteResponse,
+    StagingTransactionResponse,
+)
 from app.services.import_service import ImportService
+from app.services.promote import PromoteService
+from app.services.staging import StagingService
 from app.worker.queue import get_arq_pool
 
 router = APIRouter()
+
+
+@router.post(
+    "/accounts/{account_id}/import/staging",
+    response_model=ImportStagingResponse,
+    status_code=201,
+)
+async def stage_import(
+    account_id: uuid.UUID,
+    body: ImportStagingRequest,
+    ctx: VisibilityContext = Depends(require_import_write_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> ImportStagingResponse:
+    """Accept pre-parsed rows from the ingest CLI into the staging table.
+
+    Auth: a session writer OR a PAT carrying the import-write capability. Rows
+    land unreviewed in ``staging_transactions`` and never affect balances until
+    promoted. The server re-redacts PII and dedupes against committed + staged.
+    """
+    return await StagingService(session).stage(ctx, account_id, body)
+
+
+@router.get(
+    "/accounts/{account_id}/import/staging/{batch_id}",
+    response_model=list[StagingTransactionResponse],
+)
+async def list_staging_batch(
+    account_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    ctx: VisibilityContext = Depends(get_visibility_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> list[StagingTransactionResponse]:
+    rows = await StagingService(session).list_batch(ctx, account_id, batch_id)
+    return [StagingTransactionResponse.model_validate(r) for r in rows]
+
+
+@router.post(
+    "/accounts/{account_id}/import/staging/{batch_id}/promote",
+    response_model=PromoteResponse,
+)
+async def promote_staging_batch(
+    account_id: uuid.UUID,
+    batch_id: uuid.UUID,
+    ctx: VisibilityContext = Depends(require_import_write_ctx),
+    session: AsyncSession = Depends(get_session),
+) -> PromoteResponse:
+    """Promote a reviewed staging batch into real transactions.
+
+    Each promoted row writes one audit entry; transfer pairs are detected across
+    the household and audited. Only after this do the rows count in balances.
+    """
+    count = await PromoteService(session).promote_batch(ctx, account_id, batch_id)
+    return PromoteResponse(promoted=count)
 
 
 @router.post("/accounts/{account_id}/import/preview", response_model=ImportPreviewResponse)
