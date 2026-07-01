@@ -93,18 +93,23 @@ async def test_get_visibility_ctx_no_household_403(
     assert exc_info.value.status_code == 403
 
 
-async def test_get_visibility_ctx_missing_role_defaults_to_partner(
+async def test_get_visibility_ctx_role_is_db_derived_not_payload(
     db_session: AsyncSession, primary_user: User, primary_member: HouseholdMember
 ) -> None:
+    """Role comes from the DB, never the token payload (closes the stale-role gap).
+
+    Even a token that claims 'partner' (or omits role entirely) resolves to the
+    member's real DB role — here 'primary'."""
     payload = {
         "sub": str(primary_user.id),
         "member_id": str(primary_member.id),
+        "role": "partner",  # stale/forged claim — must be ignored
         "type": "access",
         "exp": datetime.now(UTC).timestamp() + 60,
     }
     token = jwt.encode(payload, settings.secret_key, algorithm="HS256")
     ctx = await get_visibility_ctx(_fake_request(), _bearer(token), db_session)
-    assert ctx.role == "partner"
+    assert ctx.role == "primary"
 
 
 async def test_get_visibility_ctx_no_client_ip_is_none(

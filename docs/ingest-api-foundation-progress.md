@@ -6,18 +6,20 @@ Scope: R1-R3 foundation (PAT auth, staging endpoint + worker, ingest CLI). R4/R5
 
 Tracks the 8 build tasks (T1-T8) from the eng review. Each task: status, what landed, files, how verified.
 
-| Task | Title                                                                          | Status         |
-| ---- | ------------------------------------------------------------------------------ | -------------- |
-| T1   | PAT model & SHA-256+prefix verification                                        | ✅ done        |
-| T2   | Shared ctx resolver + prefix routing                                           | ✅ done        |
-| T3   | staging_transaction table + sync endpoint + server PII                         | ✅ done        |
-| T4   | Shared dedupe/transfer service (batch-prefetch, per-row failure, unique index) | ✅ done        |
-| T5   | Audited promote-on-review (fold deferred to frontend, see TODOS)               | ✅ done        |
-| T6   | Migrations: source enum→VARCHAR + confidence                                   | ✅ done        |
-| T7   | Ingest CLI package                                                             | ✅ done        |
-| T8   | E2E tests (round-trip; PAT lifecycle)                                          | 🟡 in progress |
+| Task | Title                                                                          | Status  |
+| ---- | ------------------------------------------------------------------------------ | ------- |
+| T1   | PAT model & SHA-256+prefix verification                                        | ✅ done |
+| T2   | Shared ctx resolver + prefix routing                                           | ✅ done |
+| T3   | staging_transaction table + sync endpoint + server PII                         | ✅ done |
+| T4   | Shared dedupe/transfer service (batch-prefetch, per-row failure, unique index) | ✅ done |
+| T5   | Audited promote-on-review (fold deferred to frontend, see TODOS)               | ✅ done |
+| T6   | Migrations: source enum→VARCHAR + confidence                                   | ✅ done |
+| T7   | Ingest CLI package                                                             | ✅ done |
+| T8   | E2E tests (round-trip; PAT lifecycle)                                          | ✅ done |
 
 Legend: ⬜ pending · 🟡 in progress · ✅ done · ⚠️ done-with-concerns
+
+**Status: R1–R3 foundation COMPLETE.** Full backend suite 841 passed, 93.18% coverage (gate 90%). Ingest package 12 tests green. Remaining for the full vision: R4 rules categorization, R5 Ollama PDF (spike-gated), R6 holdings — each its own review. The SPA file-upload fold is deferred to frontend work (TODOS.md).
 
 ---
 
@@ -96,3 +98,11 @@ Status: ✅ done
 - New standalone package `ingest/` (`hearthledger_ingest`) with its own `pyproject.toml` + `hearthledger-ingest` console script. Privacy-first sidecar: parses locally, pushes only plaintext fields, server re-redacts.
 - `parsers.py`: deterministic `parse_csv` (auto header mapping, currency/paren-negative handling) + `parse_json` → canonical rows (confidence 1.0). `pii.py`: local redaction hint (mirrors server). `client.py`: `IngestClient.stage` (token bearer, client batch_id for idempotency, injectable httpx client). `cli.py`: argparse entry (`--account-id`, `--api-url`, `--token`/`HEARTHLEDGER_TOKEN`, `--dry-run`).
 - Tests: `ingest/tests/` (12 ✓) — parser mapping/currency/PII/JSON/dispatch, client posts to staging with token (MockTransport), CLI dry-run + token-required + bad-file.
+
+## T8 — E2E tests
+
+Status: ✅ done
+
+- `tests/integration/test_ingest_e2e.py` (1 ✓): full round-trip — CLI parser (`parse_csv`) → staging API (PAT auth) → `list_batch` (asserts server re-redacted a card number) → balance unchanged while staged → promote → balance reflects `-52.09` → transactions are `is_reviewed` with `source="csv"`.
+- PAT issue→use→revoke lifecycle E2E is in `tests/integration/test_pat.py` (revoke-then-fail).
+- Updated `test_visibility.py`: the obsolete "missing role defaults to partner" unit test now asserts the new behavior — role is DB-derived, the payload claim is ignored (the stale-role fix).
