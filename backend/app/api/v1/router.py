@@ -9,6 +9,7 @@ from app.api.v1 import (
     budgets,
     capital_commitments,
     categories,
+    category_rules,
     debt,
     equity_grants,
     exports,
@@ -40,6 +41,7 @@ router.include_router(users.router)
 router.include_router(accounts.router)
 router.include_router(transactions.router)
 router.include_router(categories.router)
+router.include_router(category_rules.router)
 router.include_router(snapshots.router)
 router.include_router(imports.router)
 router.include_router(budgets.router)

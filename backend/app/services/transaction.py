@@ -80,6 +80,16 @@ class TransactionService:
         account = await self.account_repo.get_by_id(ctx, account_id)
         _assert_writable(ctx, account)
 
+        # Fill an unset category from a matching rule (fill-empty only — an
+        # explicit category from the caller is never overridden).
+        category_id = data.category_id
+        if category_id is None:
+            from app.services.categorization import CategorizationService
+
+            category_id = await CategorizationService(self.session).match(
+                ctx.household_id, data.payee_normalized
+            )
+
         now = datetime.now(UTC)
         transaction = Transaction(
             account_id=account_id,
@@ -88,7 +98,7 @@ class TransactionService:
             amount=data.amount,
             payee_normalized=data.payee_normalized,
             memo=data.memo,
-            category_id=data.category_id,
+            category_id=category_id,
             is_transfer=data.is_transfer,
             tags=[],
             source="manual",
