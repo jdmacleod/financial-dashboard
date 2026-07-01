@@ -29,6 +29,10 @@ class PromoteService:
         self.session = session
         self.audit_repo = AuditRepository(session)
         self.account_repo = AccountRepository(session)
+        # Local import avoids a circular dependency at module load.
+        from app.services.categorization import CategorizationService
+
+        self.categorization = CategorizationService(session)
 
     async def promote_batch(
         self, ctx: VisibilityContext, account_id: uuid.UUID, batch_id: uuid.UUID
@@ -46,6 +50,10 @@ class PromoteService:
         promoted: list[Transaction] = []
 
         for s in staged:
+            # Deterministic auto-categorization: fill the category from a
+            # matching rule (staged rows carry no category). Rules only fill,
+            # never override — there's nothing to override here yet.
+            category_id = await self.categorization.match(ctx.household_id, s.payee_raw)
             txn = Transaction(
                 account_id=s.account_id,
                 transaction_date=s.transaction_date,
@@ -54,6 +62,7 @@ class PromoteService:
                 payee_raw=s.payee_raw,
                 payee_normalized=s.payee_raw,
                 memo=s.memo,
+                category_id=category_id,
                 tags=[],
                 source=s.source,
                 confidence=s.confidence,

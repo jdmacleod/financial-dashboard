@@ -5,6 +5,7 @@ from app.db.models.audit_log import AuditLog
 from app.db.models.budget import Budget
 from app.db.models.capital_commitment import CapitalCommitment
 from app.db.models.category import Category
+from app.db.models.category_rule import CategoryRule
 from app.db.models.debt import Debt
 from app.db.models.equity_grant import EquityGrant, VestingEvent
 from app.db.models.household import Household
@@ -31,6 +32,7 @@ __all__ = [
     "Budget",
     "CapitalCommitment",
     "Category",
+    "CategoryRule",
     "Debt",
     "EquityGrant",
     "Household",
