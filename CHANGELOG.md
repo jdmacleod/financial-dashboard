@@ -3,6 +3,14 @@
 All notable changes to HearthLedger are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.23.23.0] - 2026-07-01
+
+### Added
+
+- **Automatic categorization rules.** Create rules that map a payee to a category (match on the exact payee, a substring, or a regular expression) and HearthLedger fills in the category for you — on both imported transactions and ones you enter by hand. Rules only fill a category that's empty; they never change one you set yourself.
+- **Rule suggestions from your history.** HearthLedger looks at how you've already categorized transactions and proposes rules for the payees you see often, so you can turn months of manual sorting into a handful of confirmed rules.
+- **Backfill.** Apply your rules to existing uncategorized transactions in one action, without touching anything you've already categorized.
+
 ## [0.23.22.0] - 2026-06-30
 
 ### Added
